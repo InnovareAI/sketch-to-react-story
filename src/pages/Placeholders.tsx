@@ -408,7 +408,7 @@ export default function Placeholders() {
             <div className="space-y-3">
               <h4 className="font-medium text-sm">Basic Usage</h4>
               <div className="space-y-2 text-sm text-gray-600">
-                <p>• Use double curly braces: <code className="bg-gray-100 px-1 rounded">{{`{{placeholder}}`}}</code></p>
+                <p>• Use double curly braces: <code className="bg-gray-100 px-1 rounded">{`{{placeholder}}`}</code></p>
                 <p>• Placeholders are case-sensitive</p>
                 <p>• Use camelCase for placeholder names</p>
                 <p>• Avoid spaces and special characters</p>

@@ -260,7 +260,7 @@ export default function GlobalInbox() {
                             {message.preview}
                           </div>
                           <div className="flex items-center gap-1 mt-2">
-                            <Badge className={getPriorityColor(message.priority)} size="sm">
+                            <Badge className={getPriorityColor(message.priority)}>
                               {message.priority}
                             </Badge>
                             {message.labels.map((label, index) => (
