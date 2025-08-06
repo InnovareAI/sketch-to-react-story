@@ -133,7 +133,7 @@ export function ConversationalInterface() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div className="h-full bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto h-full">
         {/* Header */}
         <div className="text-center mb-8">
