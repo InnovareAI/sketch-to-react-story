@@ -51,6 +51,7 @@ import {
 export default function Contacts() {
   const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
   const [editingContact, setEditingContact] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   
   const contacts = [
     {
@@ -472,6 +473,34 @@ export default function Contacts() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search contacts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+            <option>All Status</option>
+            <option>Hot Lead</option>
+            <option>Warm Lead</option>
+            <option>Replied</option>
+            <option>Prospect</option>
+            <option>New Contact</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            More Filters
+          </Button>
+        </div>
       </div>
 
       {/* Contacts Content - Conditional Rendering */}

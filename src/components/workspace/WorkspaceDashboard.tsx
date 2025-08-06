@@ -90,6 +90,29 @@ export function WorkspaceDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="p-8 space-y-8">
+        {/* Filter Section */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">Activity Trends</h2>
+            <div className="flex items-center gap-3">
+              <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                <option>Week</option>
+                <option>Month</option>
+                <option>Quarter</option>
+                <option>Year</option>
+              </select>
+              <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                <option>All Campaigns</option>
+                <option>Active Only</option>
+                <option>Paused Only</option>
+                <option>Completed</option>
+              </select>
+              <Button variant="outline" size="sm">
+                Download CSV
+              </Button>
+            </div>
+          </div>
+        </div>
         {/* Accounts Section */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">

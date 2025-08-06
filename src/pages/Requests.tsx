@@ -150,6 +150,38 @@ export default function Requests() {
         </div>
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search requests..."
+              className="pl-10"
+            />
+          </div>
+          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+            <option>All Status</option>
+            <option>Pending</option>
+            <option>Accepted</option>
+            <option>Declined</option>
+            <option>Completed</option>
+          </select>
+          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+            <option>All Types</option>
+            <option>Connection</option>
+            <option>Meeting</option>
+            <option>Collaboration</option>
+            <option>Information</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            More Filters
+          </Button>
+        </div>
+      </div>
+
       {/* Request Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>

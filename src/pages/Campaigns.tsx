@@ -182,6 +182,29 @@ export default function Campaigns() {
         </Card>
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search campaigns..."
+              className="w-80 px-4 py-2 border border-gray-200 rounded-lg text-sm"
+            />
+          </div>
+          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+            <option>All Status</option>
+            <option>Active</option>
+            <option>Paused</option>
+            <option>Completed</option>
+            <option>Draft</option>
+          </select>
+        </div>
+        <Button variant="outline" size="sm">
+          More Filters
+        </Button>
+      </div>
+
       {/* Campaign List */}
       <div className="space-y-4">
         {campaigns.map((campaign) => (
