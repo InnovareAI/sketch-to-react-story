@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Mic, MicOff, Bot, User } from "lucide-react";
+import { Send, Mic, MicOff, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -12,11 +12,64 @@ interface Message {
   timestamp: Date;
 }
 
+interface QuickAction {
+  title: string;
+  description: string;
+  prompt: string;
+  icon: any;
+  color: string;
+}
+
+const quickActions: QuickAction[] = [
+  {
+    title: "Train Sam on my offer",
+    description: "Help Sam understand your product/service offering",
+    prompt: "I want to train you on my offer. Help me create a comprehensive description of what I'm selling, including key benefits, pricing, and unique selling points.",
+    icon: BookOpen,
+    color: "from-blue-500 to-purple-600"
+  },
+  {
+    title: "Train Sam on my target audience",
+    description: "Define your ideal customer profile",
+    prompt: "Let's define my target audience together. Help me create detailed buyer personas including demographics, pain points, goals, and communication preferences.",
+    icon: Users,
+    color: "from-green-500 to-teal-600"
+  },
+  {
+    title: "Optimize my campaigns",
+    description: "Get suggestions for improving campaign performance",
+    prompt: "Analyze my current campaigns and provide recommendations for improving open rates, response rates, and conversions. What should I test or change?",
+    icon: TrendingUp,
+    color: "from-orange-500 to-red-600"
+  },
+  {
+    title: "Create outreach sequences",
+    description: "Build effective multi-touch sequences",
+    prompt: "Help me create a multi-touch outreach sequence for my target audience. Include email and LinkedIn touchpoints with compelling messaging.",
+    icon: MessageSquare,
+    color: "from-purple-500 to-pink-600"
+  },
+  {
+    title: "Write sales copy",
+    description: "Generate compelling sales messages",
+    prompt: "Help me write compelling sales copy for my outreach. I need subject lines, email templates, and LinkedIn messages that get responses.",
+    icon: Target,
+    color: "from-cyan-500 to-blue-600"
+  },
+  {
+    title: "Analyze performance",
+    description: "Deep dive into campaign metrics",
+    prompt: "Let's analyze my campaign performance data together. Help me understand what's working, what's not, and how to improve my results.",
+    icon: Zap,
+    color: "from-yellow-500 to-orange-600"
+  }
+];
+
 export function ConversationalInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hi! I'm Sam, your AI workspace assistant. I can help you manage campaigns, analyze performance, and optimize your multi-channel outreach across email and LinkedIn. What would you like to work on today?",
+      content: "Hi! I'm Sam, your AI sales assistant. I'm here to help you optimize your outreach campaigns, understand your audience better, and create compelling sales content. What would you like to work on today?",
       sender: "sam",
       timestamp: new Date(),
     },
@@ -33,12 +86,13 @@ export function ConversationalInterface() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!input.trim()) return;
+  const handleSendMessage = (messageContent?: string) => {
+    const content = messageContent || input;
+    if (!content.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input,
+      content,
       sender: "user",
       timestamp: new Date(),
     };
@@ -50,12 +104,16 @@ export function ConversationalInterface() {
     setTimeout(() => {
       const samResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I understand you'd like help with that. Let me analyze your workspace data and provide insights...",
+        content: "I understand what you're looking for. Let me help you with that. Based on your request, here are some initial thoughts and questions to get us started...",
         sender: "sam",
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, samResponse]);
     }, 1000);
+  };
+
+  const handleQuickAction = (action: QuickAction) => {
+    handleSendMessage(action.prompt);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -75,109 +133,142 @@ export function ConversationalInterface() {
   };
 
   return (
-    <div className="conversational-theme flex flex-col h-full bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Chat Header */}
-      <div className="p-6 border-b border-border/50 bg-background/95 backdrop-blur">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-premium-purple to-premium-blue">
-            <Bot className="h-8 w-8 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold gradient-text">Sam AI Assistant</h2>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-premium-green rounded-full animate-pulse" />
-              <span className="text-sm text-muted-foreground">Online & ready to help</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="max-w-6xl mx-auto h-full">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600">
+              <Bot className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">Meet Sam</h1>
+              <p className="text-gray-600 text-lg">Your AI Sales Assistant</p>
             </div>
           </div>
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-sm text-gray-600">Online and ready to help</span>
+          </div>
         </div>
-      </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex gap-4 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-          >
-            {message.sender === "sam" && (
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-premium-purple to-premium-blue flex items-center justify-center">
-                  <Bot className="h-5 w-5 text-white" />
-                </div>
-              </div>
-            )}
-            
-            <div className={`max-w-[70%] ${message.sender === "user" ? "order-2" : ""}`}>
-              <Card className={`p-4 ${
-                message.sender === "user" 
-                  ? "bg-gradient-to-br from-premium-purple to-premium-blue text-white border-0" 
-                  : "glass-card-dark border-0"
-              }`}>
-                <p className="text-sm leading-relaxed">{message.content}</p>
-              </Card>
-              <div className="flex items-center gap-2 mt-1 px-2">
-                <span className="text-xs text-muted-foreground">
-                  {formatTime(message.timestamp)}
-                </span>
+        {/* Quick Actions */}
+        {messages.length <= 1 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 text-center">Quick Start</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {quickActions.map((action, index) => (
+                <Card
+                  key={index}
+                  className="p-4 cursor-pointer hover:shadow-lg transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90"
+                  onClick={() => handleQuickAction(action)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg bg-gradient-to-r ${action.color}`}>
+                      <action.icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900 mb-1">{action.title}</h3>
+                      <p className="text-sm text-gray-600">{action.description}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Chat Container */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+          {/* Messages Area */}
+          <div className="h-96 overflow-y-auto p-6 space-y-6">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex gap-4 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
+              >
                 {message.sender === "sam" && (
-                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                    AI
-                  </Badge>
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <Bot className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                )}
+                
+                <div className={`max-w-[80%] ${message.sender === "user" ? "order-2" : ""}`}>
+                  <Card className={`p-4 ${
+                    message.sender === "user" 
+                      ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0" 
+                      : "bg-gray-50 border-gray-200"
+                  }`}>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                  </Card>
+                  <div className="flex items-center gap-2 mt-1 px-2">
+                    <span className="text-xs text-gray-500">
+                      {formatTime(message.timestamp)}
+                    </span>
+                    {message.sender === "sam" && (
+                      <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                        Sam
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {message.sender === "user" && (
+                  <div className="flex-shrink-0 order-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
 
-            {message.sender === "user" && (
-              <div className="flex-shrink-0 order-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-premium-cyan to-premium-green flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
-                </div>
+          {/* Input Area */}
+          <div className="border-t border-gray-200 p-6 bg-gray-50">
+            <div className="flex gap-4 items-end">
+              <div className="flex-1 relative">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask Sam anything about your sales process..."
+                  className="py-4 text-base bg-white border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
-            )}
+              
+              <Button
+                onClick={toggleListening}
+                variant="outline"
+                size="icon"
+                className={`h-12 w-12 ${
+                  isListening 
+                    ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100" 
+                    : "hover:bg-gray-100"
+                }`}
+              >
+                {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </Button>
+              
+              <Button
+                onClick={() => handleSendMessage()}
+                disabled={!input.trim()}
+                className="h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 text-white font-medium"
+              >
+                <Send className="h-5 w-5 mr-2" />
+                Send
+              </Button>
+            </div>
+            
+            <div className="flex items-center justify-center mt-4">
+              <p className="text-xs text-gray-500">
+                Sam specializes in sales optimization, audience targeting, and campaign performance
+              </p>
+            </div>
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div className="p-6 border-t border-border/50 bg-background/95 backdrop-blur">
-        <div className="flex gap-4 items-end">
-          <div className="flex-1 relative">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask Sam anything about your workspace..."
-              className="pr-12 py-3 bg-muted/50 border-border/50 focus:bg-background"
-            />
-          </div>
-          
-          <Button
-            onClick={toggleListening}
-            variant="outline"
-            size="icon"
-            className={`h-12 w-12 ${
-              isListening 
-                ? "bg-premium-orange/10 border-premium-orange/50 text-premium-orange" 
-                : "hover:bg-muted/50"
-            }`}
-          >
-            {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-          </Button>
-          
-          <Button
-            onClick={handleSendMessage}
-            disabled={!input.trim()}
-            className="h-12 px-6 bg-gradient-to-r from-premium-purple to-premium-blue hover:from-premium-purple/90 hover:to-premium-blue/90 border-0"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
-        </div>
-        
-        <div className="flex items-center justify-center mt-4">
-          <p className="text-xs text-muted-foreground">
-            Sam can help with campaign management, performance analysis, and multi-channel outreach optimization
-          </p>
         </div>
       </div>
     </div>
