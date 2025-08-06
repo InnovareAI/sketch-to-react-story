@@ -191,7 +191,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                 <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2">
                   <span className="flex items-center gap-2">
                     <Home className="h-4 w-4" />
-                    <span>Individual</span>
+                    <span>My Account</span>
                   </span>
                   {individualOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </SidebarGroupLabel>
