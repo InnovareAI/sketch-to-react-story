@@ -14,7 +14,7 @@ export default function Agent() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full dark bg-gray-900 text-white">
         <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <WorkspaceHeader 
