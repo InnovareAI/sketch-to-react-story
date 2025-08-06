@@ -32,6 +32,7 @@ const App = () => (
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/search" element={<Search />} />
           <Route path="/inbox" element={<GlobalInbox />} />
+          <Route path="/message-queue" element={<GlobalInbox />} />
           <Route path="/global-inbox" element={<GlobalInbox />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/requests" element={<Requests />} />
