@@ -114,10 +114,14 @@ export default function Search() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Search</h1>
-          <p className="text-gray-600 mt-1">Find and connect with potential prospects</p>
+          <h1 className="text-3xl font-bold text-gray-900">Advanced Search</h1>
+          <p className="text-gray-600 mt-1">Boolean search with filters across database, campaigns, and uploaded lists</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline">
+            <Filter className="h-4 w-4 mr-2" />
+            Upload List
+          </Button>
           <Button variant="outline">
             <Save className="h-4 w-4 mr-2" />
             Save Search
@@ -129,57 +133,137 @@ export default function Search() {
         </div>
       </div>
 
-      {/* Search Section */}
+      {/* Boolean Search Interface */}
       <Card>
         <CardHeader>
-          <CardTitle>Advanced Search</CardTitle>
-          <CardDescription>Find the right prospects with advanced filters</CardDescription>
+          <CardTitle>Boolean Search Configuration</CardTitle>
+          <CardDescription>Advanced search with boolean operators and data source selection</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search for people, companies, or titles..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="space-y-6">
+            {/* Data Source Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Search In</label>
+                <Select defaultValue="all">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    <SelectItem value="database">Existing Database</SelectItem>
+                    <SelectItem value="campaigns">Active Campaigns</SelectItem>
+                    <SelectItem value="uploaded">Uploaded Lists</SelectItem>
+                    <SelectItem value="crm">CRM Integration</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Boolean Operator</label>
+                <Select defaultValue="AND">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AND">AND (All conditions)</SelectItem>
+                    <SelectItem value="OR">OR (Any condition)</SelectItem>
+                    <SelectItem value="NOT">NOT (Exclude)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Search Type</label>
+                <Select defaultValue="contacts">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contacts">Contacts</SelectItem>
+                    <SelectItem value="companies">Companies</SelectItem>
+                    <SelectItem value="both">Both</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Match Type</label>
+                <Select defaultValue="contains">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contains">Contains</SelectItem>
+                    <SelectItem value="exact">Exact Match</SelectItem>
+                    <SelectItem value="starts">Starts With</SelectItem>
+                    <SelectItem value="ends">Ends With</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="san-francisco">San Francisco</SelectItem>
-                <SelectItem value="new-york">New York</SelectItem>
-                <SelectItem value="austin">Austin</SelectItem>
-                <SelectItem value="boston">Boston</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Industry" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="technology">Technology</SelectItem>
-                <SelectItem value="finance">Finance</SelectItem>
-                <SelectItem value="healthcare">Healthcare</SelectItem>
-                <SelectItem value="consulting">Consulting</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 mt-4">
-            <Button>
-              <SearchIcon className="h-4 w-4 mr-2" />
-              Search
-            </Button>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              More Filters
-            </Button>
+
+            {/* Boolean Query Builder */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Boolean Search Query</label>
+                <textarea
+                  placeholder="Example: (Marketing OR Sales) AND (Manager OR Director) NOT Intern"
+                  className="w-full px-3 py-3 border border-gray-200 rounded-lg text-sm min-h-[100px] font-mono"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Use AND, OR, NOT operators. Use parentheses for grouping, quotes for exact phrases, and * for wildcards
+                </p>
+              </div>
+              
+              {/* Quick Filter Builder */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Job Title</label>
+                  <Input placeholder="e.g., Marketing Manager" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Company</label>
+                  <Input placeholder="e.g., Microsoft" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Location</label>
+                  <Input placeholder="e.g., San Francisco" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Industry</label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select industry" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="technology">Technology</SelectItem>
+                      <SelectItem value="finance">Finance</SelectItem>
+                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                      <SelectItem value="consulting">Consulting</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button variant="outline">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Advanced Filters
+                </Button>
+                <Button variant="outline">
+                  Load Saved Search
+                </Button>
+              </div>
+              <Button className="bg-primary hover:bg-primary/90">
+                <SearchIcon className="h-4 w-4 mr-2" />
+                Execute Search
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
