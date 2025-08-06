@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus } from "lucide-react";
+import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { SamStatusIndicator } from "./SamStatusIndicator";
 import { MessageFormatter } from "./MessageFormatter";
 import { VoiceInterface } from "./VoiceInterface";
 import { ChatHistory } from "./ChatHistory";
+import { ContextMemory } from "./ContextMemory";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { useVoice } from "@/hooks/useVoice";
 
@@ -225,78 +226,104 @@ export function ConversationalInterface() {
         {/* Quick Actions */}
         {messages.length <= 1 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-white mb-4 text-center">Quick Start</h2>
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold text-white mb-2 flex items-center justify-center gap-2">
+                <Sparkles className="h-5 w-5 text-blue-400" />
+                Quick Start
+              </h2>
+              <p className="text-gray-400 text-sm">
+                Choose an action below or ask Sam anything about your sales process
+              </p>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {quickActions.map((action, index) => (
                 <Card
                   key={index}
-                  className="p-4 cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-700 bg-gray-800/70 backdrop-blur-sm hover:bg-gray-700/90 hover:scale-[1.02] animate-fade-in"
+                  className="group p-4 cursor-pointer transition-all duration-500 border border-gray-700 bg-gray-800/70 backdrop-blur-sm hover:bg-gray-700/90 hover:scale-[1.02] hover:shadow-xl hover:shadow-blue-500/10 animate-fade-in hover:border-gray-600"
                   style={{ animationDelay: `${index * 100}ms` }}
                   onClick={() => handleQuickAction(action)}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg bg-gradient-to-r ${action.color} animate-glow`}>
+                    <div className={`p-3 rounded-xl bg-gradient-to-r ${action.color} transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg animate-glow`}>
                       <action.icon className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium text-white mb-1">{action.title}</h3>
-                      <p className="text-sm text-gray-300">{action.description}</p>
+                      <h3 className="font-semibold text-white mb-2 group-hover:text-blue-300 transition-colors">
+                        {action.title}
+                      </h3>
+                      <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors leading-relaxed">
+                        {action.description}
+                      </p>
                     </div>
                   </div>
+                  
+                  {/* Hover effect overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </Card>
               ))}
             </div>
           </div>
         )}
 
-        {/* Chat Container */}
-        <div className="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden">
-          {/* Messages Area */}
-          <div className="h-96 overflow-y-auto p-6 space-y-6">
-            {messages.map((message, index) => (
-              <MessageFormatter
-                key={message.id}
-                message={message}
-                onSpeak={speakText}
-                className="animate-fade-in"
-              />
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Sam Status Indicator */}
-          <SamStatusIndicator isActive={samIsActive} currentStatus={samStatus} />
-          
-          {/* Input Area */}
-          <div className="border-t border-gray-700 p-6 bg-gray-800">
-            <div className="flex gap-4 items-end">
-              <div className="flex-1 relative">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask Sam anything about your sales process..."
-                  className="py-4 text-base bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-4 gap-6">
+          {/* Chat Container */}
+          <div className="lg:col-span-3">
+            <div className="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden">
+              {/* Messages Area */}
+              <div className="h-96 overflow-y-auto p-6 space-y-6">
+                {messages.map((message, index) => (
+                  <MessageFormatter
+                    key={message.id}
+                    message={message}
+                    onSpeak={speakText}
+                    className="animate-fade-in"
+                  />
+                ))}
+                <div ref={messagesEndRef} />
               </div>
+
+              {/* Sam Status Indicator */}
+              <SamStatusIndicator isActive={samIsActive} currentStatus={samStatus} />
               
-              <VoiceInterface onVoiceMessage={handleVoiceMessage} />
-              
-              <Button
-                onClick={() => handleSendMessage()}
-                disabled={!input.trim()}
-                className="h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              >
-                <Send className="h-5 w-5 mr-2" />
-                Send
-              </Button>
+              {/* Input Area */}
+              <div className="border-t border-gray-700 p-6 bg-gray-800">
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1 relative">
+                    <Input
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Ask Sam anything about your sales process..."
+                      className="py-4 text-base bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+                  
+                  <VoiceInterface onVoiceMessage={handleVoiceMessage} />
+                  
+                  <Button
+                    onClick={() => handleSendMessage()}
+                    disabled={!input.trim()}
+                    className="h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  >
+                    <Send className="h-5 w-5 mr-2" />
+                    Send
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-center mt-4">
+                  <p className="text-xs text-gray-400">
+                    Sam specializes in sales optimization, audience targeting, and campaign performance
+                  </p>
+                </div>
+              </div>
             </div>
-            
-            <div className="flex items-center justify-center mt-4">
-              <p className="text-xs text-gray-400">
-                Sam specializes in sales optimization, audience targeting, and campaign performance
-              </p>
-            </div>
+          </div>
+          
+          {/* Context Memory Sidebar */}
+          <div className="lg:col-span-1">
+            <ContextMemory className="h-full" />
           </div>
         </div>
       </div>

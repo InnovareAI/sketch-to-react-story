@@ -1,4 +1,6 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bot, User, Copy, Volume2 } from 'lucide-react';
@@ -20,17 +22,6 @@ interface MessageFormatterProps {
 export function MessageFormatter({ message, onSpeak, className = "" }: MessageFormatterProps) {
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatContent = (content: string) => {
-    // Simple markdown-like formatting
-    const formatted = content
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
-      .replace(/`(.*?)`/g, '<code class="bg-gray-600 px-1 py-0.5 rounded text-sm">$1</code>') // Inline code
-      .replace(/\n/g, '<br>'); // Line breaks
-
-    return { __html: formatted };
   };
 
   const copyToClipboard = () => {
@@ -61,10 +52,17 @@ export function MessageFormatter({ message, onSpeak, className = "" }: MessageFo
             ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0" 
             : "bg-gray-700 border-gray-600 text-gray-100"
         }`}>
-          <div 
-            className="text-sm leading-relaxed"
-            dangerouslySetInnerHTML={formatContent(message.content)}
-          />
+          {message.sender === "sam" ? (
+            <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none prose-headings:text-gray-100 prose-p:text-gray-100 prose-strong:text-white prose-em:text-gray-200 prose-code:bg-gray-600 prose-code:text-gray-100 prose-pre:bg-gray-800 prose-blockquote:border-gray-500 prose-blockquote:text-gray-200">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <div className="text-sm leading-relaxed">
+              {message.content}
+            </div>
+          )}
           
           {/* Message Actions */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -top-2 right-2 flex gap-1">
