@@ -10,6 +10,8 @@ import { ChatHistory } from "./ChatHistory";
 import { ContextMemory } from "./ContextMemory";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { useVoice } from "@/hooks/useVoice";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { ChatSkeleton } from "@/components/ui/skeleton";
 
 interface Message {
   id: string;
@@ -83,6 +85,9 @@ export function ConversationalInterface() {
   
   const { speakText } = useVoice();
   
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -94,6 +99,7 @@ export function ConversationalInterface() {
   const [input, setInput] = useState("");
   const [samIsActive, setSamIsActive] = useState(false);
   const [samStatus, setSamStatus] = useState("Ready to help you");
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -127,8 +133,9 @@ export function ConversationalInterface() {
     }
     setInput("");
     
-    // Activate Sam and show status
+    // Activate Sam and show status with loading
     setSamIsActive(true);
+    setIsLoading(true);
     setSamStatus("Sam is reading your message...");
     
     // Simulate Sam's processing with different statuses
@@ -150,6 +157,7 @@ export function ConversationalInterface() {
         addMessageToSession(sessionId, samResponse);
       }
       setSamIsActive(false);
+      setIsLoading(false);
       setSamStatus("Ready to help you");
     }, 7000);
   };
@@ -273,14 +281,18 @@ export function ConversationalInterface() {
             <div className="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden">
               {/* Messages Area */}
               <div className="h-96 overflow-y-auto p-6 space-y-6">
-                {messages.map((message, index) => (
-                  <MessageFormatter
-                    key={message.id}
-                    message={message}
-                    onSpeak={speakText}
-                    className="animate-fade-in"
-                  />
-                ))}
+                {isLoading && messages.length <= 1 ? (
+                  <ChatSkeleton />
+                ) : (
+                  messages.map((message, index) => (
+                    <MessageFormatter
+                      key={message.id}
+                      message={message}
+                      onSpeak={speakText}
+                      className="animate-fade-in"
+                    />
+                  ))
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
