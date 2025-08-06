@@ -1,4 +1,4 @@
-# Welcome to your Lovable project
+# Sam AI - Intelligent Assistant Platform
 
 ## Project info
 

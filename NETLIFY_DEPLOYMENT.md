@@ -13,7 +13,7 @@ Due to CLI issues, deploy manually via Netlify web interface:
 2. **Import Repository**
    - Click "Add new site" → "Import an existing project"
    - Choose "Deploy with GitHub"
-   - Select: `InnovareAI/sketch-to-react-story`
+   - Select your Sam AI repository
 
 3. **Build Configuration (Auto-detected)**
    ```
