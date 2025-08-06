@@ -96,7 +96,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
 
   if (state === "collapsed") {
     return (
-      <Sidebar className="w-14" collapsible="icon">
+      <Sidebar className="w-14 sticky top-0 h-screen" collapsible="icon">
         <SidebarTrigger className="m-2 self-end" />
         <SidebarContent>
           <SidebarGroup>
@@ -120,8 +120,8 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
   }
 
   return (
-    <Sidebar className={`w-64 border-r ${isConversational ? 'bg-gray-900 border-gray-700' : 'border-border'}`} collapsible="icon">
-      <SidebarContent className={`p-4 ${isConversational ? 'bg-gray-900' : ''}`}>
+    <Sidebar className={`w-64 border-r sticky top-0 h-screen ${isConversational ? 'bg-gray-900 border-gray-700' : 'border-border'}`} collapsible="icon">
+      <SidebarContent className={`p-4 h-full overflow-y-auto ${isConversational ? 'bg-gray-900' : ''}`}>
         {/* Brand Header */}
         <div className="flex items-center gap-3 mb-6 px-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
