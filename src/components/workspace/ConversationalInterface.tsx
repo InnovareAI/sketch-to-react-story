@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SamStatusIndicator } from "./SamStatusIndicator";
 
 interface Message {
   id: string;
@@ -76,6 +77,8 @@ export function ConversationalInterface() {
   ]);
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [samIsActive, setSamIsActive] = useState(false);
+  const [samStatus, setSamStatus] = useState("Ready to help you");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -99,6 +102,16 @@ export function ConversationalInterface() {
 
     setMessages(prev => [...prev, userMessage]);
     setInput("");
+    
+    // Activate Sam and show status
+    setSamIsActive(true);
+    setSamStatus("Sam is reading your message...");
+    
+    // Simulate Sam's processing with different statuses
+    setTimeout(() => setSamStatus("Sam is analyzing your request..."), 1000);
+    setTimeout(() => setSamStatus("Sam is researching the best response..."), 2500);
+    setTimeout(() => setSamStatus("Sam is talking to the Knowledge Agent..."), 4000);
+    setTimeout(() => setSamStatus("Sam is preparing your response..."), 5500);
 
     // Simulate Sam's response
     setTimeout(() => {
@@ -109,7 +122,9 @@ export function ConversationalInterface() {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, samResponse]);
-    }, 1000);
+      setSamIsActive(false);
+      setSamStatus("Ready to help you");
+    }, 7000);
   };
 
   const handleQuickAction = (action: QuickAction) => {
@@ -133,7 +148,10 @@ export function ConversationalInterface() {
   };
 
   return (
-    <div className="h-full bg-gray-900 p-6">
+    <div className="h-full bg-gray-900 p-6 relative">
+      {/* Sam Status Indicator */}
+      <SamStatusIndicator isActive={samIsActive} currentStatus={samStatus} />
+      
       <div className="max-w-6xl mx-auto h-full">
         {/* Header */}
         <div className="text-center mb-8">
