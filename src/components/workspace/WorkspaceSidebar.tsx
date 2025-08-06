@@ -54,7 +54,7 @@ const networkItems = [
 
 const adminItems = [
   { title: "Company Profile", url: "/company-profile", icon: Building2 },
-  { title: "Roles & Permissions", url: "/roles", icon: Shield },
+  { title: "Users and Permissions", url: "/roles", icon: Shield },
   { title: "Companies", url: "/companies", icon: Building2 },
   { title: "Workspace settings", url: "/workspace-settings", icon: Settings },
 ];
