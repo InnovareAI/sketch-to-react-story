@@ -29,42 +29,19 @@ export function SamStatusIndicator({ isActive, currentStatus }: SamStatusIndicat
   if (!isActive) return null;
 
   return (
-    <div className="fixed top-20 right-6 z-50">
-      <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-lg p-4 min-w-64 max-w-80">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="relative">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <Bot className="h-4 w-4 text-white" />
+    <div className="w-full bg-gray-700/50 border-t border-gray-600 px-6 py-3">
+      <div className="flex items-center gap-3">
+        <div className="flex-shrink-0">
+          {getStatusIcon(currentStatus)}
+        </div>
+        <div className="flex-1">
+          <p className="text-gray-200 text-sm">{currentStatus}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative w-12 h-2 bg-gray-600 rounded-full overflow-hidden">
+            <div className="absolute inset-0">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-[wave_1.5s_ease-in-out_infinite]"></div>
             </div>
-            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-gray-800 animate-pulse"></div>
-          </div>
-          <div>
-            <h3 className="text-white font-medium text-sm">Sam AI Assistant</h3>
-            <p className="text-gray-400 text-xs">Active</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-md">
-          <div className="flex-shrink-0">
-            {getStatusIcon(currentStatus)}
-          </div>
-          <div className="flex-1">
-            <p className="text-gray-200 text-sm">{currentStatus}</p>
-          </div>
-          <div className="flex space-x-1">
-            <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse"></div>
-            <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse delay-100"></div>
-            <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse delay-200"></div>
-          </div>
-        </div>
-        
-        <div className="mt-3 bg-gray-700 rounded-md p-2">
-          <div className="flex justify-between text-xs text-gray-400 mb-1">
-            <span>Processing</span>
-            <span>78%</span>
-          </div>
-          <div className="w-full bg-gray-600 rounded-full h-1.5">
-            <div className="bg-blue-500 h-1.5 rounded-full w-3/4 transition-all duration-300"></div>
           </div>
         </div>
       </div>

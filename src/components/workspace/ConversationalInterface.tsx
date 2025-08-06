@@ -149,8 +149,6 @@ export function ConversationalInterface() {
 
   return (
     <div className="h-full bg-gray-900 p-6 relative">
-      {/* Sam Status Indicator */}
-      <SamStatusIndicator isActive={samIsActive} currentStatus={samStatus} />
       
       <div className="max-w-6xl mx-auto h-full">
         {/* Header */}
@@ -245,6 +243,9 @@ export function ConversationalInterface() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Sam Status Indicator */}
+          <SamStatusIndicator isActive={samIsActive} currentStatus={samStatus} />
+          
           {/* Input Area */}
           <div className="border-t border-gray-700 p-6 bg-gray-800">
             <div className="flex gap-4 items-end">
