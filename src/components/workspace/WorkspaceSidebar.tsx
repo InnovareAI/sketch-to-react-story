@@ -37,7 +37,6 @@ const mainNavItems = [
   { title: "Workspace Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Team Accounts", url: "/accounts", icon: Building2 },
-  { title: "Search", url: "/search", icon: Search },
   { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
 ];
 
@@ -154,6 +153,22 @@ export function WorkspaceSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Search Section */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/search" className={getNavCls("/search")}>
+                    <Search className="h-4 w-4" />
+                    <span>Search</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
