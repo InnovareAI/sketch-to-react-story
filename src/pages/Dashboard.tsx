@@ -20,7 +20,8 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Settings
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -76,8 +77,8 @@ export default function Dashboard() {
                     Refresh
                   </Button>
                   <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-xl text-white font-semibold px-6 py-2 transition-all duration-300 hover:scale-105">
-                    <Target className="h-4 w-4 mr-2" />
-                    New Campaign
+                    <Settings className="h-4 w-4 mr-2" />
+                    Customize Reports
                   </Button>
                   </div>
                 </div>
