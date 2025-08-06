@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Mic, MicOff, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp } from "lucide-react";
+import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { SamStatusIndicator } from "./SamStatusIndicator";
+import { MessageFormatter } from "./MessageFormatter";
+import { VoiceInterface } from "./VoiceInterface";
+import { ChatHistory } from "./ChatHistory";
+import { useChatHistory } from "@/hooks/useChatHistory";
+import { useVoice } from "@/hooks/useVoice";
 
 interface Message {
   id: string;
@@ -67,6 +71,17 @@ const quickActions: QuickAction[] = [
 ];
 
 export function ConversationalInterface() {
+  const { 
+    sessions, 
+    currentSessionId, 
+    createNewSession, 
+    addMessageToSession, 
+    loadSession,
+    getCurrentSession 
+  } = useChatHistory();
+  
+  const { speakText } = useVoice();
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -76,7 +91,6 @@ export function ConversationalInterface() {
     },
   ]);
   const [input, setInput] = useState("");
-  const [isListening, setIsListening] = useState(false);
   const [samIsActive, setSamIsActive] = useState(false);
   const [samStatus, setSamStatus] = useState("Ready to help you");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -93,6 +107,12 @@ export function ConversationalInterface() {
     const content = messageContent || input;
     if (!content.trim()) return;
 
+    // Create or use existing session
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      sessionId = createNewSession();
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -101,6 +121,9 @@ export function ConversationalInterface() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    if (sessionId) {
+      addMessageToSession(sessionId, userMessage);
+    }
     setInput("");
     
     // Activate Sam and show status
@@ -122,6 +145,9 @@ export function ConversationalInterface() {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, samResponse]);
+      if (sessionId) {
+        addMessageToSession(sessionId, samResponse);
+      }
       setSamIsActive(false);
       setSamStatus("Ready to help you");
     }, 7000);
@@ -138,33 +164,61 @@ export function ConversationalInterface() {
     }
   };
 
-  const toggleListening = () => {
-    setIsListening(!isListening);
-    // Voice functionality will be implemented with ElevenLabs
+  const handleVoiceMessage = (text: string) => {
+    handleSendMessage(text);
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const handleLoadSession = (sessionMessages: Message[]) => {
+    setMessages(sessionMessages);
+  };
+
+  const startNewChat = () => {
+    const sessionId = createNewSession();
+    setMessages([
+      {
+        id: "1",
+        content: "Hi! I'm Sam, your AI sales assistant. I'm here to help you optimize your outreach campaigns, understand your audience better, and create compelling sales content. What would you like to work on today?",
+        sender: "sam",
+        timestamp: new Date(),
+      }
+    ]);
   };
 
   return (
     <div className="h-full bg-gray-900 p-6 relative">
-      
       <div className="max-w-6xl mx-auto h-full">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600">
-              <Bot className="h-8 w-8 text-white" />
+        {/* Header with Chat History */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="text-center flex-1">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 animate-glow">
+                <Bot className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-white">Meet Sam</h1>
+                <p className="text-gray-300 text-lg">Your AI Sales Assistant</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold text-white">Meet Sam</h1>
-              <p className="text-gray-300 text-lg">Your AI Sales Assistant</p>
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm text-gray-400">Online and ready to help</span>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm text-gray-400">Online and ready to help</span>
+          
+          <div className="flex items-center gap-3">
+            <ChatHistory 
+              onLoadSession={handleLoadSession}
+              currentSessionId={currentSessionId}
+            />
+            <Button
+              onClick={startNewChat}
+              variant="outline"
+              size="sm"
+              className="text-gray-300 hover:text-white hover:bg-gray-700 border-gray-600"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Chat
+            </Button>
           </div>
         </div>
 
@@ -176,11 +230,12 @@ export function ConversationalInterface() {
               {quickActions.map((action, index) => (
                 <Card
                   key={index}
-                  className="p-4 cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-700 bg-gray-800/70 backdrop-blur-sm hover:bg-gray-700/90"
+                  className="p-4 cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-700 bg-gray-800/70 backdrop-blur-sm hover:bg-gray-700/90 hover:scale-[1.02] animate-fade-in"
+                  style={{ animationDelay: `${index * 100}ms` }}
                   onClick={() => handleQuickAction(action)}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg bg-gradient-to-r ${action.color}`}>
+                    <div className={`p-2 rounded-lg bg-gradient-to-r ${action.color} animate-glow`}>
                       <action.icon className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
@@ -198,47 +253,13 @@ export function ConversationalInterface() {
         <div className="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden">
           {/* Messages Area */}
           <div className="h-96 overflow-y-auto p-6 space-y-6">
-            {messages.map((message) => (
-              <div
+            {messages.map((message, index) => (
+              <MessageFormatter
                 key={message.id}
-                className={`flex gap-4 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {message.sender === "sam" && (
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      <Bot className="h-5 w-5 text-white" />
-                    </div>
-                  </div>
-                )}
-                
-                <div className={`max-w-[80%] ${message.sender === "user" ? "order-2" : ""}`}>
-                  <Card className={`p-4 ${
-                    message.sender === "user" 
-                      ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0" 
-                      : "bg-gray-700 border-gray-600 text-gray-100"
-                  }`}>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                  </Card>
-                  <div className="flex items-center gap-2 mt-1 px-2">
-                    <span className="text-xs text-gray-400">
-                      {formatTime(message.timestamp)}
-                    </span>
-                    {message.sender === "sam" && (
-                      <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-gray-600 text-gray-200">
-                        Sam
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {message.sender === "user" && (
-                  <div className="flex-shrink-0 order-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
-                      <User className="h-5 w-5 text-white" />
-                    </div>
-                  </div>
-                )}
-              </div>
+                message={message}
+                onSpeak={speakText}
+                className="animate-fade-in"
+              />
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -255,27 +276,16 @@ export function ConversationalInterface() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask Sam anything about your sales process..."
-                  className="py-4 text-base bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="py-4 text-base bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
               </div>
               
-              <Button
-                onClick={toggleListening}
-                variant="outline"
-                size="icon"
-                className={`h-12 w-12 ${
-                  isListening 
-                    ? "bg-red-900/50 border-red-600 text-red-400 hover:bg-red-900/70" 
-                    : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              </Button>
+              <VoiceInterface onVoiceMessage={handleVoiceMessage} />
               
               <Button
                 onClick={() => handleSendMessage()}
                 disabled={!input.trim()}
-                className="h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 text-white font-medium"
+                className="h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 <Send className="h-5 w-5 mr-2" />
                 Send
