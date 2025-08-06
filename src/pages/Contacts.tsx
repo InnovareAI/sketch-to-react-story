@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
+import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,6 +53,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Contacts() {
+  const [isConversational, setIsConversational] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
   const [editingContact, setEditingContact] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -220,8 +225,34 @@ export default function Contacts() {
     console.log("Saving contact:", editingContact);
     setEditingContact(null);
   };
+  
+  if (isConversational) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <WorkspaceSidebar />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <WorkspaceHeader 
+              isConversational={isConversational}
+              onToggleMode={setIsConversational}
+            />
+            <div className="flex-1 overflow-auto">
+              <ConversationalInterface />
+            </div>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
 
   return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gray-50">
+        <WorkspaceSidebar />
+        <div className="flex-1 flex flex-col">
+          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
+          <main className="flex-1 p-8">
+            <div className="max-w-7xl mx-auto">
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -798,6 +829,11 @@ export default function Contacts() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
