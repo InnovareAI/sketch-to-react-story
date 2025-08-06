@@ -129,7 +129,11 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">I</span>
           </div>
-          <span className={`font-semibold ${isConversational ? 'text-white' : 'text-foreground'}`}>Innovare</span>
+          <img 
+            src="/lovable-uploads/f38e3099-bf46-483c-9a94-d1b4f8b34cb6.png" 
+            alt="Innovare.AI" 
+            className={`h-6 ${isConversational ? 'brightness-0 invert' : ''}`}
+          />
           <SidebarTrigger className="ml-auto" />
         </div>
 
