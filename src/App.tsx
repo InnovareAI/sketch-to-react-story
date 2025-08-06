@@ -15,6 +15,8 @@ import GlobalInbox from "./pages/GlobalInbox";
 import Templates from "./pages/Templates";
 import Requests from "./pages/Requests";
 import Placeholders from "./pages/Placeholders";
+import Members from "./pages/Members";
+import Roles from "./pages/Roles";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,8 @@ const App = () => (
           <Route path="/templates" element={<Templates />} />
           <Route path="/requests" element={<Requests />} />
           <Route path="/placeholders" element={<Placeholders />} />
+          <Route path="/members" element={<Members />} />
+          <Route path="/roles" element={<Roles />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
