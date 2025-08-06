@@ -18,6 +18,12 @@ import {
   LayoutDashboard,
   ChevronDown,
   ChevronRight,
+  GraduationCap,
+  Star,
+  Gift,
+  MousePointer,
+  Video,
+  Folder,
 } from "lucide-react";
 import {
   Sidebar,
@@ -62,11 +68,16 @@ const adminItems = [
 
 // Agent Mode Navigation
 const agentNavItems = [
-  { title: "Chat with Sam", url: "/agent", icon: MessageSquare },
-  { title: "Conversation History", url: "/conversations", icon: FileText },
-  { title: "Quick Actions", url: "/quick-actions", icon: Target },
-  { title: "Knowledge Base", url: "/knowledge", icon: Search },
-  { title: "Back to Work Mode", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Meet Sam", url: "/agent", icon: Bot },
+  { title: "Agentic Team", url: "/agent/team", icon: Users },
+  { title: "Train Sam", url: "/agent/train", icon: GraduationCap },
+  { title: "Your ICP", url: "/agent/icp", icon: Target },
+  { title: "Your Value Prop", url: "/agent/value-prop", icon: Star },
+  { title: "Your Offer", url: "/agent/offer", icon: Gift },
+  { title: "Messaging Strategy", url: "/agent/messaging", icon: MessageSquare },
+  { title: "CTA", url: "/agent/cta", icon: MousePointer },
+  { title: "Meeting Link", url: "/agent/meeting", icon: Video },
+  { title: "Link to Documents", url: "/agent/documents", icon: Folder },
 ];
 
 export function WorkspaceSidebar({ isConversational = false }: { isConversational?: boolean }) {
