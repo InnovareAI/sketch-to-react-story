@@ -37,7 +37,7 @@ import { Button } from "@/components/ui/button";
 const mainNavItems = [
   { title: "Workspace Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Agent", url: "/agent", icon: Bot },
+  { title: "Meet Sam", url: "/agent", icon: Bot },
   { title: "Team Accounts", url: "/accounts", icon: Building2 },
   { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
 ];
