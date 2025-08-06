@@ -133,7 +133,7 @@ export function ConversationalInterface() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto h-full">
         {/* Header */}
         <div className="text-center mb-8">
@@ -142,25 +142,25 @@ export function ConversationalInterface() {
               <Bot className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Meet Sam</h1>
-              <p className="text-gray-600 text-lg">Your AI Sales Assistant</p>
+              <h1 className="text-4xl font-bold text-white">Meet Sam</h1>
+              <p className="text-gray-300 text-lg">Your AI Sales Assistant</p>
             </div>
           </div>
           <div className="flex items-center justify-center gap-2 mb-6">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm text-gray-600">Online and ready to help</span>
+            <span className="text-sm text-gray-400">Online and ready to help</span>
           </div>
         </div>
 
         {/* Quick Actions */}
         {messages.length <= 1 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 text-center">Quick Start</h2>
+            <h2 className="text-xl font-semibold text-white mb-4 text-center">Quick Start</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {quickActions.map((action, index) => (
                 <Card
                   key={index}
-                  className="p-4 cursor-pointer hover:shadow-lg transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90"
+                  className="p-4 cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-700 bg-gray-800/70 backdrop-blur-sm hover:bg-gray-700/90"
                   onClick={() => handleQuickAction(action)}
                 >
                   <div className="flex items-start gap-3">
@@ -168,8 +168,8 @@ export function ConversationalInterface() {
                       <action.icon className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 mb-1">{action.title}</h3>
-                      <p className="text-sm text-gray-600">{action.description}</p>
+                      <h3 className="font-medium text-white mb-1">{action.title}</h3>
+                      <p className="text-sm text-gray-300">{action.description}</p>
                     </div>
                   </div>
                 </Card>
@@ -179,7 +179,7 @@ export function ConversationalInterface() {
         )}
 
         {/* Chat Container */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+        <div className="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden">
           {/* Messages Area */}
           <div className="h-96 overflow-y-auto p-6 space-y-6">
             {messages.map((message) => (
@@ -199,16 +199,16 @@ export function ConversationalInterface() {
                   <Card className={`p-4 ${
                     message.sender === "user" 
                       ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0" 
-                      : "bg-gray-50 border-gray-200"
+                      : "bg-gray-700 border-gray-600 text-gray-100"
                   }`}>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                   </Card>
                   <div className="flex items-center gap-2 mt-1 px-2">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-400">
                       {formatTime(message.timestamp)}
                     </span>
                     {message.sender === "sam" && (
-                      <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                      <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-gray-600 text-gray-200">
                         Sam
                       </Badge>
                     )}
@@ -228,7 +228,7 @@ export function ConversationalInterface() {
           </div>
 
           {/* Input Area */}
-          <div className="border-t border-gray-200 p-6 bg-gray-50">
+          <div className="border-t border-gray-700 p-6 bg-gray-800">
             <div className="flex gap-4 items-end">
               <div className="flex-1 relative">
                 <Input
@@ -236,7 +236,7 @@ export function ConversationalInterface() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask Sam anything about your sales process..."
-                  className="py-4 text-base bg-white border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="py-4 text-base bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               
@@ -246,8 +246,8 @@ export function ConversationalInterface() {
                 size="icon"
                 className={`h-12 w-12 ${
                   isListening 
-                    ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100" 
-                    : "hover:bg-gray-100"
+                    ? "bg-red-900/50 border-red-600 text-red-400 hover:bg-red-900/70" 
+                    : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
                 }`}
               >
                 {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -264,7 +264,7 @@ export function ConversationalInterface() {
             </div>
             
             <div className="flex items-center justify-center mt-4">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-400">
                 Sam specializes in sales optimization, audience targeting, and campaign performance
               </p>
             </div>
