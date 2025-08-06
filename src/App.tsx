@@ -25,24 +25,6 @@ import Agent from "./pages/Agent";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // On mobile devices, only show the conversational interface
-  if (isMobileDevice()) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <TooltipProvider>
-            <div className="min-h-screen bg-background">
-              <Agent />
-              <Toaster />
-              <Sonner />
-            </div>
-          </TooltipProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // Desktop version with full routing
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
