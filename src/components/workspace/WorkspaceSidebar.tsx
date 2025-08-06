@@ -137,7 +137,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
           <img 
             src="/lovable-uploads/f38e3099-bf46-483c-9a94-d1b4f8b34cb6.png" 
             alt="Innovare.AI" 
-            className={`h-8 ${isConversational ? 'brightness-0 invert' : 'dark:brightness-0 dark:invert'}`}
+            className="h-8"
           />
           <SidebarTrigger className="ml-auto" />
         </div>
