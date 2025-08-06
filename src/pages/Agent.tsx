@@ -1,15 +1,18 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
 import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function Agent() {
+  const navigate = useNavigate();
+  
   // Agent mode is always conversational
   const isConversational = true;
   const onToggleMode = () => {
-    // In agent mode, we don't allow toggling back to work mode
-    // User can navigate to other pages to access work mode
+    // Navigate to main workspace when toggling to work mode
+    navigate('/');
   };
 
   return (
