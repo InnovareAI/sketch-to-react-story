@@ -40,22 +40,23 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 
-// Work Mode Navigation
-const workNavItems = [
-  { title: "Workspace Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Dashboard", url: "/dashboard", icon: Home },
+// Work Mode Navigation - Team Section
+const teamNavItems = [
+  { title: "Team Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
   { title: "Team Accounts", url: "/accounts", icon: Building2 },
+];
+
+// Work Mode Navigation - Individual Section
+const individualNavItems = [
+  { title: "Dashboard", url: "/dashboard", icon: Home },
+  { title: "Inbox", url: "/inbox", icon: Mail },
+  { title: "Message Queue", url: "/message-queue", icon: MessageSquare },
 ];
 
 const campaignItems = [
   { title: "My campaigns", url: "/campaigns", icon: Target },
   { title: "Templates", url: "/templates", icon: FileText },
-];
-
-const inboxItems = [
-  { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
-  { title: "My Inbox", url: "/inbox", icon: Mail },
-  { title: "Message Queue", url: "/message-queue", icon: MessageSquare },
 ];
 
 const networkItems = [
@@ -90,9 +91,13 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
   const location = useLocation();
   const currentPath = location.pathname;
   
+  // Simulated team membership - replace with actual logic
+  const isTeamMember = true; // TODO: Replace with actual team membership check
+  
   const [campaignOpen, setCampaignOpen] = useState(true);
   const [networkOpen, setNetworkOpen] = useState(true);
-  const [inboxOpen, setInboxOpen] = useState(true);
+  const [teamOpen, setTeamOpen] = useState(true);
+  const [individualOpen, setIndividualOpen] = useState(true);
   const [documentsOpen, setDocumentsOpen] = useState(true);
   
   const isActive = (path: string) => currentPath === path;
@@ -107,7 +112,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {(isConversational ? agentNavItems : workNavItems).map((item) => (
+                {(isConversational ? agentNavItems : [...(isTeamMember ? teamNavItems : []), ...individualNavItems]).map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink to={item.url} className={getNavCls(item.url)}>
@@ -141,27 +146,103 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
         </div>
 
 
-        {/* Main Navigation */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {(isConversational ? agentNavItems : workNavItems).map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                     <NavLink to={item.url} className={({ isActive }) => `${getNavCls(item.url)} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive 
-                          ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium')
-                          : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
-                      }`}>
-                        <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Team Section - Conditional */}
+        {!isConversational && isTeamMember && (
+          <SidebarGroup>
+            <Collapsible open={teamOpen} onOpenChange={setTeamOpen}>
+              <CollapsibleTrigger asChild>
+                <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2">
+                  <span className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span>Team</span>
+                  </span>
+                  {teamOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </SidebarGroupLabel>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {teamNavItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild>
+                          <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isActive 
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'hover:bg-muted/50'
+                          }`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarGroup>
+        )}
+
+        {/* Individual Section */}
+        {!isConversational && (
+          <SidebarGroup>
+            <Collapsible open={individualOpen} onOpenChange={setIndividualOpen}>
+              <CollapsibleTrigger asChild>
+                <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2">
+                  <span className="flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    <span>Individual</span>
+                  </span>
+                  {individualOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </SidebarGroupLabel>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {individualNavItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild>
+                          <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isActive 
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'hover:bg-muted/50'
+                          }`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarGroup>
+        )}
+
+        {/* Agent Mode Navigation */}
+        {isConversational && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {agentNavItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                       <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isActive 
+                            ? 'bg-gray-700 text-white'
+                            : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                        }`}>
+                          <item.icon className={`h-4 w-4 text-gray-300`} />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Conditional sections based on mode */}
         {!isConversational && (
@@ -256,43 +337,6 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
               </Collapsible>
             </SidebarGroup>
 
-            {/* Inbox Section - Work Mode Only */}
-            <SidebarGroup>
-              <Collapsible open={inboxOpen} onOpenChange={setInboxOpen}>
-                <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2">
-                    <span className="flex items-center gap-2">
-                      <Inbox className="h-4 w-4" />
-                      <span>Inbox</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">3848</span>
-                      {inboxOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </div>
-                  </SidebarGroupLabel>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {inboxItems.map((item) => (
-                        <SidebarMenuItem key={item.title}>
-                          <SidebarMenuButton asChild>
-                            <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              isActive 
-                                ? 'bg-primary/10 text-primary font-medium'
-                                : 'hover:bg-muted/50'
-                            }`}>
-                              <item.icon className="h-4 w-4" />
-                              <span>{item.title}</span>
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </SidebarGroup>
 
             {/* Admin Section - Work Mode Only */}
             <SidebarGroup className="mt-auto">
