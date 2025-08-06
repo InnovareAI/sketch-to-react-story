@@ -187,12 +187,12 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
         <SidebarGroup>
           <Collapsible open={campaignOpen} onOpenChange={setCampaignOpen}>
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2">
+              <SidebarGroupLabel className={`flex items-center justify-between cursor-pointer rounded-md p-2 -m-2 ${isConversational ? 'text-gray-300 hover:bg-gray-800' : 'hover:bg-muted/50'}`}>
                 <span className="flex items-center gap-2">
-                  <Target className="h-4 w-4" />
-                  Campaigns
+                  <Target className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
+                  <span className={`${isConversational ? 'text-gray-300' : ''}`}>Campaigns</span>
                 </span>
-                {campaignOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                {campaignOpen ? <ChevronDown className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} /> : <ChevronRight className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />}
               </SidebarGroupLabel>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -201,8 +201,12 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                   {campaignItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <NavLink to={item.url} className={getNavCls(item.url)}>
-                        <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
+                        <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isActive 
+                            ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium border-r-2 border-primary')
+                            : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
+                        }`}>
+                          <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                           <span>{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
@@ -218,12 +222,12 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
         <SidebarGroup>
           <Collapsible open={networkOpen} onOpenChange={setNetworkOpen}>
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2">
+              <SidebarGroupLabel className={`flex items-center justify-between cursor-pointer rounded-md p-2 -m-2 ${isConversational ? 'text-gray-300 hover:bg-gray-800' : 'hover:bg-muted/50'}`}>
                 <span className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  My network
+                  <Users className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
+                  <span className={`${isConversational ? 'text-gray-300' : ''}`}>My network</span>
                 </span>
-                {networkOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                {networkOpen ? <ChevronDown className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} /> : <ChevronRight className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />}
               </SidebarGroupLabel>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -232,8 +236,12 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                   {networkItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <NavLink to={item.url} className={getNavCls(item.url)}>
-                        <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
+                        <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isActive 
+                            ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium border-r-2 border-primary')
+                            : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
+                        }`}>
+                          <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                           <span>{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
@@ -247,10 +255,10 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
 
         {/* Inbox Section */}
         <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center justify-between">
+          <SidebarGroupLabel className={`flex items-center justify-between ${isConversational ? 'text-gray-300' : ''}`}>
             <span className="flex items-center gap-2">
-              <Inbox className="h-4 w-4" />
-              Inbox
+              <Inbox className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
+              <span className={`${isConversational ? 'text-gray-300' : ''}`}>Inbox</span>
             </span>
             <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">3848</span>
           </SidebarGroupLabel>
@@ -258,16 +266,24 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/inbox" className={getNavCls("/inbox")}>
-                    <Mail className="h-4 w-4" />
+                  <NavLink to="/inbox" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive 
+                      ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium border-r-2 border-primary')
+                      : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
+                  }`}>
+                    <Mail className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                     <span>Inbox</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/message-queue" className={getNavCls("/message-queue")}>
-                    <MessageSquare className="h-4 w-4" />
+                  <NavLink to="/message-queue" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive 
+                      ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium border-r-2 border-primary')
+                      : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
+                  }`}>
+                    <MessageSquare className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                     <span>Message queue</span>
                   </NavLink>
                 </SidebarMenuButton>
@@ -283,8 +299,12 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
               {adminItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavCls(item.url)}>
-                      <item.icon className="h-4 w-4" />
+                    <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive 
+                        ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium border-r-2 border-primary')
+                        : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
+                    }`}>
+                      <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>

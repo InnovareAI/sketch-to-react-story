@@ -24,8 +24,8 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
         <div className="flex items-center gap-6">
           <div className={`flex items-center gap-4 p-2 rounded-xl border ${isConversational ? 'bg-gray-800 border-gray-600' : 'bg-muted/30 border-border/50'}`}>
             <div className="flex items-center gap-2">
-               <BarChart3 className={`h-4 w-4 ${!isConversational ? 'text-premium-purple' : (isConversational ? 'text-gray-400' : 'text-muted-foreground')}`} />
-               <span className={`text-sm font-medium ${!isConversational ? (isConversational ? 'text-white' : 'text-foreground') : (isConversational ? 'text-gray-400' : 'text-muted-foreground')}`}>
+               <BarChart3 className={`h-4 w-4 ${!isConversational ? 'text-premium-purple' : 'text-gray-400'}`} />
+               <span className={`text-sm font-medium ${!isConversational ? (isConversational ? 'text-white' : 'text-foreground') : 'text-gray-400'}`}>
                  Work Mode
                </span>
             </div>
@@ -35,8 +35,8 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
               className="data-[state=checked]:bg-premium-purple"
             />
             <div className="flex items-center gap-2">
-               <MessageSquare className={`h-4 w-4 ${isConversational ? 'text-premium-purple' : (isConversational ? 'text-gray-400' : 'text-muted-foreground')}`} />
-               <span className={`text-sm font-medium ${isConversational ? (isConversational ? 'text-white' : 'text-foreground') : (isConversational ? 'text-gray-400' : 'text-muted-foreground')}`}>
+               <MessageSquare className={`h-4 w-4 ${isConversational ? 'text-premium-purple' : 'text-muted-foreground'}`} />
+               <span className={`text-sm font-medium ${isConversational ? 'text-white' : 'text-muted-foreground'}`}>
                  Agent Mode
               </span>
             </div>
@@ -84,11 +84,11 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
+              <Button variant="ghost" className={`flex items-center gap-2 ${isConversational ? 'text-white hover:text-gray-300' : ''}`}>
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                   <span className="text-primary-foreground text-sm font-medium">J</span>
                 </div>
-                <span className="hidden md:inline-block">Jennifer</span>
+                <span className={`hidden md:inline-block ${isConversational ? 'text-white' : ''}`}>Jennifer</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
