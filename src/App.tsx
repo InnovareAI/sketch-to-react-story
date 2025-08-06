@@ -18,6 +18,7 @@ import Placeholders from "./pages/Placeholders";
 import Members from "./pages/Members";
 import Roles from "./pages/Roles";
 import WorkspaceSettings from "./pages/WorkspaceSettings";
+import Agent from "./pages/Agent";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/agent" element={<Agent />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/accounts" element={<Accounts />} />
           <Route path="/campaigns" element={<Campaigns />} />
