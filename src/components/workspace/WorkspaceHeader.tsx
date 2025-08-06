@@ -1,7 +1,8 @@
-import { Search, Bell, Plus, User } from "lucide-react";
+import { Search, Bell, Plus, User, MessageSquare, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,23 +11,50 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function WorkspaceHeader() {
+interface WorkspaceHeaderProps {
+  isConversational: boolean;
+  onToggleMode: (conversational: boolean) => void;
+}
+
+export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHeaderProps) {
   return (
     <header className="border-b border-border bg-background px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold text-foreground">Workspace Dashboard</h1>
+        {/* Left Section - Mode Toggle */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 p-2 rounded-xl bg-muted/30 border border-border/50">
+            <div className="flex items-center gap-2">
+              <BarChart3 className={`h-4 w-4 ${!isConversational ? 'text-premium-purple' : 'text-muted-foreground'}`} />
+              <span className={`text-sm font-medium ${!isConversational ? 'text-foreground' : 'text-muted-foreground'}`}>
+                Dashboard
+              </span>
+            </div>
+            <Switch 
+              checked={isConversational}
+              onCheckedChange={onToggleMode}
+              className="data-[state=checked]:bg-premium-purple"
+            />
+            <div className="flex items-center gap-2">
+              <MessageSquare className={`h-4 w-4 ${isConversational ? 'text-premium-purple' : 'text-muted-foreground'}`} />
+              <span className={`text-sm font-medium ${isConversational ? 'text-foreground' : 'text-muted-foreground'}`}>
+                Chat with Sam
+              </span>
+            </div>
+          </div>
         </div>
         
+        {/* Right Section - Actions & User */}
         <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Jump into page..."
-              className="pl-10 w-64 bg-muted/50"
-            />
-          </div>
+          {/* Search - only show in dashboard mode */}
+          {!isConversational && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Jump into page..."
+                className="pl-10 w-64 bg-muted/50"
+              />
+            </div>
+          )}
           
           {/* Add New Dropdown */}
           <DropdownMenu>
