@@ -154,30 +154,6 @@ export function WorkspaceDashboard() {
           </div>
         </div>
 
-        {/* Filter Section */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Activity Trends</h2>
-            <div className="flex items-center gap-3">
-              <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-                <option>Week</option>
-                <option>Month</option>
-                <option>Quarter</option>
-                <option>Year</option>
-              </select>
-              <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-                <option>All Campaigns</option>
-                <option>Active Only</option>
-                <option>Paused Only</option>
-                <option>Completed</option>
-              </select>
-              <Button variant="outline" size="sm">
-                Download CSV
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {/* Premium Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {metrics.map((metric, index) => (
