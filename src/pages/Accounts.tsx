@@ -6,6 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Building2, 
   Mail, 
@@ -29,7 +33,9 @@ import {
   MessageSquare,
   Calendar,
   DollarSign,
-  Target
+  Target,
+  Save,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,63 +47,120 @@ import {
 
 export default function Accounts() {
   const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
+  const [editingAccount, setEditingAccount] = useState<any>(null);
   
   const accounts = [
     {
       id: 1,
       name: "Jennifer Fleming",
-      company: "TechCorp Solutions",
-      role: "VP of Sales",
       email: "jennifer.fleming@techcorp.com",
       phone: "+1 (555) 123-4567",
-      linkedin: "linkedin.com/in/jennifer-fleming",
-      website: "techcorp.com",
+      whatsapp: "+1 (555) 123-4567",
+      companyPhone: "+1 (555) 123-0000",
+      company: "TechCorp Solutions",
+      role: "VP of Sales",
       location: "San Francisco, CA",
+      linkedin: "linkedin.com/in/jennifer-fleming",
       status: "Hot Lead",
       lastContact: "2 days ago",
       responseRate: 85,
-      avatar: "/placeholder.svg",
+      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b829?w=400&h=400&fit=crop&crop=face",
       campaigns: 3,
       meetings: 2,
-      revenue: "$45,000"
+      revenue: "$45,000",
+      currentCampaigns: ["Q1 Enterprise Outreach", "Product Demo Follow-up", "LinkedIn Lead Generation"]
     },
     {
       id: 2,
       name: "David Chen",
-      company: "InnovateLabs",
-      role: "CTO",
       email: "david.chen@innovatelabs.io",
       phone: "+1 (555) 987-6543",
-      linkedin: "linkedin.com/in/david-chen-cto",
-      website: "innovatelabs.io",
+      whatsapp: "+1 (555) 987-6543",
+      companyPhone: "+1 (555) 987-0000",
+      company: "InnovateLabs",
+      role: "CTO",
       location: "Austin, TX",
+      linkedin: "linkedin.com/in/david-chen-cto",
       status: "Warm Lead",
       lastContact: "1 week ago",
       responseRate: 72,
-      avatar: "/placeholder.svg",
+      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
       campaigns: 2,
       meetings: 1,
-      revenue: "$28,500"
+      revenue: "$28,500",
+      currentCampaigns: ["Q1 Enterprise Outreach", "Holiday Campaign 2024"]
     },
     {
       id: 3,
       name: "Sarah Williams",
-      company: "GrowthMetrics",
-      role: "Head of Marketing",
       email: "sarah.williams@growthmetrics.com",
       phone: "+1 (555) 456-7890",
-      linkedin: "linkedin.com/in/sarahwilliams",
-      website: "growthmetrics.com",
+      whatsapp: "+1 (555) 456-7890",
+      companyPhone: "+1 (555) 456-0000",
+      company: "GrowthMetrics",
+      role: "Head of Marketing",
       location: "New York, NY",
+      linkedin: "linkedin.com/in/sarahwilliams",
       status: "Prospect",
       lastContact: "3 days ago",
       responseRate: 68,
-      avatar: "/placeholder.svg",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
       campaigns: 1,
       meetings: 0,
-      revenue: "$0"
+      revenue: "$0",
+      currentCampaigns: ["LinkedIn Lead Generation"]
+    },
+    {
+      id: 4,
+      name: "Michael Rodriguez",
+      email: "michael.r@scalecorp.com",
+      phone: "+1 (555) 789-0123",
+      whatsapp: "+1 (555) 789-0123",
+      companyPhone: "+1 (555) 789-0000",
+      company: "ScaleCorp",
+      role: "Operations Director",
+      location: "Chicago, IL",
+      linkedin: "linkedin.com/in/michaelrodriguez",
+      status: "New Contact",
+      lastContact: "Never",
+      responseRate: 0,
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+      campaigns: 0,
+      meetings: 0,
+      revenue: "$0",
+      currentCampaigns: []
+    },
+    {
+      id: 5,
+      name: "Emily Johnson",
+      email: "emily.johnson@financeplus.com",
+      phone: "+1 (555) 234-5678",
+      whatsapp: "+1 (555) 234-5678",
+      companyPhone: "+1 (555) 234-0000",
+      company: "FinancePlus",
+      role: "CFO",
+      location: "Boston, MA",
+      linkedin: "linkedin.com/in/emilyjohnson-cfo",
+      status: "Replied",
+      lastContact: "1 day ago",
+      responseRate: 92,
+      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&crop=face",
+      campaigns: 2,
+      meetings: 3,
+      revenue: "$67,000",
+      currentCampaigns: ["Q1 Enterprise Outreach", "Product Demo Follow-up"]
     }
   ];
+
+  const handleEditAccount = (account: any) => {
+    setEditingAccount({ ...account });
+  };
+
+  const handleSaveAccount = () => {
+    // Here you would typically save to your backend
+    console.log("Saving account:", editingAccount);
+    setEditingAccount(null);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -130,6 +193,120 @@ export default function Accounts() {
           </Button>
         </div>
       </div>
+
+      {/* Edit Account Dialog */}
+      <Dialog open={!!editingAccount} onOpenChange={() => setEditingAccount(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Account</DialogTitle>
+            <DialogDescription>
+              Update the account information and contact details.
+            </DialogDescription>
+          </DialogHeader>
+          {editingAccount && (
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  value={editingAccount.name}
+                  onChange={(e) => setEditingAccount({...editingAccount, name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Input
+                  id="role"
+                  value={editingAccount.role}
+                  onChange={(e) => setEditingAccount({...editingAccount, role: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  value={editingAccount.company}
+                  onChange={(e) => setEditingAccount({...editingAccount, company: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={editingAccount.email}
+                  onChange={(e) => setEditingAccount({...editingAccount, email: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Personal Phone</Label>
+                <Input
+                  id="phone"
+                  value={editingAccount.phone}
+                  onChange={(e) => setEditingAccount({...editingAccount, phone: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp">WhatsApp</Label>
+                <Input
+                  id="whatsapp"
+                  value={editingAccount.whatsapp}
+                  onChange={(e) => setEditingAccount({...editingAccount, whatsapp: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="companyPhone">Company Phone</Label>
+                <Input
+                  id="companyPhone"
+                  value={editingAccount.companyPhone}
+                  onChange={(e) => setEditingAccount({...editingAccount, companyPhone: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={editingAccount.location}
+                  onChange={(e) => setEditingAccount({...editingAccount, location: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="linkedin">LinkedIn</Label>
+                <Input
+                  id="linkedin"
+                  value={editingAccount.linkedin}
+                  onChange={(e) => setEditingAccount({...editingAccount, linkedin: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={editingAccount.status} onValueChange={(value) => setEditingAccount({...editingAccount, status: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Hot Lead">Hot Lead</SelectItem>
+                    <SelectItem value="Warm Lead">Warm Lead</SelectItem>
+                    <SelectItem value="Prospect">Prospect</SelectItem>
+                    <SelectItem value="New Contact">New Contact</SelectItem>
+                    <SelectItem value="Replied">Replied</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2 flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setEditingAccount(null)}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveAccount}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Search, View Toggle and Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
@@ -305,7 +482,7 @@ export default function Accounts() {
                             Add to Campaign
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditAccount(account)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Account
                           </DropdownMenuItem>
@@ -355,17 +532,17 @@ export default function Accounts() {
                         <Linkedin className="h-4 w-4 mr-2" />
                         LinkedIn Message
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Add to Campaign
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Account
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                          <DropdownMenuItem>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add to Campaign
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleEditAccount(account)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Account
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                 </div>
 
                 {/* Status Badge */}
@@ -389,6 +566,18 @@ export default function Accounts() {
                     <Phone className="h-4 w-4" />
                     <span>{account.phone}</span>
                   </div>
+                  {account.whatsapp && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MessageSquare className="h-4 w-4 text-green-600" />
+                      <span>{account.whatsapp}</span>
+                    </div>
+                  )}
+                  {account.companyPhone && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Phone className="h-4 w-4 text-blue-600" />
+                      <span>{account.companyPhone}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Linkedin className="h-4 w-4" />
                     <span className="truncate">{account.linkedin}</span>
@@ -433,8 +622,24 @@ export default function Accounts() {
                   </div>
                 </div>
 
+                {/* Current Campaigns */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Current Campaigns</h4>
+                  {account.currentCampaigns && account.currentCampaigns.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {account.currentCampaigns.map((campaign: string, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {campaign}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500">No active campaigns</p>
+                  )}
+                </div>
+
                 {/* Action Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-2">
                   <Button size="sm" className="flex-1 animate-fade-in">
                     <Mail className="h-3 w-3 mr-1" />
                     Email
@@ -443,8 +648,14 @@ export default function Accounts() {
                     <Linkedin className="h-3 w-3 mr-1" />
                     LinkedIn
                   </Button>
-                  <Button size="sm" variant="outline" className="animate-fade-in">
-                    <MessageSquare className="h-3 w-3" />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1 animate-fade-in">
+                    <MessageSquare className="h-3 w-3 mr-1" />
+                    WhatsApp
+                  </Button>
+                  <Button size="sm" variant="outline" className="animate-fade-in" onClick={() => handleEditAccount(account)}>
+                    <Edit className="h-3 w-3" />
                   </Button>
                 </div>
               </CardContent>
