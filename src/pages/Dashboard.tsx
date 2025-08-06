@@ -55,37 +55,37 @@ export default function Dashboard() {
         <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col">
           <WorkspaceHeader isConversational={isConversational} onToggleMode={handleToggleMode} />
-          <main className="flex-1 p-8">
-            <div className="max-w-7xl mx-auto space-y-8">
+          <main className="flex-1 p-4 lg:p-8">
+            <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
               {/* Header with glass morphism effect */}
-              <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl p-8 shadow-2xl">
-                <div className="flex items-center justify-between">
+              <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl p-4 lg:p-8 shadow-2xl">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div>
-                  <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent">
-                    Analytics Dashboard
-                  </h1>
-                  <p className="text-slate-600 mt-2 text-lg">Real-time insights into your outreach performance</p>
+                    <h1 className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent">
+                      Analytics Dashboard
+                    </h1>
+                    <p className="text-slate-600 mt-2 text-base lg:text-lg">Real-time insights into your outreach performance</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={refreshData}
-                    disabled={isLoading}
-                    className="backdrop-blur-sm bg-white/50 border border-white/30 hover:bg-white/70 transition-all duration-300 shadow-lg"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </Button>
-                  <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-xl text-white font-semibold px-6 py-2 transition-all duration-300 hover:scale-105">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Customize Reports
-                  </Button>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={refreshData}
+                      disabled={isLoading}
+                      className="backdrop-blur-sm bg-white/50 border border-white/30 hover:bg-white/70 transition-all duration-300 shadow-lg"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} mr-2`} />
+                      <span className="hidden sm:inline">Refresh</span>
+                    </Button>
+                    <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-xl text-white font-semibold px-4 lg:px-6 py-2 transition-all duration-300 hover:scale-105">
+                      <Settings className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">Customize </span>Reports
+                    </Button>
                   </div>
                 </div>
               </div>
 
               {/* Enhanced KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 <MetricCard
                   title="Total Contacts"
                   value={analytics.totalContacts}
@@ -117,7 +117,7 @@ export default function Dashboard() {
               </div>
 
               {/* Charts Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
                 <AnalyticsChart
                   title="Response Rate Trend"
                   description="Daily response rates over the past 30 days"

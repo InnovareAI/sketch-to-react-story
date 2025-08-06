@@ -89,29 +89,29 @@ const campaigns = [
 export function WorkspaceDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="p-8 space-y-8">
+      <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
         {/* Workspace Overview Banner with Account Info */}
-        <div className="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-white/80 border border-white/20 p-8 shadow-2xl">
+        <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl backdrop-blur-xl bg-white/80 border border-white/20 p-4 lg:p-8 shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10" />
           <div className="relative z-10">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-600/20 to-blue-600/20 backdrop-blur-sm border border-purple-300/30">
-                  <Crown className="h-8 w-8 text-purple-600" />
+            <div className="flex flex-col lg:flex-row items-start justify-between mb-4 lg:mb-6 gap-4">
+              <div className="flex items-center gap-3 lg:gap-4">
+                <div className="p-2 lg:p-3 rounded-2xl bg-gradient-to-br from-purple-600/20 to-blue-600/20 backdrop-blur-sm border border-purple-300/30">
+                  <Crown className="h-6 w-6 lg:h-8 lg:w-8 text-purple-600" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent">
+                  <h1 className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent">
                     Workspace Overview
                   </h1>
-                  <p className="text-slate-600 text-lg">Monitor your multi-channel outreach performance</p>
+                  <p className="text-slate-600 text-base lg:text-lg">Monitor your multi-channel outreach performance</p>
                 </div>
               </div>
               
               {/* Account Information - Moved to Right */}
-              <div className="backdrop-blur-sm bg-gradient-to-r from-white/70 to-white/50 rounded-xl p-4 border border-white/40 shadow-lg">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
-                    <User className="h-6 w-6 text-white" />
+              <div className="w-full lg:w-auto backdrop-blur-sm bg-gradient-to-r from-white/70 to-white/50 rounded-xl p-4 border border-white/40 shadow-lg">
+                <div className="flex items-center gap-3 lg:gap-4">
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
+                    <User className="h-5 w-5 lg:h-6 lg:w-6 text-white" />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-slate-900">Jennifer Fleming</h3>
@@ -153,7 +153,7 @@ export function WorkspaceDashboard() {
         </div>
 
         {/* Premium Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           {metrics.map((metric, index) => (
             <Card key={metric.title} className="group relative overflow-hidden backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1">
               <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-purple-400/30 to-blue-400/30" />
@@ -292,7 +292,7 @@ export function WorkspaceDashboard() {
         </Card>
 
         {/* Premium Action Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           {/* Quick Actions */}
           <Card className="glass-card border-0 premium-shadow group hover:scale-[1.02] transition-all duration-300">
             <CardHeader className="pb-4">
