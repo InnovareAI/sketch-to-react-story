@@ -90,7 +90,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
   
   const isActive = (path: string) => currentPath === path;
   const getNavCls = (path: string) =>
-    isActive(path) ? "bg-primary/10 text-primary font-medium border-r-2 border-primary" : "hover:bg-muted/50";
+    isActive(path) ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50";
 
   if (state === "collapsed") {
     return (
@@ -171,7 +171,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                   <SidebarMenuButton asChild>
                      <NavLink to={item.url} className={({ isActive }) => `${getNavCls(item.url)} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive 
-                          ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium border-r-2 border-primary')
+                          ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium')
                           : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
                       }`}>
                         <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
@@ -195,7 +195,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                     <SidebarMenuButton asChild>
                        <NavLink to="/search" className={({ isActive }) => `${getNavCls("/search")} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                           isActive 
-                            ? 'bg-primary/10 text-primary font-medium border-r-2 border-primary'
+                            ? 'bg-primary/10 text-primary font-medium'
                             : 'hover:bg-muted/50'
                         }`}>
                         <Search className="h-4 w-4" />
@@ -227,7 +227,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                           <SidebarMenuButton asChild>
                             <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                               isActive 
-                                ? 'bg-primary/10 text-primary font-medium border-r-2 border-primary'
+                                ? 'bg-primary/10 text-primary font-medium'
                                 : 'hover:bg-muted/50'
                             }`}>
                               <item.icon className="h-4 w-4" />
@@ -262,7 +262,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                           <SidebarMenuButton asChild>
                             <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                               isActive 
-                                ? 'bg-primary/10 text-primary font-medium border-r-2 border-primary'
+                                ? 'bg-primary/10 text-primary font-medium'
                                 : 'hover:bg-muted/50'
                             }`}>
                               <item.icon className="h-4 w-4" />
@@ -292,7 +292,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                     <SidebarMenuButton asChild>
                       <NavLink to="/inbox" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive 
-                          ? 'bg-primary/10 text-primary font-medium border-r-2 border-primary'
+                          ? 'bg-primary/10 text-primary font-medium'
                           : 'hover:bg-muted/50'
                       }`}>
                         <Mail className="h-4 w-4" />
@@ -304,7 +304,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                     <SidebarMenuButton asChild>
                       <NavLink to="/message-queue" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive 
-                          ? 'bg-primary/10 text-primary font-medium border-r-2 border-primary'
+                          ? 'bg-primary/10 text-primary font-medium'
                           : 'hover:bg-muted/50'
                       }`}>
                         <MessageSquare className="h-4 w-4" />
@@ -325,7 +325,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
                       <SidebarMenuButton asChild>
                         <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                           isActive 
-                            ? 'bg-primary/10 text-primary font-medium border-r-2 border-primary'
+                            ? 'bg-primary/10 text-primary font-medium'
                             : 'hover:bg-muted/50'
                         }`}>
                           <item.icon className="h-4 w-4" />
