@@ -71,6 +71,9 @@ const agentNavItems = [
   { title: "Meet Sam", url: "/agent", icon: Bot },
   { title: "Agentic Team", url: "/agent/team", icon: Users },
   { title: "Train Sam", url: "/agent/train", icon: GraduationCap },
+];
+
+const agentDocumentItems = [
   { title: "Your ICP", url: "/agent/icp", icon: Target },
   { title: "Your Value Prop", url: "/agent/value-prop", icon: Star },
   { title: "Your Offer", url: "/agent/offer", icon: Gift },
@@ -87,6 +90,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
   
   const [campaignOpen, setCampaignOpen] = useState(true);
   const [networkOpen, setNetworkOpen] = useState(true);
+  const [documentsOpen, setDocumentsOpen] = useState(true);
   
   const isActive = (path: string) => currentPath === path;
   const getNavCls = (path: string) =>
@@ -311,6 +315,41 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
         {/* Agent Mode specific sections */}
         {isConversational && (
           <>
+            {/* Your Documents Section */}
+            <SidebarGroup>
+              <Collapsible open={documentsOpen} onOpenChange={setDocumentsOpen}>
+                <CollapsibleTrigger asChild>
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-gray-800 rounded-md p-2 -m-2 text-gray-300">
+                    <span className="flex items-center gap-2">
+                      <Folder className="h-4 w-4 text-gray-300" />
+                      <span className="text-gray-300">Your Documents</span>
+                    </span>
+                    {documentsOpen ? <ChevronDown className="h-4 w-4 text-gray-300" /> : <ChevronRight className="h-4 w-4 text-gray-300" />}
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {agentDocumentItems.map((item) => (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton asChild>
+                            <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              isActive 
+                                ? 'bg-gray-700 text-white'
+                                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                            }`}>
+                              <item.icon className="h-4 w-4 text-gray-300" />
+                              <span>{item.title}</span>
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </SidebarGroup>
+
             {/* AI Assistant Features */}
             <SidebarGroup>
               <SidebarGroupLabel className="flex items-center justify-between text-gray-300">
