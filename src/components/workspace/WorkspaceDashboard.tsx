@@ -90,6 +90,70 @@ export function WorkspaceDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="p-8 space-y-8">
+        {/* Workspace Overview Banner with Account Info */}
+        <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 p-8 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-r from-premium-purple/5 to-premium-blue/5" />
+          <div className="relative z-10">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-premium-purple/10 border border-premium-purple/20">
+                  <Crown className="h-8 w-8 text-premium-purple" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Workspace Overview</h1>
+                  <p className="text-gray-600 text-lg">Monitor your multi-channel outreach performance</p>
+                </div>
+              </div>
+              <Button className="bg-gradient-to-r from-premium-purple to-premium-blue hover:from-premium-purple/90 hover:to-premium-blue/90 border-0 shadow-lg">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Account
+              </Button>
+            </div>
+
+            {/* Account Information */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-premium-purple to-premium-blue flex items-center justify-center">
+                  <User className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">Jennifer Fleming</h3>
+                  <p className="text-sm text-gray-600">Senior Account Executive</p>
+                  <div className="flex items-center gap-4 mt-1">
+                    <Badge className="bg-premium-green/10 text-premium-green border-premium-green/20">
+                      <div className="w-2 h-2 bg-premium-green rounded-full mr-2" />
+                      LinkedIn Connected
+                    </Badge>
+                    <Badge className="bg-premium-blue/10 text-premium-blue border-premium-blue/20">
+                      <div className="w-2 h-2 bg-premium-blue rounded-full mr-2" />
+                      Email Active
+                    </Badge>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" className="hover:bg-premium-purple/10">
+                  <Eye className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Features */}
+            <div className="flex items-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-premium-green" />
+                <span className="text-gray-900">Real-time Analytics</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-premium-orange" />
+                <span className="text-gray-900">AI-Powered Insights</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-premium-cyan" />
+                <span className="text-gray-900">Premium Workspace</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Filter Section */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
           <div className="flex items-center justify-between">
@@ -110,70 +174,6 @@ export function WorkspaceDashboard() {
               <Button variant="outline" size="sm">
                 Download CSV
               </Button>
-            </div>
-          </div>
-        </div>
-        {/* Accounts Section */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Accounts</h2>
-            <Button className="bg-gradient-to-r from-premium-purple to-premium-blue hover:from-premium-purple/90 hover:to-premium-blue/90 border-0 shadow-lg">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Account
-            </Button>
-          </div>
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-premium-purple to-premium-blue flex items-center justify-center">
-                <User className="h-6 w-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">Jennifer Fleming</h3>
-                <p className="text-sm text-gray-600">Senior Account Executive</p>
-                <div className="flex items-center gap-4 mt-1">
-                  <Badge className="bg-premium-green/10 text-premium-green border-premium-green/20">
-                    <div className="w-2 h-2 bg-premium-green rounded-full mr-2" />
-                    LinkedIn Connected
-                  </Badge>
-                  <Badge className="bg-premium-blue/10 text-premium-blue border-premium-blue/20">
-                    <div className="w-2 h-2 bg-premium-blue rounded-full mr-2" />
-                    Email Active
-                  </Badge>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" className="hover:bg-premium-purple/10">
-                <Eye className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 p-8 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-r from-premium-purple/5 to-premium-blue/5" />
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-2xl bg-premium-purple/10 border border-premium-purple/20">
-                <Crown className="h-8 w-8 text-premium-purple" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Workspace Overview</h1>
-                <p className="text-gray-600 text-lg">Monitor your multi-channel outreach performance</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-premium-green" />
-                <span className="text-gray-900">Real-time Analytics</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-premium-orange" />
-                <span className="text-gray-900">AI-Powered Insights</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-premium-cyan" />
-                <span className="text-gray-900">Premium Workspace</span>
-              </div>
             </div>
           </div>
         </div>
