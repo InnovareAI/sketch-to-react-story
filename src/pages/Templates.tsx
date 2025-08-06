@@ -41,6 +41,20 @@ export default function Templates() {
   const templates = [
     {
       id: 1,
+      name: "Sam Lead Funnel",
+      type: "email",
+      channel: "Email",
+      subject: "Quick question about {{companyName}}'s growth strategy",
+      content: "Hi {{firstName}},\n\nI've been following {{companyName}}'s journey and I'm impressed with your recent expansion into {{industry}}.\n\nMany companies at your stage struggle with scaling their lead generation while maintaining quality. I've helped similar companies like {{competitorExample}} increase qualified leads by 40% using our proven funnel approach.\n\nWould you be open to a brief 15-minute conversation about how we could help {{companyName}} achieve similar results?\n\nBest regards,\nSam",
+      category: "Lead Generation",
+      tags: ["Sam", "Lead Funnel", "Growth"],
+      performance: { sent: 189, opened: 127, replied: 45, responseRate: 23.8 },
+      lastUsed: "1 hour ago",
+      created: "2024-01-20",
+      status: "Active"
+    },
+    {
+      id: 2,
       name: "Enterprise Introduction",
       type: "email",
       channel: "Email",
@@ -54,7 +68,7 @@ export default function Templates() {
       status: "Active"
     },
     {
-      id: 2,
+      id: 3,
       name: "LinkedIn Connection Request",
       type: "linkedin",
       channel: "LinkedIn",
