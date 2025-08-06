@@ -638,17 +638,14 @@ export default function Accounts() {
                 {/* Action Buttons */}
                 <div className="flex gap-2 mb-2">
                   <Button size="sm" className="flex-1 animate-fade-in">
-                    <Mail className="h-3 w-3 mr-1" />
                     Email
                   </Button>
                   <Button size="sm" variant="outline" className="flex-1 animate-fade-in">
-                    <Linkedin className="h-3 w-3 mr-1" />
                     LinkedIn
                   </Button>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="flex-1 animate-fade-in">
-                    <MessageSquare className="h-3 w-3 mr-1" />
                     WhatsApp
                   </Button>
                   <Button size="sm" variant="outline" className="animate-fade-in" onClick={() => handleEditAccount(account)}>
