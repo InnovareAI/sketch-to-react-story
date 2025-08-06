@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { NotificationCenter } from "@/components/ui/notification-center";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,12 +76,8 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
           </DropdownMenu>
           
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-              3
-            </Badge>
-          </Button>
+          <NotificationCenter />
+          <ThemeToggle />
           
           {/* User Menu */}
           <DropdownMenu>
