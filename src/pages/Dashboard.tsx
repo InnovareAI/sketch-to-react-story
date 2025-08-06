@@ -1,19 +1,22 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { MetricCard } from "@/components/dashboard/MetricCard";
+import { AnalyticsChart } from "@/components/dashboard/AnalyticsChart";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { 
-  BarChart3, 
   Users, 
   Mail, 
   Linkedin, 
-  TrendingUp, 
   Target,
+  TrendingUp,
+  MessageSquare,
+  BarChart3,
+  RefreshCw,
   Calendar,
   CheckCircle2,
   Clock,
@@ -22,197 +25,233 @@ import {
 
 export default function Dashboard() {
   const [isConversational, setIsConversational] = useState(false);
+  const navigate = useNavigate();
+  const { analytics, chartData, campaignMetrics, refreshData, isLoading } = useAnalytics();
 
-  if (isConversational) {
-    return (
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full">
-          <WorkspaceSidebar isConversational={isConversational} />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <WorkspaceHeader 
-              isConversational={isConversational}
-              onToggleMode={setIsConversational}
-            />
-            <div className="flex-1 overflow-auto">
-              <ConversationalInterface />
-            </div>
-          </div>
-        </div>
-      </SidebarProvider>
-    );
-  }
+  const handleToggleMode = (conversational: boolean) => {
+    if (conversational) {
+      navigate('/agent');
+    } else {
+      setIsConversational(false);
+    }
+  };
+
+  // Prepare chart data for different visualizations
+  const campaignStatusData = [
+    { name: 'Active', value: analytics.activeCampaigns },
+    { name: 'Paused', value: Math.floor(analytics.totalCampaigns * 0.3) },
+    { name: 'Completed', value: analytics.totalCampaigns - analytics.activeCampaigns - Math.floor(analytics.totalCampaigns * 0.3) }
+  ];
+
+  const weeklyMessagesData = Array.from({ length: 7 }, (_, i) => ({
+    name: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+    value: Math.floor(Math.random() * 200) + 50
+  }));
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
         <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col">
-          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
+          <WorkspaceHeader isConversational={isConversational} onToggleMode={handleToggleMode} />
           <main className="flex-1 p-8">
-            <div className="max-w-7xl mx-auto">
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Overview of your outreach performance</p>
-        </div>
-        <Button className="bg-primary hover:bg-primary/90">
-          <Target className="h-4 w-4 mr-2" />
-          New Campaign
-        </Button>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Contacts</CardTitle>
-            <Users className="h-4 w-4 text-premium-purple" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">2,847</div>
-            <p className="text-xs text-green-600 mt-1">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +12.5% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Email Response Rate</CardTitle>
-            <Mail className="h-4 w-4 text-premium-cyan" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">24.3%</div>
-            <p className="text-xs text-green-600 mt-1">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +2.1% from last week
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">LinkedIn Connections</CardTitle>
-            <Linkedin className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">1,234</div>
-            <p className="text-xs text-green-600 mt-1">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +8.2% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Campaigns</CardTitle>
-            <BarChart3 className="h-4 w-4 text-premium-orange" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">12</div>
-            <p className="text-xs text-gray-600 mt-1">
-              <Clock className="h-3 w-3 inline mr-1" />
-              3 ending this week
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Campaign Performance */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Campaign Performance</CardTitle>
-            <CardDescription>Your top performing campaigns this month</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              { name: "Q1 Enterprise Outreach", status: "Active", progress: 78, responses: 23, sent: 156 },
-              { name: "LinkedIn Lead Generation", status: "Active", progress: 65, responses: 18, sent: 89 },
-              { name: "Product Demo Follow-up", status: "Paused", progress: 45, responses: 12, sent: 67 },
-              { name: "Holiday Campaign 2024", status: "Completed", progress: 100, responses: 34, sent: 234 }
-            ].map((campaign, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <h4 className="font-medium text-gray-900">{campaign.name}</h4>
-                    <Badge variant={campaign.status === "Active" ? "default" : campaign.status === "Paused" ? "secondary" : "outline"}>
-                      {campaign.status}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {campaign.responses}/{campaign.sent} responses
-                  </div>
+            <div className="max-w-7xl mx-auto space-y-8">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+                  <p className="text-gray-600 mt-1">Real-time insights into your outreach performance</p>
                 </div>
-                <Progress value={campaign.progress} className="h-2" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-gray-900">Recent Activity</CardTitle>
-            <CardDescription>Latest updates from your campaigns</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              { type: "success", message: "New response from Jennifer Fleming", time: "2 min ago", icon: CheckCircle2 },
-              { type: "info", message: "Campaign 'Q1 Enterprise' reached 500 contacts", time: "1 hour ago", icon: BarChart3 },
-              { type: "warning", message: "LinkedIn rate limit approaching", time: "3 hours ago", icon: AlertTriangle },
-              { type: "success", message: "Meeting scheduled with David Chen", time: "5 hours ago", icon: Calendar },
-              { type: "info", message: "New contact added to 'Tech Leads' list", time: "1 day ago", icon: Users }
-            ].map((activity, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className={`p-2 rounded-full ${
-                  activity.type === "success" ? "bg-green-100" :
-                  activity.type === "warning" ? "bg-yellow-100" : "bg-blue-100"
-                }`}>
-                  <activity.icon className={`h-4 w-4 ${
-                    activity.type === "success" ? "text-green-600" :
-                    activity.type === "warning" ? "text-yellow-600" : "text-blue-600"
-                  }`} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900">{activity.message}</p>
-                  <p className="text-xs text-gray-500">{activity.time}</p>
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={refreshData}
+                    disabled={isLoading}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button className="bg-primary hover:bg-primary/90">
+                    <Target className="h-4 w-4 mr-2" />
+                    New Campaign
+                  </Button>
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-gray-900">Quick Actions</CardTitle>
-          <CardDescription>Common tasks to get you started</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
-              <Users className="h-6 w-6" />
-              <span>Import Contacts</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
-              <Target className="h-6 w-6" />
-              <span>Create Campaign</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
-              <BarChart3 className="h-6 w-6" />
-              <span>View Analytics</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      </div>
+              {/* Enhanced KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <MetricCard
+                  title="Total Contacts"
+                  value={analytics.totalContacts}
+                  change={{ value: 12.5, type: 'increase', period: 'last month' }}
+                  icon={Users}
+                  iconColor="text-blue-600"
+                />
+                <MetricCard
+                  title="Response Rate"
+                  value={`${analytics.responseRate}%`}
+                  change={{ value: 2.1, type: 'increase', period: 'last week' }}
+                  icon={MessageSquare}
+                  iconColor="text-green-600"
+                />
+                <MetricCard
+                  title="Open Rate"
+                  value={`${analytics.openRate}%`}
+                  change={{ value: 5.3, type: 'increase', period: 'last week' }}
+                  icon={Mail}
+                  iconColor="text-purple-600"
+                />
+                <MetricCard
+                  title="Active Campaigns"
+                  value={analytics.activeCampaigns}
+                  change={{ value: 8.2, type: 'increase', period: 'last month' }}
+                  icon={Target}
+                  iconColor="text-orange-600"
+                />
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AnalyticsChart
+                  title="Response Rate Trend"
+                  description="Daily response rates over the past 30 days"
+                  data={chartData}
+                  type="line"
+                  color="#3b82f6"
+                />
+                <AnalyticsChart
+                  title="Campaign Status Distribution"
+                  description="Current status of all campaigns"
+                  data={campaignStatusData}
+                  type="pie"
+                />
+              </div>
+
+              {/* Weekly Messages Chart */}
+              <AnalyticsChart
+                title="Weekly Message Volume"
+                description="Messages sent per day this week"
+                data={weeklyMessagesData}
+                type="bar"
+                color="#10b981"
+                className="w-full"
+              />
+
+              {/* Campaign Performance Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Campaign Performance
+                  </CardTitle>
+                  <CardDescription>Detailed metrics for your active campaigns</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {campaignMetrics.map((campaign) => (
+                      <div key={campaign.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                campaign.status === 'active' ? 'bg-green-100 text-green-800' :
+                                campaign.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {campaign.status}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-500">Sent:</span>
+                                <span className="ml-1 font-medium">{campaign.sent.toLocaleString()}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Opened:</span>
+                                <span className="ml-1 font-medium">{campaign.opened.toLocaleString()}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Replied:</span>
+                                <span className="ml-1 font-medium">{campaign.replied.toLocaleString()}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Response Rate:</span>
+                                <span className="ml-1 font-medium text-green-600">{campaign.responseRate}%</span>
+                              </div>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Activity Feed */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Recent Activity
+                  </CardTitle>
+                  <CardDescription>Latest updates from your campaigns</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { 
+                        type: "success", 
+                        message: "New response from Jennifer Fleming", 
+                        time: "2 min ago", 
+                        icon: CheckCircle2,
+                        campaign: "Q1 Sales Outreach"
+                      },
+                      { 
+                        type: "info", 
+                        message: "Campaign reached 1,000 contacts", 
+                        time: "1 hour ago", 
+                        icon: Users,
+                        campaign: "Product Demo Follow-up"
+                      },
+                      { 
+                        type: "warning", 
+                        message: "LinkedIn rate limit approaching", 
+                        time: "3 hours ago", 
+                        icon: AlertTriangle,
+                        campaign: "Executive Outreach"
+                      },
+                      { 
+                        type: "success", 
+                        message: "Meeting scheduled with David Chen", 
+                        time: "5 hours ago", 
+                        icon: Calendar,
+                        campaign: "Partnership Outreach"
+                      }
+                    ].map((activity, index) => (
+                      <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className={`p-2 rounded-full ${
+                          activity.type === "success" ? "bg-green-100" :
+                          activity.type === "warning" ? "bg-yellow-100" : "bg-blue-100"
+                        }`}>
+                          <activity.icon className={`h-4 w-4 ${
+                            activity.type === "success" ? "text-green-600" :
+                            activity.type === "warning" ? "text-yellow-600" : "text-blue-600"
+                          }`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{activity.message}</p>
+                          <p className="text-xs text-gray-500">{activity.campaign} • {activity.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </main>
         </div>
