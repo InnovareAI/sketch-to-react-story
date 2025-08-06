@@ -44,7 +44,6 @@ import { Button } from "@/components/ui/button";
 const workNavItems = [
   { title: "Workspace Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Meet Sam", url: "/agent", icon: Bot },
   { title: "Team Accounts", url: "/accounts", icon: Building2 },
   { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
 ];
@@ -68,7 +67,6 @@ const adminItems = [
 
 // Agent Mode Navigation
 const agentNavItems = [
-  { title: "Meet Sam", url: "/agent", icon: Bot },
   { title: "Agentic Team", url: "/agent/team", icon: Users },
   { title: "Train Sam", url: "/agent/train", icon: GraduationCap },
 ];

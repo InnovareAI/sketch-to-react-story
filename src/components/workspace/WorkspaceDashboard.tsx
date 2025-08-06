@@ -88,44 +88,46 @@ const campaigns = [
 
 export function WorkspaceDashboard() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="p-8 space-y-8">
         {/* Workspace Overview Banner with Account Info */}
-        <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 p-8 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-r from-premium-purple/5 to-premium-blue/5" />
+        <div className="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-white/80 border border-white/20 p-8 shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10" />
           <div className="relative z-10">
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-premium-purple/10 border border-premium-purple/20">
-                  <Crown className="h-8 w-8 text-premium-purple" />
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-600/20 to-blue-600/20 backdrop-blur-sm border border-purple-300/30">
+                  <Crown className="h-8 w-8 text-purple-600" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Workspace Overview</h1>
-                  <p className="text-gray-600 text-lg">Monitor your multi-channel outreach performance</p>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent">
+                    Workspace Overview
+                  </h1>
+                  <p className="text-slate-600 text-lg">Monitor your multi-channel outreach performance</p>
                 </div>
               </div>
               
               {/* Account Information - Moved to Right */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+              <div className="backdrop-blur-sm bg-gradient-to-r from-white/70 to-white/50 rounded-xl p-4 border border-white/40 shadow-lg">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-premium-purple to-premium-blue flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
                     <User className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Jennifer Fleming</h3>
-                    <p className="text-sm text-gray-600">Senior Account Executive</p>
+                    <h3 className="font-semibold text-slate-900">Jennifer Fleming</h3>
+                    <p className="text-sm text-slate-600">Senior Account Executive</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge className="bg-premium-green/10 text-premium-green border-premium-green/20 text-xs">
-                        <div className="w-1.5 h-1.5 bg-premium-green rounded-full mr-1" />
+                      <Badge className="bg-emerald-100/80 text-emerald-700 border-emerald-200/50 text-xs backdrop-blur-sm">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1" />
                         LinkedIn
                       </Badge>
-                      <Badge className="bg-premium-blue/10 text-premium-blue border-premium-blue/20 text-xs">
-                        <div className="w-1.5 h-1.5 bg-premium-blue rounded-full mr-1" />
+                      <Badge className="bg-blue-100/80 text-blue-700 border-blue-200/50 text-xs backdrop-blur-sm">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1" />
                         Email
                       </Badge>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="hover:bg-premium-purple/10">
+                  <Button variant="ghost" size="sm" className="hover:bg-purple-100/50 backdrop-blur-sm">
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
@@ -153,8 +155,8 @@ export function WorkspaceDashboard() {
         {/* Premium Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {metrics.map((metric, index) => (
-            <Card key={metric.title} className="bg-white border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
-              <div className={`absolute inset-0 opacity-30 bg-gradient-to-br ${metric.gradient}`} />
+            <Card key={metric.title} className="group relative overflow-hidden backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1">
+              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-purple-400/30 to-blue-400/30" />
               <div className="absolute inset-0 bg-white/95 backdrop-blur-xl" />
               
               <CardHeader className="relative z-10 pb-2">
@@ -195,7 +197,7 @@ export function WorkspaceDashboard() {
         </div>
 
         {/* Premium Campaign Activity */}
-        <Card className="bg-white border border-gray-200 shadow-lg">
+        <Card className="backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl">
           <CardHeader className="pb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
