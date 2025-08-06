@@ -8,35 +8,48 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
-
-    --popover: 224 71% 4%;
-    --popover-foreground: 213 31% 91%;
-
+    /* Light theme for dashboard */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
     --primary: 262 83% 58%;
     --primary-foreground: 210 20% 98%;
-
-    --secondary: 215 28% 17%;
-    --secondary-foreground: 210 20% 98%;
-
-    --muted: 215 28% 17%;
-    --muted-foreground: 217 10% 65%;
-
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 338 100% 55%;
     --accent-foreground: 210 20% 98%;
-
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 20% 98%;
-
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
     --ring: 262 83% 58%;
-
     --radius: 0.75rem;
+
+    /* Dark theme for conversational interface */
+    --conv-background: 224 71% 4%;
+    --conv-foreground: 213 31% 91%;
+    --conv-card: 224 71% 4%;
+    --conv-card-foreground: 213 31% 91%;
+    --conv-popover: 224 71% 4%;
+    --conv-popover-foreground: 213 31% 91%;
+    --conv-primary: 262 83% 58%;
+    --conv-primary-foreground: 210 20% 98%;
+    --conv-secondary: 215 28% 17%;
+    --conv-secondary-foreground: 210 20% 98%;
+    --conv-muted: 215 28% 17%;
+    --conv-muted-foreground: 217 10% 65%;
+    --conv-accent: 338 100% 55%;
+    --conv-accent-foreground: 210 20% 98%;
+    --conv-destructive: 0 84% 60%;
+    --conv-destructive-foreground: 210 20% 98%;
+    --conv-border: 215 28% 17%;
+    --conv-input: 215 28% 17%;
+    --conv-ring: 262 83% 58%;
 
     /* Premium color palette */
     --premium-blue: 220 91% 58%;
@@ -56,18 +69,20 @@ All colors MUST be HSL.
     /* Glass effects */
     --glass-bg: rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-bg-light: rgba(255, 255, 255, 0.8);
+    --glass-border-light: rgba(0, 0, 0, 0.1);
     
     /* Shadows */
     --shadow-premium: 0 25px 50px -12px hsl(var(--premium-purple) / 0.25);
     --shadow-glow: 0 0 40px hsl(var(--premium-blue) / 0.3);
 
-    --sidebar-background: 224 71% 4%;
-    --sidebar-foreground: 213 31% 91%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222.2 84% 4.9%;
     --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 210 20% 98%;
-    --sidebar-accent: 215 28% 17%;
-    --sidebar-accent-foreground: 213 31% 91%;
-    --sidebar-border: 215 28% 17%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
     --sidebar-ring: 262 83% 58%;
   }
 
@@ -89,6 +104,12 @@ All colors MUST be HSL.
 
 @layer components {
   .glass-card {
+    background: var(--glass-bg-light);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border-light);
+  }
+  
+  .glass-card-dark {
     background: var(--glass-bg);
     backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
@@ -110,7 +131,7 @@ All colors MUST be HSL.
   }
   
   .metric-card {
-    background: var(--gradient-card);
+    background: var(--glass-bg-light);
     backdrop-filter: blur(20px);
     border: 1px solid hsl(var(--border));
     transition: all 0.3s ease;
@@ -119,5 +140,28 @@ All colors MUST be HSL.
   .metric-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-premium);
+  }
+
+  /* Conversational interface theme */
+  .conversational-theme {
+    --background: var(--conv-background);
+    --foreground: var(--conv-foreground);
+    --card: var(--conv-card);
+    --card-foreground: var(--conv-card-foreground);
+    --popover: var(--conv-popover);
+    --popover-foreground: var(--conv-popover-foreground);
+    --primary: var(--conv-primary);
+    --primary-foreground: var(--conv-primary-foreground);
+    --secondary: var(--conv-secondary);
+    --secondary-foreground: var(--conv-secondary-foreground);
+    --muted: var(--conv-muted);
+    --muted-foreground: var(--conv-muted-foreground);
+    --accent: var(--conv-accent);
+    --accent-foreground: var(--conv-accent-foreground);
+    --destructive: var(--conv-destructive);
+    --destructive-foreground: var(--conv-destructive-foreground);
+    --border: var(--conv-border);
+    --input: var(--conv-input);
+    --ring: var(--conv-ring);
   }
 }

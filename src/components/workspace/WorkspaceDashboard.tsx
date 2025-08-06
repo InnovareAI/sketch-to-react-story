@@ -88,10 +88,10 @@ const campaigns = [
 
 export function WorkspaceDashboard() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="p-8 space-y-8">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-premium-purple/10 via-premium-blue/10 to-premium-cyan/10 border border-premium-purple/20 p-8">
+        <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 p-8 shadow-lg">
           <div className="absolute inset-0 bg-gradient-to-r from-premium-purple/5 to-premium-blue/5" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4">
@@ -99,22 +99,22 @@ export function WorkspaceDashboard() {
                 <Crown className="h-8 w-8 text-premium-purple" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold gradient-text">Workspace Overview</h1>
-                <p className="text-muted-foreground text-lg">Monitor your LinkedIn outreach performance</p>
+                <h1 className="text-3xl font-bold text-gray-900">Workspace Overview</h1>
+                <p className="text-gray-600 text-lg">Monitor your LinkedIn outreach performance</p>
               </div>
             </div>
             <div className="flex items-center gap-6 text-sm">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-premium-green" />
-                <span className="text-foreground">Real-time Analytics</span>
+                <span className="text-gray-900">Real-time Analytics</span>
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-premium-orange" />
-                <span className="text-foreground">AI-Powered Insights</span>
+                <span className="text-gray-900">AI-Powered Insights</span>
               </div>
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-premium-cyan" />
-                <span className="text-foreground">Premium Dashboard</span>
+                <span className="text-gray-900">Premium Dashboard</span>
               </div>
             </div>
           </div>
@@ -123,9 +123,9 @@ export function WorkspaceDashboard() {
         {/* Premium Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {metrics.map((metric, index) => (
-            <Card key={metric.title} className="metric-card group relative overflow-hidden border-0">
-              <div className={`absolute inset-0 opacity-50 bg-gradient-to-br ${metric.gradient}`} />
-              <div className="absolute inset-0 bg-background/90 backdrop-blur-xl" />
+            <Card key={metric.title} className="bg-white border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
+              <div className={`absolute inset-0 opacity-30 bg-gradient-to-br ${metric.gradient}`} />
+              <div className="absolute inset-0 bg-white/95 backdrop-blur-xl" />
               
               <CardHeader className="relative z-10 pb-2">
                 <div className="flex items-center justify-between">
@@ -133,7 +133,7 @@ export function WorkspaceDashboard() {
                     <metric.icon className="h-5 w-5 text-white" />
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-foreground">{metric.value}</div>
+                    <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
                     <div className="flex items-center gap-1 text-xs">
                       {metric.trend === "up" ? (
                         <TrendingUp className="h-3 w-3 text-premium-green" />
@@ -150,9 +150,9 @@ export function WorkspaceDashboard() {
               
               <CardContent className="relative z-10 pt-0">
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-foreground">{metric.title}</h3>
-                  <p className="text-xs text-muted-foreground">{metric.description}</p>
-                  <div className="h-1.5 bg-muted/20 rounded-full overflow-hidden">
+                  <h3 className="font-semibold text-gray-900">{metric.title}</h3>
+                  <p className="text-xs text-gray-600">{metric.description}</p>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div 
                       className={`h-full bg-gradient-to-r ${metric.gradient} rounded-full transition-all duration-700 ease-out`}
                       style={{ width: `${65 + index * 10}%` }}
@@ -165,7 +165,7 @@ export function WorkspaceDashboard() {
         </div>
 
         {/* Premium Campaign Activity */}
-        <Card className="glass-card border-0 premium-shadow">
+        <Card className="bg-white border border-gray-200 shadow-lg">
           <CardHeader className="pb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -173,8 +173,8 @@ export function WorkspaceDashboard() {
                   <Rocket className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-bold text-foreground">Active Campaigns</CardTitle>
-                  <p className="text-muted-foreground">Monitor your outreach performance</p>
+                  <CardTitle className="text-xl font-bold text-gray-900">Active Campaigns</CardTitle>
+                  <p className="text-gray-600">Monitor your outreach performance</p>
                 </div>
               </div>
               <Button className="bg-gradient-to-r from-premium-purple to-premium-blue hover:from-premium-purple/90 hover:to-premium-blue/90 border-0 shadow-lg">

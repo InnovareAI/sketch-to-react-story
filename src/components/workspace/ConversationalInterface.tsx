@@ -75,7 +75,7 @@ export function ConversationalInterface() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="conversational-theme flex flex-col h-full bg-gradient-to-br from-background via-background to-muted/20">
       {/* Chat Header */}
       <div className="p-6 border-b border-border/50 bg-background/95 backdrop-blur">
         <div className="flex items-center gap-4">
@@ -111,7 +111,7 @@ export function ConversationalInterface() {
               <Card className={`p-4 ${
                 message.sender === "user" 
                   ? "bg-gradient-to-br from-premium-purple to-premium-blue text-white border-0" 
-                  : "glass-card border-0"
+                  : "glass-card-dark border-0"
               }`}>
                 <p className="text-sm leading-relaxed">{message.content}</p>
               </Card>
