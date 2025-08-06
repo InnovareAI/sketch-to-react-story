@@ -50,32 +50,36 @@ export default function Dashboard() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-50">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-slate-100">
         <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col">
           <WorkspaceHeader isConversational={isConversational} onToggleMode={handleToggleMode} />
           <main className="flex-1 p-8">
             <div className="max-w-7xl mx-auto space-y-8">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-                  <p className="text-gray-600 mt-1">Real-time insights into your outreach performance</p>
-                </div>
-                <div className="flex items-center gap-3">
+              {/* Header with glass morphism effect */}
+              <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl p-8 shadow-2xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent">
+                    Analytics Dashboard
+                  </h1>
+                  <p className="text-slate-600 mt-2 text-lg">Real-time insights into your outreach performance</p>
+                  </div>
+                  <div className="flex items-center gap-3">
                   <Button 
                     variant="outline" 
                     onClick={refreshData}
                     disabled={isLoading}
-                    className="flex items-center gap-2"
+                    className="backdrop-blur-sm bg-white/50 border border-white/30 hover:bg-white/70 transition-all duration-300 shadow-lg"
                   >
                     <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                     Refresh
                   </Button>
-                  <Button className="bg-primary hover:bg-primary/90">
+                  <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-xl text-white font-semibold px-6 py-2 transition-all duration-300 hover:scale-105">
                     <Target className="h-4 w-4 mr-2" />
                     New Campaign
                   </Button>
+                  </div>
                 </div>
               </div>
 

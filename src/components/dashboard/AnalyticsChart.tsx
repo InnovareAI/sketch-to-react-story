@@ -136,14 +136,17 @@ export function AnalyticsChart({
   };
 
   return (
-    <Card className={`animate-fade-in ${className}`}>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
+    <Card className={`backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 animate-fade-in ${className}`}>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-lg" />
+      <CardHeader className="relative z-10">
+        <CardTitle className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+          {title}
+        </CardTitle>
         {description && (
-          <CardDescription>{description}</CardDescription>
+          <CardDescription className="text-slate-600">{description}</CardDescription>
         )}
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="relative z-10 pt-0">
         {renderChart()}
       </CardContent>
     </Card>
