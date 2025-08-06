@@ -129,38 +129,6 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
           <SidebarTrigger className="ml-auto" />
         </div>
 
-        {/* LinkedIn Accounts Section */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 px-2 mb-3">
-            <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">in</span>
-            </div>
-            <span className={`text-sm font-medium ${isConversational ? 'text-gray-300' : 'text-muted-foreground'}`}>All accounts</span>
-            <Button variant="ghost" size="sm" className="ml-auto h-6 w-6 p-0">
-              <span className="text-primary text-lg">+</span>
-            </Button>
-          </div>
-          
-          <div className={`rounded-lg p-3 mb-1 ${isConversational ? 'bg-gray-800' : 'bg-muted/30'}`}>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">J</span>
-              </div>
-              <div>
-                <div className={`text-sm font-medium ${isConversational ? 'text-white' : ''}`}>Jennifer Fleming</div>
-                <div className={`text-xs ${isConversational ? 'text-gray-400' : 'text-muted-foreground'}`}>Senior Account Executive</div>
-                <div className={`text-xs ${isConversational ? 'text-gray-400' : 'text-muted-foreground'}`}>Multi-channel outreach</div>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="text-xs text-green-600">LinkedIn: Active</div>
-                  <div className="text-xs text-blue-600">Email: Active</div>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" className="ml-auto h-6 w-6 p-0">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
 
         {/* Main Navigation */}
         <SidebarGroup>

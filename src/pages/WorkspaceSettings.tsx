@@ -105,13 +105,65 @@ export default function WorkspaceSettings() {
               </div>
               
               <div className="space-y-6">
-        <Tabs defaultValue="linkedin" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="accounts" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="accounts">Account Management</TabsTrigger>
             <TabsTrigger value="linkedin">LinkedIn Accounts</TabsTrigger>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="accounts" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Account Management
+                </CardTitle>
+                <CardDescription>
+                  Manage all workspace accounts and team member access
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* All Accounts Section */}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">in</span>
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">All accounts</span>
+                      <Button variant="outline" size="sm" className="ml-auto">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Account
+                      </Button>
+                    </div>
+                    
+                    <div className="rounded-lg p-4 border bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
+                          <span className="text-white text-sm font-bold">J</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">Jennifer Fleming</div>
+                          <div className="text-xs text-muted-foreground">Senior Account Executive</div>
+                          <div className="text-xs text-muted-foreground">Multi-channel outreach</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="text-xs text-green-600">LinkedIn: Active</div>
+                            <div className="text-xs text-blue-600">Email: Active</div>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm">
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="linkedin" className="space-y-6">
             <Card>
