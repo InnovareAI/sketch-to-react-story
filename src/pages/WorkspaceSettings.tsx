@@ -91,7 +91,7 @@ export default function WorkspaceSettings() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
-        <WorkspaceSidebar />
+        <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col">
           <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
           <main className="flex-1 p-8">

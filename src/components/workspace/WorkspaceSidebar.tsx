@@ -59,7 +59,7 @@ const adminItems = [
   { title: "Workspace settings", url: "/workspace-settings", icon: Settings },
 ];
 
-export function WorkspaceSidebar() {
+export function WorkspaceSidebar({ isConversational = false }: { isConversational?: boolean }) {
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -83,7 +83,7 @@ export function WorkspaceSidebar() {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink to={item.url} className={getNavCls(item.url)}>
-                        <item.icon className="h-4 w-4" />
+                      <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -97,14 +97,14 @@ export function WorkspaceSidebar() {
   }
 
   return (
-    <Sidebar className="w-64 border-r border-border" collapsible="icon">
-      <SidebarContent className="p-4">
+    <Sidebar className={`w-64 border-r ${isConversational ? 'bg-gray-900 border-gray-700' : 'border-border'}`} collapsible="icon">
+      <SidebarContent className={`p-4 ${isConversational ? 'bg-gray-900' : ''}`}>
         {/* Brand Header */}
         <div className="flex items-center gap-3 mb-6 px-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">I</span>
           </div>
-          <span className="font-semibold text-foreground">Innovare</span>
+          <span className={`font-semibold ${isConversational ? 'text-white' : 'text-foreground'}`}>Innovare</span>
           <SidebarTrigger className="ml-auto" />
         </div>
 
@@ -114,21 +114,21 @@ export function WorkspaceSidebar() {
             <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-bold">in</span>
             </div>
-            <span className="text-sm font-medium text-muted-foreground">All accounts</span>
+            <span className={`text-sm font-medium ${isConversational ? 'text-gray-300' : 'text-muted-foreground'}`}>All accounts</span>
             <Button variant="ghost" size="sm" className="ml-auto h-6 w-6 p-0">
               <span className="text-primary text-lg">+</span>
             </Button>
           </div>
           
-          <div className="bg-muted/30 rounded-lg p-3 mb-1">
+          <div className={`rounded-lg p-3 mb-1 ${isConversational ? 'bg-gray-800' : 'bg-muted/30'}`}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-bold">J</span>
               </div>
               <div>
-                <div className="text-sm font-medium">Jennifer Fleming</div>
-                <div className="text-xs text-muted-foreground">Senior Account Executive</div>
-                <div className="text-xs text-muted-foreground">Multi-channel outreach</div>
+                <div className={`text-sm font-medium ${isConversational ? 'text-white' : ''}`}>Jennifer Fleming</div>
+                <div className={`text-xs ${isConversational ? 'text-gray-400' : 'text-muted-foreground'}`}>Senior Account Executive</div>
+                <div className={`text-xs ${isConversational ? 'text-gray-400' : 'text-muted-foreground'}`}>Multi-channel outreach</div>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="text-xs text-green-600">LinkedIn: Active</div>
                   <div className="text-xs text-blue-600">Email: Active</div>
@@ -148,8 +148,12 @@ export function WorkspaceSidebar() {
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavCls(item.url)}>
-                      <item.icon className="h-4 w-4" />
+                     <NavLink to={item.url} className={({ isActive }) => `${getNavCls(item.url)} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive 
+                          ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium border-r-2 border-primary')
+                          : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
+                      }`}>
+                        <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -165,8 +169,12 @@ export function WorkspaceSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/search" className={getNavCls("/search")}>
-                    <Search className="h-4 w-4" />
+                   <NavLink to="/search" className={({ isActive }) => `${getNavCls("/search")} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive 
+                        ? (isConversational ? 'bg-gray-700 text-white' : 'bg-primary/10 text-primary font-medium border-r-2 border-primary')
+                        : (isConversational ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'hover:bg-muted/50')
+                    }`}>
+                    <Search className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                     <span>Search</span>
                   </NavLink>
                 </SidebarMenuButton>
@@ -194,7 +202,7 @@ export function WorkspaceSidebar() {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
                         <NavLink to={item.url} className={getNavCls(item.url)}>
-                          <item.icon className="h-4 w-4" />
+                        <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                           <span>{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
@@ -225,7 +233,7 @@ export function WorkspaceSidebar() {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
                         <NavLink to={item.url} className={getNavCls(item.url)}>
-                          <item.icon className="h-4 w-4" />
+                        <item.icon className={`h-4 w-4 ${isConversational ? 'text-gray-300' : ''}`} />
                           <span>{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>

@@ -11,7 +11,7 @@ const Index = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-background">
-        <WorkspaceSidebar />
+        <WorkspaceSidebar isConversational={isConversational} />
         <main className="flex-1 flex flex-col overflow-hidden">
           <WorkspaceHeader 
             isConversational={isConversational}

@@ -27,7 +27,7 @@ export default function Dashboard() {
     return (
       <SidebarProvider>
         <div className="min-h-screen flex w-full">
-          <WorkspaceSidebar />
+          <WorkspaceSidebar isConversational={isConversational} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <WorkspaceHeader 
               isConversational={isConversational}
@@ -45,7 +45,7 @@ export default function Dashboard() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
-        <WorkspaceSidebar />
+        <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col">
           <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
           <main className="flex-1 p-8">

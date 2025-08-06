@@ -18,16 +18,16 @@ interface WorkspaceHeaderProps {
 
 export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHeaderProps) {
   return (
-    <header className="border-b border-border bg-background px-6 py-4">
+    <header className={`border-b px-6 py-4 ${isConversational ? 'bg-gray-900 border-gray-700' : 'bg-background border-border'}`}>
       <div className="flex items-center justify-between">
         {/* Left Section - Mode Toggle */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4 p-2 rounded-xl bg-muted/30 border border-border/50">
+          <div className={`flex items-center gap-4 p-2 rounded-xl border ${isConversational ? 'bg-gray-800 border-gray-600' : 'bg-muted/30 border-border/50'}`}>
             <div className="flex items-center gap-2">
-              <BarChart3 className={`h-4 w-4 ${!isConversational ? 'text-premium-purple' : 'text-muted-foreground'}`} />
-              <span className={`text-sm font-medium ${!isConversational ? 'text-foreground' : 'text-muted-foreground'}`}>
-                Work Mode
-              </span>
+               <BarChart3 className={`h-4 w-4 ${!isConversational ? 'text-premium-purple' : (isConversational ? 'text-gray-400' : 'text-muted-foreground')}`} />
+               <span className={`text-sm font-medium ${!isConversational ? (isConversational ? 'text-white' : 'text-foreground') : (isConversational ? 'text-gray-400' : 'text-muted-foreground')}`}>
+                 Work Mode
+               </span>
             </div>
             <Switch 
               checked={isConversational}
@@ -35,9 +35,9 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
               className="data-[state=checked]:bg-premium-purple"
             />
             <div className="flex items-center gap-2">
-              <MessageSquare className={`h-4 w-4 ${isConversational ? 'text-premium-purple' : 'text-muted-foreground'}`} />
-              <span className={`text-sm font-medium ${isConversational ? 'text-foreground' : 'text-muted-foreground'}`}>
-                Agent Mode
+               <MessageSquare className={`h-4 w-4 ${isConversational ? 'text-premium-purple' : (isConversational ? 'text-gray-400' : 'text-muted-foreground')}`} />
+               <span className={`text-sm font-medium ${isConversational ? (isConversational ? 'text-white' : 'text-foreground') : (isConversational ? 'text-gray-400' : 'text-muted-foreground')}`}>
+                 Agent Mode
               </span>
             </div>
           </div>
