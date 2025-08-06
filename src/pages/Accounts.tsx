@@ -559,7 +559,6 @@ export default function Accounts() {
                 {/* Contact Details */}
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Mail className="h-4 w-4" />
                     <span className="truncate">{account.email}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -568,7 +567,6 @@ export default function Accounts() {
                   </div>
                   {account.whatsapp && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MessageSquare className="h-4 w-4 text-green-600" />
                       <span>{account.whatsapp}</span>
                     </div>
                   )}
@@ -579,7 +577,6 @@ export default function Accounts() {
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Linkedin className="h-4 w-4" />
                     <span className="truncate">{account.linkedin}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
