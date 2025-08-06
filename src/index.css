@@ -87,7 +87,35 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Already using dark theme as default */
+    /* Dark theme with white text everywhere */
+    --background: 224 71% 4%;
+    --foreground: 0 0% 100%;
+    --card: 224 71% 4%;
+    --card-foreground: 0 0% 100%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 0 0% 85%;
+    --accent: 338 100% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 262 83% 58%;
+
+    --sidebar-background: 224 71% 4%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 215 28% 17%;
+    --sidebar-ring: 262 83% 58%;
   }
 }
 
@@ -96,9 +124,32 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    @apply dark;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    color: white !important;
+  }
+
+  /* Ensure all text is white in dark mode */
+  .dark * {
+    color: white !important;
+  }
+
+  /* Override specific elements that should keep their colors */
+  .dark .text-primary {
+    color: hsl(var(--primary)) !important;
+  }
+
+  .dark .text-secondary {
+    color: hsl(var(--secondary-foreground)) !important;
+  }
+
+  .dark .text-muted-foreground {
+    color: hsl(var(--muted-foreground)) !important;
   }
 }
 
