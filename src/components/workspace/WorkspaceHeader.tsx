@@ -86,9 +86,9 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-primary-foreground text-sm font-medium">T</span>
+                  <span className="text-primary-foreground text-sm font-medium">J</span>
                 </div>
-                <span className="hidden md:inline-block">Thorsten</span>
+                <span className="hidden md:inline-block">Jennifer</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

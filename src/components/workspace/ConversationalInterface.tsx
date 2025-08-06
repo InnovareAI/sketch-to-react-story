@@ -16,7 +16,7 @@ export function ConversationalInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hi! I'm Sam, your AI workspace assistant. I can help you manage campaigns, analyze performance, and optimize your LinkedIn outreach. What would you like to work on today?",
+      content: "Hi! I'm Sam, your AI workspace assistant. I can help you manage campaigns, analyze performance, and optimize your multi-channel outreach across email and LinkedIn. What would you like to work on today?",
       sender: "sam",
       timestamp: new Date(),
     },
@@ -176,7 +176,7 @@ export function ConversationalInterface() {
         
         <div className="flex items-center justify-center mt-4">
           <p className="text-xs text-muted-foreground">
-            Sam can help with campaign management, performance analysis, and LinkedIn outreach optimization
+            Sam can help with campaign management, performance analysis, and multi-channel outreach optimization
           </p>
         </div>
       </div>

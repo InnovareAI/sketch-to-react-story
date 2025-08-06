@@ -43,7 +43,6 @@ const mainNavItems = [
 const campaignItems = [
   { title: "My campaigns", url: "/campaigns", icon: Target },
   { title: "Templates", url: "/templates", icon: FileText },
-  { title: "Marketplace", url: "/marketplace", icon: Building2 },
 ];
 
 const networkItems = [
@@ -114,7 +113,7 @@ export function WorkspaceSidebar() {
             <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-bold">in</span>
             </div>
-            <span className="text-sm font-medium text-muted-foreground">All LinkedIn accounts</span>
+            <span className="text-sm font-medium text-muted-foreground">All accounts</span>
             <Button variant="ghost" size="sm" className="ml-auto h-6 w-6 p-0">
               <span className="text-primary text-lg">+</span>
             </Button>
@@ -123,13 +122,16 @@ export function WorkspaceSidebar() {
           <div className="bg-muted/30 rounded-lg p-3 mb-1">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">I</span>
+                <span className="text-white text-xs font-bold">J</span>
               </div>
               <div>
-                <div className="text-sm font-medium">Innovare</div>
-                <div className="text-xs text-muted-foreground">Dr. Stephanie Gripne</div>
-                <div className="text-xs text-muted-foreground">Impact Finance Center</div>
-                <div className="text-xs text-green-600">Active: 7:00-22:00</div>
+                <div className="text-sm font-medium">Jennifer Fleming</div>
+                <div className="text-xs text-muted-foreground">Senior Account Executive</div>
+                <div className="text-xs text-muted-foreground">Multi-channel outreach</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="text-xs text-green-600">LinkedIn: Active</div>
+                  <div className="text-xs text-blue-600">Email: Active</div>
+                </div>
               </div>
               <Button variant="ghost" size="sm" className="ml-auto h-6 w-6 p-0">
                 <Settings className="h-4 w-4" />

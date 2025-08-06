@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Users, Target, MessageSquare, BarChart3, Zap, Rocket, Star, Crown, Activity, ArrowUpRight, Eye, Clock, Globe } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, User, Target, MessageSquare, BarChart3, Zap, Rocket, Star, Crown, Activity, ArrowUpRight, Eye, Clock, Globe, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ const metrics = [
     icon: Target,
     color: "premium-purple",
     gradient: "from-premium-purple to-premium-blue",
-    description: "Active outreach campaigns",
+    description: "Active multi-channel campaigns",
   },
   {
     title: "Active Connections",
@@ -23,7 +23,7 @@ const metrics = [
     icon: Users,
     color: "premium-cyan",
     gradient: "from-premium-cyan to-premium-green",
-    description: "LinkedIn connections made",
+    description: "Email & LinkedIn connections",
   },
   {
     title: "Response Rate",
@@ -90,6 +90,41 @@ export function WorkspaceDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="p-8 space-y-8">
+        {/* Accounts Section */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Accounts</h2>
+            <Button className="bg-gradient-to-r from-premium-purple to-premium-blue hover:from-premium-purple/90 hover:to-premium-blue/90 border-0 shadow-lg">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Account
+            </Button>
+          </div>
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-premium-purple to-premium-blue flex items-center justify-center">
+                <User className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">Jennifer Fleming</h3>
+                <p className="text-sm text-gray-600">Senior Account Executive</p>
+                <div className="flex items-center gap-4 mt-1">
+                  <Badge className="bg-premium-green/10 text-premium-green border-premium-green/20">
+                    <div className="w-2 h-2 bg-premium-green rounded-full mr-2" />
+                    LinkedIn Connected
+                  </Badge>
+                  <Badge className="bg-premium-blue/10 text-premium-blue border-premium-blue/20">
+                    <div className="w-2 h-2 bg-premium-blue rounded-full mr-2" />
+                    Email Active
+                  </Badge>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="hover:bg-premium-purple/10">
+                <Eye className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Hero Section */}
         <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 p-8 shadow-lg">
           <div className="absolute inset-0 bg-gradient-to-r from-premium-purple/5 to-premium-blue/5" />
@@ -100,7 +135,7 @@ export function WorkspaceDashboard() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Workspace Overview</h1>
-                <p className="text-gray-600 text-lg">Monitor your LinkedIn outreach performance</p>
+                <p className="text-gray-600 text-lg">Monitor your multi-channel outreach performance</p>
               </div>
             </div>
             <div className="flex items-center gap-6 text-sm">
@@ -307,8 +342,8 @@ export function WorkspaceDashboard() {
                 <span className="font-semibold text-premium-blue">2.4 hours</span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-xl bg-gradient-to-r from-premium-orange/10 to-premium-pink/10 border border-premium-orange/20">
-                <span className="text-sm text-muted-foreground">Active LinkedIn accounts</span>
-                <span className="font-semibold text-premium-orange">3</span>
+                <span className="text-sm text-muted-foreground">Active accounts</span>
+                <span className="font-semibold text-premium-orange">1</span>
               </div>
             </CardContent>
           </Card>
