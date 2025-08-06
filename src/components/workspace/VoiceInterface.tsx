@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,12 +21,13 @@ interface VoiceInterfaceProps {
 }
 
 export function VoiceInterface({ onVoiceMessage, className = "" }: VoiceInterfaceProps) {
-  const [apiKey, setApiKey] = useState('');
-  const [voiceId, setVoiceId] = useState('pNInz6obpgDQGcFmaJgB'); // Default voice
+  const [apiKey, setApiKey] = useState('enabled'); // Flag to indicate ElevenLabs is available
+  const [voiceId, setVoiceId] = useState('9BWtsMINqrJLrRacOk9x'); // Aria voice
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
+  // Use the voice hook with ElevenLabs enabled
   const { isListening, isPlaying, error, startListening, stopListening, speakText } = useVoice({
-    apiKey: apiKey || undefined,
+    apiKey: apiKey === 'enabled' ? 'enabled' : undefined,
     voiceId,
     model: 'eleven_turbo_v2'
   });

@@ -74,21 +74,17 @@ export function useVoice(config?: VoiceConfig) {
       setIsPlaying(true);
 
       if (config?.apiKey) {
-        // Use ElevenLabs TTS when API key is provided
-        const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + (config.voiceId || 'pNInz6obpgDQGcFmaJgB'), {
+        // Use Supabase Edge Function for secure ElevenLabs TTS
+        const response = await fetch('/functions/v1/voice-tts', {
           method: 'POST',
           headers: {
-            'Accept': 'audio/mpeg',
             'Content-Type': 'application/json',
-            'xi-api-key': config.apiKey
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
           },
           body: JSON.stringify({
             text,
-            model_id: config.model || 'eleven_monolingual_v1',
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.5
-            }
+            voiceId: config.voiceId || '9BWtsMINqrJLrRacOk9x', // Aria voice
+            model: config.model || 'eleven_turbo_v2'
           })
         });
 
@@ -101,6 +97,12 @@ export function useVoice(config?: VoiceConfig) {
         const audio = new Audio(audioUrl);
         
         audio.onended = () => {
+          setIsPlaying(false);
+          URL.revokeObjectURL(audioUrl);
+        };
+        
+        audio.onerror = () => {
+          setError('Audio playback failed');
           setIsPlaying(false);
           URL.revokeObjectURL(audioUrl);
         };
