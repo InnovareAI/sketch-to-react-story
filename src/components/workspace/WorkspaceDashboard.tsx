@@ -149,7 +149,7 @@ export function WorkspaceDashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-premium-cyan" />
-                <span className="text-gray-900">Premium Dashboard</span>
+                <span className="text-gray-900">Premium Workspace</span>
               </div>
             </div>
           </div>

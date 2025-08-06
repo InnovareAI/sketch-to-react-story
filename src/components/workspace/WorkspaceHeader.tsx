@@ -26,7 +26,7 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
             <div className="flex items-center gap-2">
               <BarChart3 className={`h-4 w-4 ${!isConversational ? 'text-premium-purple' : 'text-muted-foreground'}`} />
               <span className={`text-sm font-medium ${!isConversational ? 'text-foreground' : 'text-muted-foreground'}`}>
-                Dashboard
+                Work Mode
               </span>
             </div>
             <Switch 
@@ -37,7 +37,7 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
             <div className="flex items-center gap-2">
               <MessageSquare className={`h-4 w-4 ${isConversational ? 'text-premium-purple' : 'text-muted-foreground'}`} />
               <span className={`text-sm font-medium ${isConversational ? 'text-foreground' : 'text-muted-foreground'}`}>
-                Chat with Sam
+                Agent Mode
               </span>
             </div>
           </div>
@@ -45,7 +45,7 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
         
         {/* Right Section - Actions & User */}
         <div className="flex items-center gap-4">
-          {/* Search - only show in dashboard mode */}
+          {/* Search - only show in work mode */}
           {!isConversational && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
