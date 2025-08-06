@@ -124,22 +124,17 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  html {
-    @apply dark;
-  }
-
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    color: white !important;
   }
 
-  /* Ensure all text is white in dark mode */
+  /* Ensure all text is white only in dark mode */
   .dark * {
     color: white !important;
   }
 
-  /* Override specific elements that should keep their colors */
+  /* Override specific elements that should keep their colors in dark mode */
   .dark .text-primary {
     color: hsl(var(--primary)) !important;
   }
