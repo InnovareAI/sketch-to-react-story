@@ -45,12 +45,17 @@ const workNavItems = [
   { title: "Workspace Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Team Accounts", url: "/accounts", icon: Building2 },
-  { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
 ];
 
 const campaignItems = [
   { title: "My campaigns", url: "/campaigns", icon: Target },
   { title: "Templates", url: "/templates", icon: FileText },
+];
+
+const inboxItems = [
+  { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
+  { title: "My Inbox", url: "/inbox", icon: Mail },
+  { title: "Message Queue", url: "/message-queue", icon: MessageSquare },
 ];
 
 const networkItems = [
@@ -70,7 +75,6 @@ const agentNavItems = [
   { title: "Agentic Team", url: "/agent/team", icon: Users },
   { title: "Train Sam", url: "/agent/train", icon: GraduationCap },
 ];
-
 const agentDocumentItems = [
   { title: "Your ICP", url: "/agent/icp", icon: Target },
   { title: "Your Value Prop", url: "/agent/value-prop", icon: Star },
@@ -88,6 +92,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
   
   const [campaignOpen, setCampaignOpen] = useState(true);
   const [networkOpen, setNetworkOpen] = useState(true);
+  const [inboxOpen, setInboxOpen] = useState(true);
   const [documentsOpen, setDocumentsOpen] = useState(true);
   
   const isActive = (path: string) => currentPath === path;
@@ -253,41 +258,40 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
 
             {/* Inbox Section - Work Mode Only */}
             <SidebarGroup>
-              <SidebarGroupLabel className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Inbox className="h-4 w-4" />
-                  <span>Inbox</span>
-                </span>
-                <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">3848</span>
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink to="/inbox" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive 
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-muted/50'
-                      }`}>
-                        <Mail className="h-4 w-4" />
-                        <span>Inbox</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink to="/message-queue" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive 
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-muted/50'
-                      }`}>
-                        <MessageSquare className="h-4 w-4" />
-                        <span>Message queue</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
+              <Collapsible open={inboxOpen} onOpenChange={setInboxOpen}>
+                <CollapsibleTrigger asChild>
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2">
+                    <span className="flex items-center gap-2">
+                      <Inbox className="h-4 w-4" />
+                      <span>Inbox</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">3848</span>
+                      {inboxOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {inboxItems.map((item) => (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton asChild>
+                            <NavLink to={item.url} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              isActive 
+                                ? 'bg-primary/10 text-primary font-medium'
+                                : 'hover:bg-muted/50'
+                            }`}>
+                              <item.icon className="h-4 w-4" />
+                              <span>{item.title}</span>
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </Collapsible>
             </SidebarGroup>
 
             {/* Admin Section - Work Mode Only */}
