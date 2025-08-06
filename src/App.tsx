@@ -17,6 +17,7 @@ import Requests from "./pages/Requests";
 import Placeholders from "./pages/Placeholders";
 import Members from "./pages/Members";
 import Roles from "./pages/Roles";
+import WorkspaceSettings from "./pages/WorkspaceSettings";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/company-profile" element={<Members />} />
           <Route path="/members" element={<Members />} />
           <Route path="/roles" element={<Roles />} />
+          <Route path="/workspace-settings" element={<WorkspaceSettings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
