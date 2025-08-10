@@ -31,13 +31,29 @@ import {
   Webhook,
   UserX,
   Calendar,
-  MapPin
+  MapPin,
+  ChevronDown,
+  CalendarDays,
+  Trash
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
   const [isConversational, setIsConversational] = useState(false);
+  const [inactiveDates, setInactiveDates] = useState([
+    { id: 1, date: "25 Dec, 2023 - 25 Dec, 2023", label: "Christmas Day" },
+    { id: 2, date: "01 Jan, 2024 - 01 Jan, 2024", label: "New Year's Day" }
+  ]);
+  const [weeklyHours, setWeeklyHours] = useState({
+    monday: { start: "7:00", end: "22:00" },
+    tuesday: { start: "7:00", end: "22:00" },
+    wednesday: { start: "7:00", end: "22:00" },
+    thursday: { start: "7:00", end: "22:00" },
+    friday: { start: "7:00", end: "22:00" },
+    saturday: { start: "10:00", end: "19:00" },
+    sunday: { start: "11:30", end: "17:00" }
+  });
   const [linkedinAccounts, setLinkedinAccounts] = useState([
     {
       id: 1,
@@ -82,6 +98,29 @@ export default function WorkspaceSettings() {
       description: "LinkedIn account has been disconnected.",
       variant: "destructive"
     });
+  };
+
+  const handleAddInactiveDate = () => {
+    const newDate = {
+      id: Date.now(),
+      date: "Select date range",
+      label: "New inactive period"
+    };
+    setInactiveDates(prev => [...prev, newDate]);
+  };
+
+  const handleRemoveInactiveDate = (dateId: number) => {
+    setInactiveDates(prev => prev.filter(date => date.id !== dateId));
+  };
+
+  const handleTimeChange = (day: string, timeType: 'start' | 'end', value: string) => {
+    setWeeklyHours(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day as keyof typeof prev],
+        [timeType]: value
+      }
+    }));
   };
 
   const getStatusBadge = (status: string) => {
@@ -210,24 +249,147 @@ export default function WorkspaceSettings() {
                 </CardTitle>
                 <CardDescription>Set daily active hours and choose specific inactive dates</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="start-time">Start Time</Label>
-                    <Input id="start-time" type="time" defaultValue="09:00" />
+              <CardContent className="space-y-6">
+                {/* LinkedIn Account Time Zone */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold">LinkedIn Account Time Zone</Label>
+                    <p className="text-sm text-muted-foreground">Select time zone that is natural for activity for this LinkedIn account.</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end-time">End Time</Label>
-                    <Input id="end-time" type="time" defaultValue="17:00" />
+                  <div className="flex items-center gap-4">
+                    <div className="space-y-2">
+                      <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="US/Mountain">US/Mountain</option>
+                        <option value="US/Pacific">US/Pacific</option>
+                        <option value="US/Central">US/Central</option>
+                        <option value="US/Eastern">US/Eastern</option>
+                        <option value="Europe/London">Europe/London</option>
+                      </select>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      <span className="font-medium">15:45 PM</span> local time
+                    </div>
                   </div>
                 </div>
+
                 <Separator />
-                <div className="space-y-2">
-                  <Label>Inactive Dates</Label>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <Button variant="outline" size="sm">Select Dates</Button>
+
+                {/* Weekly Active Hours */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold">Weekly Active Hours</Label>
+                    <p className="text-sm text-muted-foreground">Set the hours when campaign messages are sent and searches auto-reload. Use your typical work hours for a natural, human-like pattern. Actions will only run during this time.</p>
                   </div>
+
+                  <div className="space-y-3">
+                    {Object.entries(weeklyHours).map(([day, times]) => (
+                      <div key={day} className="grid grid-cols-4 gap-4 items-center py-2">
+                        <div className="font-medium capitalize flex items-center gap-2">
+                          {day === 'sunday' && <Badge variant="secondary" className="text-xs">Today</Badge>}
+                          {day}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="time" 
+                            value={times.start}
+                            onChange={(e) => handleTimeChange(day, 'start', e.target.value)}
+                            className="w-24"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="time" 
+                            value={times.end}
+                            onChange={(e) => handleTimeChange(day, 'end', e.target.value)}
+                            className="w-24"
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {day.charAt(0).toUpperCase() + day.slice(1)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button className="w-fit">Apply</Button>
+                </div>
+
+                <Separator />
+
+                {/* Send direct messages only during account active times */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Send direct messages only during account active times</Label>
+                    <p className="text-sm text-muted-foreground">Restrict message sending to active hours only</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+
+                <Separator />
+
+                {/* Additional Inactive Days */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-semibold">Additional Inactive Days</Label>
+                      <p className="text-sm text-muted-foreground">Add specific dates (like holidays or time off) when automated actions should pause — even if they fall within active hours.</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleAddInactiveDate}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Inactive
+                    </Button>
+                  </div>
+
+                  {inactiveDates.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm">
+                            Select all
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                            <Trash className="h-4 w-4 mr-2" />
+                            Delete selected
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium">Inactive Date Range</Label>
+                        <div className="mt-2 space-y-2">
+                          {inactiveDates.map((inactiveDate) => (
+                            <div key={inactiveDate.id} className="flex items-center justify-between p-3 border rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <input type="checkbox" className="h-4 w-4" />
+                                <div>
+                                  <div className="font-medium text-sm">{inactiveDate.date}</div>
+                                  {inactiveDate.label && (
+                                    <div className="text-xs text-muted-foreground">{inactiveDate.label}</div>
+                                  )}
+                                </div>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleRemoveInactiveDate(inactiveDate.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t">
+                        <span className="text-sm text-muted-foreground">50 / Page</span>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm">Previous</Button>
+                          <Button variant="outline" size="sm">Next</Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
