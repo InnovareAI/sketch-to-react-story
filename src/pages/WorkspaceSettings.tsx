@@ -508,54 +508,10 @@ export default function WorkspaceSettings() {
                 <CardDescription>Manage your dedicated IP address easily even while traveling</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Bright Data Integration Status */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="text-blue-600 mt-0.5">
-                      <Globe className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-blue-800 font-medium">Bright Data Integration</p>
-                      <p className="text-sm text-blue-700 mt-1">
-                        Proxy locations are powered by Bright Data's premium residential network. 
-                        Connect your Bright Data account to access advanced proxy features and dedicated IPs.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     In order to assure a secure connection from us to your LinkedIn account we provide a dedicated IP address which will only be used for your account.
                   </p>
-
-                  {/* Bright Data Account Connection */}
-                  <div className="border rounded-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-base font-medium">Bright Data Account</Label>
-                        <p className="text-sm text-muted-foreground">Connect your Bright Data account for premium proxy features</p>
-                      </div>
-                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                        Not Connected
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="bright-data-username">Bright Data Username</Label>
-                        <Input id="bright-data-username" placeholder="Enter your Bright Data username" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="bright-data-password">Bright Data Password</Label>
-                        <Input id="bright-data-password" type="password" placeholder="Enter your Bright Data password" />
-                      </div>
-                      <Button variant="outline">
-                        <Link className="h-4 w-4 mr-2" />
-                        Connect Bright Data Account
-                      </Button>
-                    </div>
-                  </div>
                   
                   <div className="space-y-3">
                     <Label className="text-base font-medium">Select the country for proxy you want to run your LinkedIn</Label>
@@ -579,21 +535,6 @@ export default function WorkspaceSettings() {
                       
                       <div className="text-xs text-muted-foreground">
                         <span className="underline cursor-pointer hover:text-foreground">Can't find your country?</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="text-yellow-600 mt-0.5">
-                        <AlertCircle className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-yellow-800 font-medium">Premium Features</p>
-                        <p className="text-sm text-yellow-700 mt-1">
-                          Connecting your Bright Data account unlocks residential IPs, city-level targeting, 
-                          and enhanced anonymity for your LinkedIn campaigns.
-                        </p>
                       </div>
                     </div>
                   </div>
