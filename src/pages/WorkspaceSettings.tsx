@@ -558,12 +558,45 @@ export default function WorkspaceSettings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="border rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                        <MessageCircle className="h-4 w-4 text-green-600" />
+                      <div className="w-8 h-8 bg-orange-100 rounded flex items-center justify-center">
+                        <Database className="h-4 w-4 text-orange-600" />
                       </div>
-                      <span className="font-medium">CRM Integration</span>
+                      <span className="font-medium">HubSpot</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">Sync contacts with your CRM system</p>
+                    <p className="text-sm text-muted-foreground mb-3">Sync contacts and deals with HubSpot CRM</p>
+                    <Button variant="outline" size="sm">Configure</Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
+                        <Users className="h-4 w-4 text-green-600" />
+                      </div>
+                      <span className="font-medium">Pipedrive</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">Connect your Pipedrive sales pipeline</p>
+                    <Button variant="outline" size="sm">Configure</Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                        <Database className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <span className="font-medium">Airtable</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">Store and organize data in Airtable bases</p>
+                    <Button variant="outline" size="sm">Configure</Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-emerald-100 rounded flex items-center justify-center">
+                        <Globe className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <span className="font-medium">Google Sheets</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">Export data to Google Sheets automatically</p>
                     <Button variant="outline" size="sm">Configure</Button>
                   </div>
                 </div>
