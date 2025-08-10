@@ -108,13 +108,13 @@ export default function WorkspaceSettings() {
 
   const handleRemoveAccount = (accountId: number) => {
     // Show confirmation dialog first
-    const confirmed = confirm("Are you sure you want to disconnect this LinkedIn account? This will also remove your subscription from Unipile and cannot be undone.");
+    const confirmed = confirm("Are you sure you want to cancel your subscription and disconnect this LinkedIn account? This action cannot be undone.");
     
     if (confirmed) {
       setLinkedinAccounts(prev => prev.filter(acc => acc.id !== accountId));
       toast({
-        title: "Account Disconnected",
-        description: "LinkedIn account and Unipile subscription have been removed successfully.",
+        title: "Subscription Cancelled",
+        description: "LinkedIn account disconnected and subscription cancelled successfully.",
         variant: "destructive"
       });
     }
@@ -955,7 +955,7 @@ export default function WorkspaceSettings() {
                   <ul className="text-sm text-muted-foreground mt-2 space-y-1 ml-4">
                     <li>• Stop all active campaigns</li>
                     <li>• Remove access to this account</li>
-                    <li>• Cancel your subscription from Unipile</li>
+                    <li>• Cancel your subscription</li>
                     <li>• This action cannot be undone</li>
                   </ul>
                 </div>
@@ -1069,33 +1069,6 @@ export default function WorkspaceSettings() {
                   <Switch defaultChecked />
                 </div>
                 <Button>Connect WhatsApp Account</Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="general" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Workspace Information
-                </CardTitle>
-                <CardDescription>Update your workspace details</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="workspace-name">Workspace Name</Label>
-                  <Input id="workspace-name" defaultValue="Acme Corporation" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="workspace-domain">Domain</Label>
-                  <Input id="workspace-domain" defaultValue="acme.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Input id="timezone" defaultValue="UTC-5 (Eastern Time)" />
-                </div>
-                <Button>Save Changes</Button>
               </CardContent>
             </Card>
           </TabsContent>
