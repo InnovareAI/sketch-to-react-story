@@ -62,6 +62,22 @@ export default function Contacts() {
   const handleViewModeChange = (mode: "list" | "tile") => {
     setViewMode(mode);
   };
+
+  // CSV Import functionality
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [csvData, setCsvData] = useState("");
+  
+  const handleImportContacts = () => {
+    if (!csvData.trim()) {
+      // Show error toast if no data
+      return;
+    }
+    // Process CSV data here
+    console.log("Importing CSV data:", csvData);
+    setShowImportDialog(false);
+    setCsvData("");
+    // Could add toast notification here
+  };
   
   const contacts = [
     {
@@ -274,9 +290,9 @@ export default function Contacts() {
             <Download className="h-4 w-4 mr-2" />
             Download
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
             <Upload className="h-4 w-4 mr-2" />
-            Upload
+            Import CSV
           </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
@@ -430,6 +446,47 @@ export default function Contacts() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Contacts from CSV</DialogTitle>
+            <DialogDescription>
+              Paste your CSV data below. Expected format: Name, Email, Phone, Company, Role, Location
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="csv-data">CSV Data</Label>
+              <Textarea
+                id="csv-data"
+                value={csvData}
+                onChange={(e) => setCsvData(e.target.value)}
+                placeholder={`Jennifer Fleming,jennifer@techcorp.com,+1-555-123-4567,TechCorp,VP Sales,San Francisco
+David Chen,david@innovate.io,+1-555-987-6543,InnovateLabs,CTO,Austin
+Sarah Williams,sarah@growth.com,+1-555-456-7890,GrowthMetrics,Marketing Head,New York`}
+                rows={8}
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p><strong>Format:</strong> Name, Email, Phone, Company, Role, Location</p>
+              <p><strong>Note:</strong> Each contact should be on a separate line</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowImportDialog(false)}>
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button onClick={handleImportContacts}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import Contacts
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

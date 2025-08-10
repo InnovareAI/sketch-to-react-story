@@ -48,6 +48,22 @@ export default function WorkspaceSettings() {
   const handleNavigation = (sectionId: string) => {
     setLinkedinActiveSection(sectionId);
   };
+
+  // Handle Save Company Profile
+  const handleSaveCompanyProfile = () => {
+    toast({
+      title: "Company Profile Saved",
+      description: "Your company profile information has been updated successfully.",
+    });
+  };
+
+  // Handle Add New LinkedIn Account
+  const handleAddNewLinkedIn = () => {
+    toast({
+      title: "Add LinkedIn Account",
+      description: "Redirecting to LinkedIn authentication...",
+    });
+  };
   const [inactiveDates, setInactiveDates] = useState([
     { id: 1, date: "25 Dec, 2023 - 25 Dec, 2023", label: "Christmas Day" },
     { id: 2, date: "01 Jan, 2024 - 01 Jan, 2024", label: "New Year's Day" }
@@ -360,7 +376,7 @@ export default function WorkspaceSettings() {
                   </div>
                 </div>
 
-                <Button className="w-fit">Save Company Profile</Button>
+                <Button onClick={handleSaveCompanyProfile} className="w-fit">Save Company Profile</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -423,7 +439,7 @@ export default function WorkspaceSettings() {
                       Jump into page...
                     </CardDescription>
                   </div>
-                  <Button onClick={handleConnectLinkedin} className="flex items-center gap-2">
+                  <Button onClick={handleAddNewLinkedIn} className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
                     Add new
                   </Button>
