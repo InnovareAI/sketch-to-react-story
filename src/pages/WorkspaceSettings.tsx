@@ -230,24 +230,132 @@ export default function WorkspaceSettings() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
-                  Workspace Information
+                  Company Profile
                 </CardTitle>
-                <CardDescription>Update your workspace details</CardDescription>
+                <CardDescription>Update your company and workspace details</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="workspace-name">Workspace Name</Label>
-                  <Input id="workspace-name" defaultValue="Acme Corporation" />
+              <CardContent className="space-y-6">
+                {/* Basic Company Information */}
+                <div className="space-y-4">
+                  <h4 className="text-base font-semibold text-gray-900">Company Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company-name">Company Name</Label>
+                      <Input id="company-name" defaultValue="Acme Corporation" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company-website">Website</Label>
+                      <Input id="company-website" type="url" placeholder="https://acme.com" />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="industry">Industry</Label>
+                      <select id="industry" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Select industry</option>
+                        <option value="technology">Technology</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="finance">Finance</option>
+                        <option value="manufacturing">Manufacturing</option>
+                        <option value="retail">Retail</option>
+                        <option value="education">Education</option>
+                        <option value="consulting">Consulting</option>
+                        <option value="real-estate">Real Estate</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company-size">Company Size</Label>
+                      <select id="company-size" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Select size</option>
+                        <option value="1-10">1-10 employees</option>
+                        <option value="11-50">11-50 employees</option>
+                        <option value="51-200">51-200 employees</option>
+                        <option value="201-500">201-500 employees</option>
+                        <option value="501-1000">501-1000 employees</option>
+                        <option value="1000+">1000+ employees</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="company-description">Company Description</Label>
+                    <textarea 
+                      id="company-description" 
+                      rows={3}
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Brief description of your company and what you do"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="workspace-domain">Domain</Label>
-                  <Input id="workspace-domain" defaultValue="acme.com" />
+
+                <Separator />
+
+                {/* Contact Information */}
+                <div className="space-y-4">
+                  <h4 className="text-base font-semibold text-gray-900">Contact Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Business Email</Label>
+                      <Input id="email" type="email" placeholder="contact@acme.com" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input id="address" placeholder="123 Business Street, City, State 12345" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Input id="timezone" defaultValue="UTC-5 (Eastern Time)" />
+
+                <Separator />
+
+                {/* Workspace Settings */}
+                <div className="space-y-4">
+                  <h4 className="text-base font-semibold text-gray-900">Workspace Settings</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="workspace-name">Workspace Name</Label>
+                      <Input id="workspace-name" defaultValue="Acme Corporation" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="timezone">Timezone</Label>
+                      <select id="timezone" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="UTC-12">UTC-12 (Baker Island)</option>
+                        <option value="UTC-11">UTC-11 (American Samoa)</option>
+                        <option value="UTC-10">UTC-10 (Hawaii)</option>
+                        <option value="UTC-9">UTC-9 (Alaska)</option>
+                        <option value="UTC-8">UTC-8 (Pacific Time)</option>
+                        <option value="UTC-7">UTC-7 (Mountain Time)</option>
+                        <option value="UTC-6">UTC-6 (Central Time)</option>
+                        <option value="UTC-5" selected>UTC-5 (Eastern Time)</option>
+                        <option value="UTC-4">UTC-4 (Atlantic Time)</option>
+                        <option value="UTC-3">UTC-3 (Argentina)</option>
+                        <option value="UTC-2">UTC-2 (South Georgia)</option>
+                        <option value="UTC-1">UTC-1 (Azores)</option>
+                        <option value="UTC+0">UTC+0 (London)</option>
+                        <option value="UTC+1">UTC+1 (Central Europe)</option>
+                        <option value="UTC+2">UTC+2 (Eastern Europe)</option>
+                        <option value="UTC+3">UTC+3 (Moscow)</option>
+                        <option value="UTC+4">UTC+4 (Dubai)</option>
+                        <option value="UTC+5">UTC+5 (Pakistan)</option>
+                        <option value="UTC+6">UTC+6 (Bangladesh)</option>
+                        <option value="UTC+7">UTC+7 (Thailand)</option>
+                        <option value="UTC+8">UTC+8 (China)</option>
+                        <option value="UTC+9">UTC+9 (Japan)</option>
+                        <option value="UTC+10">UTC+10 (Australia East)</option>
+                        <option value="UTC+11">UTC+11 (Solomon Islands)</option>
+                        <option value="UTC+12">UTC+12 (New Zealand)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <Button>Save Changes</Button>
+
+                <Button className="w-fit">Save Company Profile</Button>
               </CardContent>
             </Card>
           </TabsContent>
