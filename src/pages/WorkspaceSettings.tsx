@@ -990,24 +990,9 @@ export default function WorkspaceSettings() {
                   </div>
 
                   <div className="pt-4 border-t">
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-                      <div className="flex items-start gap-3">
-                        <div className="text-orange-600 mt-0.5">
-                          <AlertCircle className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-orange-800 font-medium">Unipile Integration</p>
-                          <p className="text-sm text-orange-700 mt-1">
-                            This action will also remove your subscription from Unipile and cancel all associated services. 
-                            You will need to re-subscribe through Unipile if you reconnect this account later.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
                     <Button variant="destructive" onClick={() => handleRemoveAccount(1)} className="w-fit">
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Disconnect account and cancel Unipile subscription
+                      Cancel subscription and disconnect LinkedIn account
                     </Button>
                   </div>
                 </div>
