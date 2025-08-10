@@ -43,6 +43,11 @@ export default function WorkspaceSettings() {
   const { toast } = useToast();
   const [isConversational, setIsConversational] = useState(false);
   const [linkedinActiveSection, setLinkedinActiveSection] = useState("account-header");
+  
+  // Prevent navigation state from changing when clicking on form elements
+  const handleNavigation = (sectionId: string) => {
+    setLinkedinActiveSection(sectionId);
+  };
   const [inactiveDates, setInactiveDates] = useState([
     { id: 1, date: "25 Dec, 2023 - 25 Dec, 2023", label: "Christmas Day" },
     { id: 2, date: "01 Jan, 2024 - 01 Jan, 2024", label: "New Year's Day" }
@@ -382,7 +387,11 @@ export default function WorkspaceSettings() {
                         return (
                           <button
                             key={section.id}
-                            onClick={() => setLinkedinActiveSection(section.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleNavigation(section.id);
+                            }}
                             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm ${
                               linkedinActiveSection === section.id
                                 ? "bg-blue-50 text-blue-700 border border-blue-200"
@@ -400,7 +409,7 @@ export default function WorkspaceSettings() {
               </div>
 
               {/* Right Content Area */}
-              <div className="flex-1">
+              <div className="flex-1" onClick={(e) => e.stopPropagation()}>
                 {linkedinActiveSection === "account-header" && (
             <Card>
               <CardHeader>
@@ -657,59 +666,59 @@ export default function WorkspaceSettings() {
                 {linkedinActiveSection === "integrations" && (
                   <Card>
                     <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Link className="h-5 w-5" />
-                  Integrations Apps
-                </CardTitle>
-                <CardDescription>Here, you can easily set up and manage integrations between Innovareai and other applications</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-orange-100 rounded flex items-center justify-center">
-                        <Database className="h-4 w-4 text-orange-600" />
+                      <CardTitle className="flex items-center gap-2">
+                        <Link className="h-5 w-5" />
+                        Integrations Apps
+                      </CardTitle>
+                      <CardDescription>Here, you can easily set up and manage integrations between Innovareai and other applications</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="border rounded-lg p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-8 h-8 bg-orange-100 rounded flex items-center justify-center">
+                              <Database className="h-4 w-4 text-orange-600" />
+                            </div>
+                            <span className="font-medium">HubSpot</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3">Sync contacts and deals with HubSpot CRM</p>
+                          <Button variant="outline" size="sm">Configure</Button>
+                        </div>
+                        
+                        <div className="border rounded-lg p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
+                              <Users className="h-4 w-4 text-green-600" />
+                            </div>
+                            <span className="font-medium">Pipedrive</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3">Connect your Pipedrive sales pipeline</p>
+                          <Button variant="outline" size="sm">Configure</Button>
+                        </div>
+                        
+                        <div className="border rounded-lg p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                              <Database className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <span className="font-medium">Airtable</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3">Store and organize data in Airtable bases</p>
+                          <Button variant="outline" size="sm">Configure</Button>
+                        </div>
+                        
+                        <div className="border rounded-lg p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-8 h-8 bg-emerald-100 rounded flex items-center justify-center">
+                              <Globe className="h-4 w-4 text-emerald-600" />
+                            </div>
+                            <span className="font-medium">Google Sheets</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3">Export data to Google Sheets automatically</p>
+                          <Button variant="outline" size="sm">Configure</Button>
+                        </div>
                       </div>
-                      <span className="font-medium">HubSpot</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">Sync contacts and deals with HubSpot CRM</p>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                        <Users className="h-4 w-4 text-green-600" />
-                      </div>
-                      <span className="font-medium">Pipedrive</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">Connect your Pipedrive sales pipeline</p>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                        <Database className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <span className="font-medium">Airtable</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">Store and organize data in Airtable bases</p>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-emerald-100 rounded flex items-center justify-center">
-                        <Globe className="h-4 w-4 text-emerald-600" />
-                      </div>
-                      <span className="font-medium">Google Sheets</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">Export data to Google Sheets automatically</p>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                </div>
-              </CardContent>
+                    </CardContent>
                   </Card>
                 )}
 
@@ -1188,15 +1197,20 @@ export default function WorkspaceSettings() {
                 <CardDescription>Connect your calendar accounts for scheduling and availability</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-red-100 rounded flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-red-600" />
+                      <div className="w-10 h-10 bg-white rounded border flex items-center justify-center">
+                        <svg className="h-6 w-6" viewBox="0 0 24 24">
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
                       </div>
                       <div>
-                        <h3 className="font-semibold">Gmail</h3>
-                        <p className="text-xs text-muted-foreground">Google Calendar integration</p>
+                        <h3 className="font-semibold">Google Calendar</h3>
+                        <p className="text-xs text-muted-foreground">Gmail & Google Workspace integration</p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm" className="w-full">Connect</Button>
@@ -1204,24 +1218,15 @@ export default function WorkspaceSettings() {
                   
                   <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-green-100 rounded flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-green-600" />
+                      <div className="w-10 h-10 bg-white rounded border flex items-center justify-center">
+                        <svg className="h-6 w-6" viewBox="0 0 24 24">
+                          <path fill="#0078D4" d="M21.53 4.306v15.363A.463.463 0 0 1 21.067 20H2.932a.463.463 0 0 1-.463-.463V4.306a.463.463 0 0 1 .463-.463H21.067c.256 0 .463.207.463.463zM2.932 3.378A.928.928 0 0 0 2.004 4.306v15.363c0 .512.416.928.928.928H21.067c.512 0 .928-.416.928-.928V4.306a.928.928 0 0 0-.928-.928H2.932z"/>
+                          <path fill="#0078D4" d="m4.007 5.78 8.002 6.503L20.008 5.78h-16z"/>
+                          <path fill="#0078D4" d="M20.472 6.017 12.009 12.89 3.528 6.017l-.985 1.256 9.466 7.687 9.448-7.687z"/>
+                        </svg>
                       </div>
                       <div>
-                        <h3 className="font-semibold">Google Workspace</h3>
-                        <p className="text-xs text-muted-foreground">Business Google Calendar</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" className="w-full">Connect</Button>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Outlook</h3>
+                        <h3 className="font-semibold">Outlook Calendar</h3>
                         <p className="text-xs text-muted-foreground">Microsoft Outlook Calendar</p>
                       </div>
                     </div>

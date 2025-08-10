@@ -32,6 +32,11 @@ import {
 
 export default function Requests() {
   const [activeTab, setActiveTab] = useState("pending");
+  
+  // Prevent tab state from changing when clicking on form elements
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
 
   const requests = [
     {

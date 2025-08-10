@@ -54,9 +54,14 @@ import {
 
 export default function Contacts() {
   const [isConversational, setIsConversational] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
+  const [viewMode, setViewMode] = useState<"list" | "tile">("list");
   const [editingContact, setEditingContact] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Prevent view mode from changing when clicking on form elements
+  const handleViewModeChange = (mode: "list" | "tile") => {
+    setViewMode(mode);
+  };
   
   const contacts = [
     {
@@ -445,7 +450,11 @@ export default function Contacts() {
                 <Button
                   variant={viewMode === "list" ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setViewMode("list")}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleViewModeChange("list");
+                  }}
                   className="rounded-none"
                 >
                   <List className="h-4 w-4" />
@@ -453,7 +462,11 @@ export default function Contacts() {
                 <Button
                   variant={viewMode === "tile" ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setViewMode("tile")}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleViewModeChange("tile");
+                  }}
                   className="rounded-none"
                 >
                   <Grid3X3 className="h-4 w-4" />
