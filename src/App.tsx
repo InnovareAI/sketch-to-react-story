@@ -12,6 +12,7 @@ import Campaigns from "./pages/Campaigns";
 import Contacts from "./pages/Contacts";
 import Search from "./pages/Search";
 import GlobalInbox from "./pages/GlobalInbox";
+import MessageQueue from "./pages/MessageQueue";
 import Templates from "./pages/Templates";
 import Requests from "./pages/Requests";
 import Placeholders from "./pages/Placeholders";
@@ -39,7 +40,7 @@ const App: React.FC = () => {
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/search" element={<Search />} />
             <Route path="/inbox" element={<GlobalInbox />} />
-            <Route path="/message-queue" element={<GlobalInbox />} />
+            <Route path="/message-queue" element={<MessageQueue />} />
             <Route path="/global-inbox" element={<GlobalInbox />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/requests" element={<Requests />} />

@@ -36,7 +36,7 @@ export default function Roles() {
 
   if (isConversational) {
     return (
-      <SidebarProvider>
+      <SidebarProvider open={true} onOpenChange={() => {}}>
         <div className="min-h-screen flex w-full">
           <WorkspaceSidebar isConversational={isConversational} />
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -107,7 +107,7 @@ export default function Roles() {
   ];
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={true} onOpenChange={() => {}}>
       <div className="min-h-screen flex w-full bg-gray-50">
         <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col">

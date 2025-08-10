@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +49,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Accounts() {
+  const [isConversational, setIsConversational] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
   const [editingAccount, setEditingAccount] = useState<any>(null);
   
@@ -163,7 +167,14 @@ export default function Accounts() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <SidebarProvider open={true} onOpenChange={() => {}}>
+      <div className="min-h-screen flex w-full bg-gray-50">
+        <WorkspaceSidebar isConversational={isConversational} />
+        <div className="flex-1 flex flex-col">
+          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
+          <main className="flex-1 p-8">
+            <div className="max-w-7xl mx-auto">
+              <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -657,6 +668,11 @@ export default function Accounts() {
           ))}
         </div>
       )}
-    </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }

@@ -35,7 +35,7 @@ export default function Campaigns() {
 
   if (isConversational) {
     return (
-      <SidebarProvider>
+      <SidebarProvider open={true} onOpenChange={() => {}}>
         <div className="min-h-screen flex w-full">
           <WorkspaceSidebar isConversational={isConversational} />
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -138,7 +138,7 @@ export default function Campaigns() {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={true} onOpenChange={() => {}}>
       <div className="min-h-screen flex w-full bg-gray-50">
         <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col">

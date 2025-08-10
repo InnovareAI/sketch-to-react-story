@@ -106,8 +106,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
 
   if (state === "collapsed") {
     return (
-      <Sidebar className="w-14 sticky top-0 h-screen lg:block hidden" collapsible="icon">
-        <SidebarTrigger className="m-2 self-end" />
+      <Sidebar className="w-14 sticky top-0 h-screen lg:block hidden" collapsible="none">
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
@@ -130,7 +129,7 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
   }
 
   return (
-    <Sidebar className={`w-64 lg:w-64 md:w-56 border-r sticky top-0 h-screen lg:block ${isConversational ? 'bg-gray-900 border-gray-700' : 'border-border'}`} collapsible="icon">
+    <Sidebar className={`w-64 lg:w-64 md:w-56 border-r sticky top-0 h-screen lg:block ${isConversational ? 'bg-gray-900 border-gray-700' : 'border-border'}`} collapsible="none">
       <SidebarContent className={`p-4 h-full overflow-y-auto ${isConversational ? 'bg-gray-900' : ''}`}>
         {/* Brand Header */}
         <div className="flex items-center gap-3 mb-6 px-2">
@@ -139,7 +138,6 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
             alt="Sam AI" 
             className={`h-8 ${isConversational ? '' : 'dark:invert'}`}
           />
-          <SidebarTrigger className="ml-auto" />
         </div>
 
 

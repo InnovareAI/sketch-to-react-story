@@ -68,7 +68,7 @@ export default function Dashboard() {
 
   if (isLoading && !analytics.totalContacts) {
     return (
-      <SidebarProvider>
+      <SidebarProvider open={true} onOpenChange={() => {}}>
         <div className="min-h-screen flex w-full">
           <WorkspaceSidebar isConversational={isConversational} />
           <div className="flex-1">
@@ -83,7 +83,7 @@ export default function Dashboard() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={true} onOpenChange={() => {}}>
       <div className="min-h-screen flex w-full">
         <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1">

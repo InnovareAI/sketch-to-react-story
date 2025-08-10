@@ -50,7 +50,7 @@ export default function Dashboard() {
   }));
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={true} onOpenChange={() => {}}>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-slate-100">
         <WorkspaceSidebar isConversational={isConversational} />
         <div className="flex-1 flex flex-col">
