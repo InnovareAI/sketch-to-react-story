@@ -22,7 +22,16 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  MessageCircle,
+  Clock,
+  Globe,
+  Link,
+  Webhook,
+  UserX,
+  Calendar,
+  MapPin
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -105,178 +114,375 @@ export default function WorkspaceSettings() {
               </div>
               
               <div className="space-y-6">
-        <Tabs defaultValue="accounts" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="accounts">Account Management</TabsTrigger>
-            <TabsTrigger value="linkedin">LinkedIn Accounts</TabsTrigger>
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="linkedin">LinkedIn Account</TabsTrigger>
+            <TabsTrigger value="email">Email Account</TabsTrigger>
+            <TabsTrigger value="whatsapp">WhatsApp Account</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="accounts" className="space-y-6">
+          <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Account Management
+                  <Building2 className="h-5 w-5" />
+                  Workspace Information
                 </CardTitle>
-                <CardDescription>
-                  Manage all workspace accounts and team member access
-                </CardDescription>
+                <CardDescription>Update your workspace details</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* All Accounts Section */}
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">in</span>
-                      </div>
-                      <span className="text-sm font-medium text-muted-foreground">All accounts</span>
-                      <Button variant="outline" size="sm" className="ml-auto">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Account
-                      </Button>
-                    </div>
-                    
-                    <div className="rounded-lg p-4 border bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-bold">J</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">Jennifer Fleming</div>
-                          <div className="text-xs text-muted-foreground">Senior Account Executive</div>
-                          <div className="text-xs text-muted-foreground">Multi-channel outreach</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="text-xs text-green-600">LinkedIn: Active</div>
-                            <div className="text-xs text-blue-600">Email: Active</div>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="workspace-name">Workspace Name</Label>
+                  <Input id="workspace-name" defaultValue="Acme Corporation" />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="workspace-domain">Domain</Label>
+                  <Input id="workspace-domain" defaultValue="acme.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Input id="timezone" defaultValue="UTC-5 (Eastern Time)" />
+                </div>
+                <Button>Save Changes</Button>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="linkedin" className="space-y-6">
+            {/* LinkedIn Account Header */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Linkedin className="h-5 w-5 text-blue-600" />
-                      LinkedIn Accounts
+                      LinkedIn Settings: Dr. Stephanie Gripne
                     </CardTitle>
                     <CardDescription>
-                      Manage your LinkedIn accounts for outreach campaigns
+                      Jump into page...
                     </CardDescription>
                   </div>
                   <Button onClick={handleConnectLinkedin} className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
-                    Connect LinkedIn Account
+                    Add new
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {linkedinAccounts.map((account) => (
-                    <div key={account.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-4">
-                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Linkedin className="h-6 w-6 text-blue-600" />
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium">{account.name}</h3>
-                              {getStatusBadge(account.status)}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{account.email}</p>
-                            <p className="text-sm text-blue-600">{account.profileUrl}</p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span>Connected: {account.connectedAt}</span>
-                              <span>Messages: {account.messagesSent}</span>
-                              <span>Connections: {account.connectionsAdded}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {account.status === "expired" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRefreshToken(account.id)}
-                              className="flex items-center gap-1"
-                            >
-                              <RefreshCw className="h-3 w-3" />
-                              Refresh
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveAccount(account.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {linkedinAccounts.length === 0 && (
-                    <div className="text-center py-8">
-                      <Linkedin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="font-medium mb-2">No LinkedIn accounts connected</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Connect your LinkedIn accounts to start sending personalized outreach campaigns
-                      </p>
-                      <Button onClick={handleConnectLinkedin}>
-                        Connect Your First Account
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
             </Card>
 
+            {/* LinkedIn account limit */}
             <Card>
               <CardHeader>
-                <CardTitle>LinkedIn Settings</CardTitle>
-                <CardDescription>Configure LinkedIn automation preferences</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  LinkedIn account limit
+                </CardTitle>
+                <CardDescription>Set up LinkedIn account limit</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Daily Message Limit</Label>
-                    <p className="text-sm text-muted-foreground">Maximum messages per account per day</p>
+                    <Label>Daily Connection Requests</Label>
+                    <p className="text-sm text-muted-foreground">Maximum connection requests per day</p>
                   </div>
-                  <Input type="number" defaultValue="50" className="w-20" />
+                  <Input type="number" defaultValue="20" className="w-20" />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Auto Accept Connections</Label>
-                    <p className="text-sm text-muted-foreground">Automatically accept connection requests</p>
+                    <Label>Daily Messages</Label>
+                    <p className="text-sm text-muted-foreground">Maximum messages per day</p>
+                  </div>
+                  <Input type="number" defaultValue="50" className="w-20" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Activity schedule settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Activity schedule settings
+                </CardTitle>
+                <CardDescription>Set daily active hours and choose specific inactive dates</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start-time">Start Time</Label>
+                    <Input id="start-time" type="time" defaultValue="09:00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end-time">End Time</Label>
+                    <Input id="end-time" type="time" defaultValue="17:00" />
+                  </div>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label>Inactive Dates</Label>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <Button variant="outline" size="sm">Select Dates</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Proxy location */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Proxy location
+                </CardTitle>
+                <CardDescription>Manage your dedicated IP address easily even while traveling</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Current Location</Label>
+                    <p className="text-sm text-muted-foreground">United States - New York</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Globe className="h-4 w-4 mr-2" />
+                    Change Location
+                  </Button>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Auto-detect Location</Label>
+                    <p className="text-sm text-muted-foreground">Automatically adjust proxy based on your location</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Integrations Apps */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link className="h-5 w-5" />
+                  Integrations Apps
+                </CardTitle>
+                <CardDescription>Here, you can easily set up and manage integrations between Innovareai and other applications</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <span className="font-medium">Email Integration</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">Connect your email for seamless outreach</p>
+                    <Button variant="outline" size="sm">Configure</Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
+                        <MessageCircle className="h-4 w-4 text-green-600" />
+                      </div>
+                      <span className="font-medium">CRM Integration</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">Sync contacts with your CRM system</p>
+                    <Button variant="outline" size="sm">Configure</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Webhooks */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Webhook className="h-5 w-5" />
+                  Webhooks
+                </CardTitle>
+                <CardDescription>With webhooks you can easily notify another system when the contact accepted your request or replied to a messenger campaign. The webhook will include the contact information that is available at that moment.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="webhook-url">Webhook URL</Label>
+                  <Input id="webhook-url" placeholder="https://your-app.com/webhook" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable Connection Accepted Webhook</Label>
+                    <p className="text-sm text-muted-foreground">Trigger when someone accepts your connection request</p>
                   </div>
                   <Switch />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Smart Delays</Label>
-                    <p className="text-sm text-muted-foreground">Add random delays between actions</p>
+                    <Label>Enable Message Reply Webhook</Label>
+                    <p className="text-sm text-muted-foreground">Trigger when someone replies to your message</p>
+                  </div>
+                  <Switch />
+                </div>
+                <Button>Save Webhook Settings</Button>
+              </CardContent>
+            </Card>
+
+            {/* Blacklists */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserX className="h-5 w-5" />
+                  Blacklists
+                </CardTitle>
+                <CardDescription>The blacklist feature provides opportunity to block outreaching specific people by different criteria</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Blacklisted Domains</Label>
+                  <Input placeholder="example.com, spam-domain.com" />
+                  <p className="text-xs text-muted-foreground">Comma-separated list of domains to exclude</p>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label>Blacklisted Companies</Label>
+                  <Input placeholder="Company A, Company B" />
+                  <p className="text-xs text-muted-foreground">Comma-separated list of companies to exclude</p>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label>Blacklisted Keywords</Label>
+                  <Input placeholder="competitor, not interested" />
+                  <p className="text-xs text-muted-foreground">Exclude profiles containing these keywords</p>
+                </div>
+                <Button>Save Blacklist Settings</Button>
+              </CardContent>
+            </Card>
+
+            {/* General settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  General settings
+                </CardTitle>
+                <CardDescription>Here you select whether this is your default account.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Set as Default Account</Label>
+                    <p className="text-sm text-muted-foreground">Use this account for all new campaigns</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Auto-pause on Warnings</Label>
+                    <p className="text-sm text-muted-foreground">Automatically pause activity when LinkedIn shows warnings</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Disconnect LinkedIn Account */}
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <XCircle className="h-5 w-5" />
+                  Disconnect LinkedIn Account
+                </CardTitle>
+                <CardDescription>Here you can disconnect your LinkedIn Account</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-destructive/10 p-4 rounded-lg mb-4">
+                  <p className="text-sm text-destructive font-medium mb-2">⚠️ Warning</p>
+                  <p className="text-sm text-muted-foreground">
+                    Disconnecting your LinkedIn account will stop all active campaigns and remove access to this account. 
+                    This action cannot be undone.
+                  </p>
+                </div>
+                <Button variant="destructive" onClick={() => handleRemoveAccount(1)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Disconnect Account
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="email" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                  Email Account Settings
+                </CardTitle>
+                <CardDescription>Configure your email accounts for outreach campaigns</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email-address">Email Address</Label>
+                  <Input id="email-address" type="email" placeholder="your.email@company.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtp-server">SMTP Server</Label>
+                  <Input id="smtp-server" placeholder="smtp.gmail.com" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-port">SMTP Port</Label>
+                    <Input id="smtp-port" type="number" defaultValue="587" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="encryption">Encryption</Label>
+                    <Input id="encryption" defaultValue="TLS" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email-password">App Password</Label>
+                  <Input id="email-password" type="password" placeholder="Enter app password" />
+                </div>
+                <Button>Connect Email Account</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="whatsapp" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-green-600" />
+                  WhatsApp Account Settings
+                </CardTitle>
+                <CardDescription>Configure WhatsApp Business API for messaging campaigns</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp-number">Phone Number</Label>
+                  <Input id="whatsapp-number" type="tel" placeholder="+1 (555) 123-4567" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="business-account-id">Business Account ID</Label>
+                  <Input id="business-account-id" placeholder="Enter WhatsApp Business Account ID" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="access-token">Access Token</Label>
+                  <Input id="access-token" type="password" placeholder="Enter WhatsApp Business API token" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable Message Templates</Label>
+                    <p className="text-sm text-muted-foreground">Use pre-approved message templates</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <Button>Connect WhatsApp Account</Button>
               </CardContent>
             </Card>
           </TabsContent>
