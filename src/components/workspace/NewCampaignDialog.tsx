@@ -28,7 +28,8 @@ interface NewCampaignDialogProps {
 
 export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps) {
   const [step, setStep] = useState(1);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [selectedCampaignType, setSelectedCampaignType] = useState<any>(null);
+  const [campaignMode, setCampaignMode] = useState<"type" | "blank" | "template">("type");
   const [campaignData, setCampaignData] = useState({
     name: "",
     objective: "",
@@ -39,98 +40,144 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
   });
   const { toast } = useToast();
 
-  // Sample templates (in real app, this would come from an API/database)
-  const templates = [
+  // Campaign types based on user requirements
+  const campaignTypes = [
     {
       id: 1,
-      name: "Sam Lead Funnel",
-      type: "email",
-      channel: "Email",
-      subject: "Quick question about {{companyName}}'s growth strategy",
-      content: "Hi {{firstName}},\n\nI've been following {{companyName}}'s journey and I'm impressed with your recent expansion into {{industry}}.\n\nMany companies at your stage struggle with scaling their lead generation while maintaining quality. I've helped similar companies like {{competitorExample}} increase qualified leads by 40% using our proven funnel approach.\n\nWould you be open to a brief 15-minute conversation about how we could help {{companyName}} achieve similar results?\n\nBest regards,\nSam",
-      category: "Lead Generation",
-      tags: ["Sam", "Lead Funnel", "Growth"],
-      stats: {
-        used: 156,
-        openRate: "68%",
-        responseRate: "24%"
-      }
+      name: "Mobile Connector",
+      type: "connector",
+      description: "Send additional ~10-15 connection requests per day",
+      requirements: "LinkedIn 2FA Required",
+      icon: "📱",
+      category: "Connection",
+      features: ["Automated connection requests", "Daily limits", "2FA security"],
+      recommended: false
     },
     {
       id: 2,
-      name: "Partnership Outreach",
-      type: "linkedin",
-      channel: "LinkedIn",
-      subject: "Partnership opportunity with {{companyName}}",
-      content: "Hi {{firstName}},\n\nI came across {{companyName}} and was impressed by your work in {{industry}}. I believe there could be a great synergy between our companies.\n\nWe've successfully partnered with companies like {{partnerExample}} to drive mutual growth and expand market reach.\n\nI'd love to explore how we could work together. Are you available for a quick call this week?\n\nBest,\n{{senderName}}",
-      category: "Partnership",
-      tags: ["Partnership", "Collaboration", "Business Development"],
-      stats: {
-        used: 89,
-        openRate: "72%",
-        responseRate: "31%"
-      }
+      name: "Connector",
+      type: "connector",
+      description: "Reach out to 2nd and 3rd+ degree connections with personalised connection requests and follow-ups. Grow your professional circle and unlock new opportunities.",
+      requirements: null,
+      icon: "🤝",
+      category: "Connection",
+      features: ["2nd/3rd degree outreach", "Personalized requests", "Follow-up sequences"],
+      recommended: true
     },
     {
       id: 3,
-      name: "Product Demo Request",
-      type: "email",
-      channel: "Email",
-      subject: "Quick demo of our {{productName}} solution",
-      content: "Hello {{firstName}},\n\nI noticed that {{companyName}} is in the {{industry}} space, and I thought you might be interested in seeing how {{productName}} has helped similar companies like {{clientExample}} achieve {{benefit}}.\n\nWould you be interested in a brief 15-minute demo to see how this could benefit {{companyName}}?\n\nI have availability {{timeSlots}} - would any of these work for you?\n\nBest regards,\n{{senderName}}",
-      category: "Product Demo",
-      tags: ["Demo", "Product", "Sales"],
-      stats: {
-        used: 234,
-        openRate: "61%",
-        responseRate: "18%"
-      }
+      name: "Builder",
+      type: "builder",
+      description: "Create more advanced flows with profile visiting, following and more",
+      requirements: null,
+      icon: "🔧",
+      category: "Advanced",
+      features: ["Profile visits", "Following automation", "Custom flows"],
+      recommended: false
     },
     {
       id: 4,
-      name: "Follow-up Sequence",
-      type: "email",
-      channel: "Email",
-      subject: "Following up on {{previousContact}}",
-      content: "Hi {{firstName}},\n\nI wanted to follow up on our previous conversation about {{topicDiscussed}}.\n\nI've been thinking about the challenges you mentioned regarding {{specificChallenge}}, and I have a few ideas that might help.\n\nWould you be open to a quick 10-minute call to discuss these solutions?\n\nLooking forward to hearing from you,\n{{senderName}}",
-      category: "Follow-up",
-      tags: ["Follow-up", "Nurturing", "Relationship"],
-      stats: {
-        used: 178,
-        openRate: "74%",
-        responseRate: "28%"
-      }
+      name: "Messenger",
+      type: "messenger",
+      description: "Send direct messages to contacts that approved your request",
+      requirements: null,
+      icon: "💬",
+      category: "Messaging",
+      features: ["Direct messages", "Contact targeting", "Message sequences"],
+      recommended: true
     },
     {
       id: 5,
-      name: "Event Invitation",
-      type: "linkedin",
-      channel: "LinkedIn",
-      subject: "Exclusive invitation to {{eventName}}",
-      content: "Hi {{firstName}},\n\nI hope this message finds you well. I wanted to personally invite you to {{eventName}}, an exclusive event for {{industry}} leaders.\n\nGiven your role at {{companyName}} and expertise in {{expertise}}, I think you'd find great value in the discussions and networking opportunities.\n\nThe event details:\n📅 {{eventDate}}\n📍 {{eventLocation}}\n🎯 Focus: {{eventFocus}}\n\nWould you like me to reserve a spot for you?\n\nBest regards,\n{{senderName}}",
+      name: "Open In-Mail",
+      type: "inmail",
+      description: "Send messages to your prospects without using a connection request",
+      requirements: "LinkedIn Premium Required",
+      icon: "✉️",
+      category: "Premium",
+      features: ["No connection needed", "Premium messaging", "Higher reach"],
+      recommended: false
+    },
+    {
+      id: 6,
+      name: "Event invite",
+      type: "event",
+      description: "Invite your first-degree connections to attend a Linkedin event",
+      requirements: null,
+      icon: "📅",
       category: "Events",
-      tags: ["Events", "Networking", "Invitation"],
-      stats: {
-        used: 67,
-        openRate: "69%",
-        responseRate: "35%"
-      }
+      features: ["Event invitations", "1st degree targeting", "Event promotion"],
+      recommended: false
+    },
+    {
+      id: 7,
+      name: "Company follow invite",
+      type: "company_follow",
+      description: "Invite 1st degree connections to follow your company",
+      requirements: null,
+      icon: "🏢",
+      category: "Company",
+      features: ["Company promotion", "Follower growth", "Brand awareness"],
+      recommended: false
+    },
+    {
+      id: 8,
+      name: "Group",
+      type: "group",
+      description: "Send message requests to fellow LinkedIn group members",
+      requirements: null,
+      icon: "👥",
+      category: "Groups",
+      features: ["Group member targeting", "Community outreach", "Niche audiences"],
+      recommended: false
+    },
+    {
+      id: 9,
+      name: "Inbound",
+      type: "inbound",
+      description: "Outreach the users who have viewed your profile",
+      requirements: null,
+      icon: "👁️",
+      category: "Retargeting",
+      features: ["Profile visitor targeting", "Warm prospects", "Interest-based"],
+      recommended: true
+    },
+    {
+      id: 10,
+      name: "Event participants",
+      type: "event_participants",
+      description: "Send message requests to the participants of the event",
+      requirements: null,
+      icon: "🎪",
+      category: "Events",
+      features: ["Event-based targeting", "Participant outreach", "Networking"],
+      recommended: false
+    },
+    {
+      id: 11,
+      name: "Recovery",
+      type: "recovery",
+      description: "Recover contacts and last message that was sent to them",
+      requirements: null,
+      icon: "🔄",
+      category: "Recovery",
+      features: ["Contact recovery", "Message history", "Re-engagement"],
+      recommended: false
     }
   ];
 
-  const handleTemplateSelect = (template: any) => {
-    setSelectedTemplate(template);
+  const handleCampaignTypeSelect = (campaignType: any) => {
+    setSelectedCampaignType(campaignType);
     setCampaignData({
       ...campaignData,
-      name: `${template.name} Campaign`
+      name: `${campaignType.name} Campaign`
     });
   };
 
   const handleNext = () => {
-    if (step === 1 && !selectedTemplate) {
+    if (step === 1 && campaignMode === "type" && !selectedCampaignType) {
       toast({
-        title: "Template Required",
-        description: "Please select a template to continue.",
+        title: "Campaign Type Required",
+        description: "Please select a campaign type to continue.",
         variant: "destructive"
       });
       return;
@@ -144,14 +191,17 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
 
   const handleCreateCampaign = () => {
     // Here you would typically call an API to create the campaign
+    const typeText = selectedCampaignType ? `using the ${selectedCampaignType.name} type` : 
+                     campaignMode === "blank" ? "as a blank campaign" : "from template";
     toast({
       title: "Campaign Created!",
-      description: `"${campaignData.name}" has been created successfully using the ${selectedTemplate.name} template.`
+      description: `"${campaignData.name}" has been created successfully ${typeText}.`
     });
     
     // Reset form
     setStep(1);
-    setSelectedTemplate(null);
+    setSelectedCampaignType(null);
+    setCampaignMode("type");
     setCampaignData({
       name: "",
       objective: "",
@@ -191,7 +241,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
             Create New Campaign
           </DialogTitle>
           <DialogDescription>
-            {step === 1 ? "Choose a template to get started" : step === 2 ? "Configure your campaign settings" : "Review and create your campaign"}
+            {step === 1 ? "Select campaign type to get started" : step === 2 ? "Configure your campaign settings" : "Review and create your campaign"}
           </DialogDescription>
         </DialogHeader>
 
@@ -201,7 +251,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary text-white' : 'bg-gray-200'}`}>
               1
             </div>
-            <span className="text-sm font-medium">Choose Template</span>
+            <span className="text-sm font-medium">Select Type</span>
           </div>
           <ArrowRight className="h-4 w-4 text-gray-400" />
           <div className={`flex items-center space-x-2 ${step >= 2 ? 'text-primary' : 'text-gray-400'}`}>
@@ -219,64 +269,92 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
           </div>
         </div>
 
-        {/* Step 1: Template Selection */}
+        {/* Step 1: Campaign Type Selection */}
         {step === 1 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Select a Template</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {templates.map((template) => (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold mb-2">To create campaign select type of campaign</h3>
+              <p className="text-gray-600 text-sm">
+                Using a campaign, you have the power to configure an automated messaging sequence, 
+                specifying when, what, and to whom each message should be sent. Once you've selected 
+                the campaign name and type, the remaining settings will become accessible for your customization.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {campaignTypes.map((campaignType) => (
                 <Card 
-                  key={template.id} 
+                  key={campaignType.id} 
                   className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedTemplate?.id === template.id ? 'ring-2 ring-primary border-primary' : ''
-                  }`}
-                  onClick={() => handleTemplateSelect(template)}
+                    selectedCampaignType?.id === campaignType.id ? 'ring-2 ring-primary border-primary' : ''
+                  } ${campaignType.recommended ? 'border-green-200 bg-green-50/30' : ''}`}
+                  onClick={() => handleCampaignTypeSelect(campaignType)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
-                        {getChannelIcon(template.channel)}
-                        <CardTitle className="text-lg">{template.name}</CardTitle>
+                        <span className="text-2xl">{campaignType.icon}</span>
+                        <div>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            {campaignType.name}
+                            {campaignType.recommended && (
+                              <Badge className="bg-green-100 text-green-800 text-xs">Recommended</Badge>
+                            )}
+                          </CardTitle>
+                          {campaignType.requirements && (
+                            <p className="text-xs text-orange-600 font-medium mt-1">{campaignType.requirements}</p>
+                          )}
+                        </div>
                       </div>
-                      {selectedTemplate?.id === template.id && (
+                      {selectedCampaignType?.id === campaignType.id && (
                         <CheckCircle className="h-5 w-5 text-primary" />
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getCategoryColor(template.category)}>
-                        {template.category}
-                      </Badge>
-                      <Badge variant="outline">{template.channel}</Badge>
-                    </div>
+                    <Badge className={getCategoryColor(campaignType.category)} variant="outline">
+                      {campaignType.category}
+                    </Badge>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Subject:</p>
-                        <p className="text-sm text-gray-600">{template.subject}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Preview:</p>
-                        <p className="text-sm text-gray-600 line-clamp-3">{template.content.substring(0, 120)}...</p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 pt-2 border-t">
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-gray-900">{template.stats.used}</div>
-                          <div className="text-xs text-gray-600">Used</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-green-600">{template.stats.openRate}</div>
-                          <div className="text-xs text-gray-600">Open Rate</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-blue-600">{template.stats.responseRate}</div>
-                          <div className="text-xs text-gray-600">Response</div>
-                        </div>
+                      <p className="text-sm text-gray-700">{campaignType.description}</p>
+                      
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-gray-600">Features:</p>
+                        <ul className="space-y-1">
+                          {campaignType.features.map((feature: string, index: number) => (
+                            <li key={index} className="text-xs text-gray-600 flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+            </div>
+
+            {/* Additional Options */}
+            <div className="flex flex-col gap-2 pt-4 border-t">
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  setCampaignMode("blank");
+                  setCampaignData({...campaignData, name: "New Campaign"});
+                  setStep(2);
+                }}>
+                  Create blank campaign
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  setCampaignMode("template");
+                  setStep(2);
+                }}>
+                  Create campaign from template
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -409,37 +487,48 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Selected Template</CardTitle>
+                  <CardTitle className="text-base">Campaign Type</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {selectedTemplate && (
+                  {selectedCampaignType ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        {getChannelIcon(selectedTemplate.channel)}
-                        <span className="font-medium">{selectedTemplate.name}</span>
-                        <Badge className={getCategoryColor(selectedTemplate.category)}>
-                          {selectedTemplate.category}
+                        <span className="text-xl">{selectedCampaignType.icon}</span>
+                        <span className="font-medium">{selectedCampaignType.name}</span>
+                        <Badge className={getCategoryColor(selectedCampaignType.category)}>
+                          {selectedCampaignType.category}
                         </Badge>
+                        {selectedCampaignType.recommended && (
+                          <Badge className="bg-green-100 text-green-800 text-xs">Recommended</Badge>
+                        )}
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-700">Subject:</span>
-                        <p className="text-sm text-gray-900">{selectedTemplate.subject}</p>
+                        <span className="text-sm font-medium text-gray-700">Description:</span>
+                        <p className="text-sm text-gray-900">{selectedCampaignType.description}</p>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 pt-2 border-t">
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-green-600">{selectedTemplate.stats.openRate}</div>
-                          <div className="text-xs text-gray-600">Open Rate</div>
+                      {selectedCampaignType.requirements && (
+                        <div>
+                          <span className="text-sm font-medium text-gray-700">Requirements:</span>
+                          <p className="text-sm text-orange-600">{selectedCampaignType.requirements}</p>
                         </div>
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-blue-600">{selectedTemplate.stats.responseRate}</div>
-                          <div className="text-xs text-gray-600">Response</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-gray-900">{selectedTemplate.stats.used}</div>
-                          <div className="text-xs text-gray-600">Used</div>
-                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <span className="text-sm font-medium text-gray-700">Features:</span>
+                        <ul className="space-y-1">
+                          {selectedCampaignType.features.map((feature: string, index: number) => (
+                            <li key={index} className="text-sm text-gray-600 flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      {campaignMode === "blank" ? "Blank Campaign" : 
+                       campaignMode === "template" ? "Template-based Campaign" : "No type selected"}
+                    </p>
                   )}
                 </CardContent>
               </Card>
