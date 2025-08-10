@@ -558,17 +558,6 @@ export default function WorkspaceSettings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="border rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                        <Mail className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <span className="font-medium">Email Integration</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">Connect your email for seamless outreach</p>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-2">
                       <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
                         <MessageCircle className="h-4 w-4 text-green-600" />
                       </div>
