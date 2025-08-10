@@ -1150,7 +1150,29 @@ export default function WorkspaceSettings() {
           </TabsContent>
 
           <TabsContent value="whatsapp" className="space-y-6">
-            <Card>
+            {/* Coming Soon Banner */}
+            <div className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm"></div>
+              <div className="relative bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200 rounded-lg p-6 text-center">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <MessageCircle className="h-8 w-8 text-green-600" />
+                  <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    COMING SOON
+                  </span>
+                </div>
+                <h3 className="text-lg font-semibold text-green-800 mb-2">WhatsApp Integration</h3>
+                <p className="text-green-700 text-sm max-w-2xl mx-auto">
+                  WhatsApp Business API integration is currently under development. Soon you'll be able to connect your WhatsApp Business account for seamless messaging campaigns.
+                </p>
+                <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full text-green-700 text-sm font-medium">
+                  <Clock className="h-4 w-4" />
+                  Stay tuned for updates
+                </div>
+              </div>
+            </div>
+            
+            {/* Disabled Settings Preview */}
+            <Card className="opacity-60 pointer-events-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageCircle className="h-5 w-5 text-green-600" />
@@ -1161,24 +1183,24 @@ export default function WorkspaceSettings() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp-number">Phone Number</Label>
-                  <Input id="whatsapp-number" type="tel" placeholder="+1 (555) 123-4567" />
+                  <Input id="whatsapp-number" type="tel" placeholder="+1 (555) 123-4567" disabled />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="business-account-id">Business Account ID</Label>
-                  <Input id="business-account-id" placeholder="Enter WhatsApp Business Account ID" />
+                  <Input id="business-account-id" placeholder="Enter WhatsApp Business Account ID" disabled />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="access-token">Access Token</Label>
-                  <Input id="access-token" type="password" placeholder="Enter WhatsApp Business API token" />
+                  <Input id="access-token" type="password" placeholder="Enter WhatsApp Business API token" disabled />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Enable Message Templates</Label>
                     <p className="text-sm text-muted-foreground">Use pre-approved message templates</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch defaultChecked disabled />
                 </div>
-                <Button>Connect WhatsApp Account</Button>
+                <Button disabled>Connect WhatsApp Account</Button>
               </CardContent>
             </Card>
           </TabsContent>
