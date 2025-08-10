@@ -403,24 +403,39 @@ export default function WorkspaceSettings() {
                 </CardTitle>
                 <CardDescription>Manage your dedicated IP address easily even while traveling</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Current Location</Label>
-                    <p className="text-sm text-muted-foreground">United States - New York</p>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    In order to assure a secure connection from us to your LinkedIn account we provide a dedicated IP address which will only be used for your account.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Select the country for proxy you want to run your LinkedIn</Label>
+                    
+                    <div className="space-y-2">
+                      <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="US">United States</option>
+                        <option value="CA">Canada</option>
+                        <option value="UK">United Kingdom</option>
+                        <option value="DE">Germany</option>
+                        <option value="FR">France</option>
+                        <option value="IT">Italy</option>
+                        <option value="ES">Spain</option>
+                        <option value="NL">Netherlands</option>
+                        <option value="AU">Australia</option>
+                        <option value="JP">Japan</option>
+                        <option value="SG">Singapore</option>
+                        <option value="BR">Brazil</option>
+                        <option value="IN">India</option>
+                      </select>
+                      
+                      <div className="text-xs text-muted-foreground">
+                        <span className="underline cursor-pointer hover:text-foreground">Can't find your country?</span>
+                      </div>
+                    </div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Globe className="h-4 w-4 mr-2" />
-                    Change Location
-                  </Button>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Auto-detect Location</Label>
-                    <p className="text-sm text-muted-foreground">Automatically adjust proxy based on your location</p>
-                  </div>
-                  <Switch defaultChecked />
+
+                  <Button className="w-fit">Apply</Button>
                 </div>
               </CardContent>
             </Card>
