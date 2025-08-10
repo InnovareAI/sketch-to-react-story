@@ -1,0 +1,45 @@
+{
+  "mcpServers": {
+    "apify-actors": {
+      "command": "npx",
+      "args": ["-y", "@apify/actors-mcp-server", "--actors", "lukaskrivka/google-maps-with-contact-details,apify/linkedin-company-scraper,apify/linkedin-profile-scraper,apify/web-scraper"],
+      "env": {
+        "APIFY_TOKEN": "${APIFY_TOKEN}"
+      },
+      "description": "LinkedIn scraping and data collection for Stage 1 & 2 of Sam AI workflow"
+    },
+    "unipile-messaging": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "UNIPILE_DSN=${UNIPILE_DSN}",
+        "-e",
+        "UNIPILE_API_KEY=${UNIPILE_API_KEY}",
+        "buryhuang/mcp-unipile:latest"
+      ],
+      "description": "LinkedIn messaging and connection management for Stage 6 & 7 outreach"
+    },
+    "n8n-workflows": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "N8N_API_URL=${N8N_API_URL}",
+        "-e",
+        "N8N_API_KEY=${N8N_API_KEY}",
+        "czlonkowski/n8n-mcp:latest"
+      ],
+      "description": "Workflow automation for all stages of Sam AI process"
+    },
+    "supabase-database": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${SUPABASE_CONNECTION_STRING}"],
+      "description": "Direct database access for Sam AI data operations"
+    }
+  }
+}

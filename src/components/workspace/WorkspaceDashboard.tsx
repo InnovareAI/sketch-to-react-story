@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Users, User, Target, MessageSquare, BarChart3, Zap, Rocket, Star, Crown, Activity, ArrowUpRight, Eye, Clock, Globe, Plus } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, User, Target, MessageSquare, BarChart3, Zap, Rocket, Star, Crown, Activity, ArrowUpRight, Eye, Clock, Globe, Plus, FolderOpen, Code, Database, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,9 +87,71 @@ const campaigns = [
 ];
 
 export function WorkspaceDashboard() {
+  const openProjectDirectory = (path: string) => {
+    // This would typically open the directory in the user's file explorer
+    console.log(`Opening project directory: ${path}`);
+    // In a real implementation, this could trigger a file system API or send a command to the desktop app
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
+        {/* Sam AI Project Card */}
+        <div className="flex justify-center mb-6">
+          <Card className="group relative overflow-hidden backdrop-blur-xl bg-white/90 border border-white/30 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1 cursor-pointer max-w-md w-full">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10" />
+            <CardHeader className="relative z-10 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg">
+                    <Bot className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Sam AI Platform
+                    </CardTitle>
+                    <p className="text-gray-600 text-sm">Autonomous Sales Agentic System</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="hover:bg-blue-100/50 backdrop-blur-sm"
+                  onClick={() => openProjectDirectory('/Users/tvonlinz/Dev_Master/InnovareAI/sketch-to-react-story')}
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="relative z-10 pt-0">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs">
+                  <Badge className="bg-blue-100/80 text-blue-700 border-blue-200/50 backdrop-blur-sm">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1" />
+                    Active
+                  </Badge>
+                  <Badge className="bg-purple-100/80 text-purple-700 border-purple-200/50 backdrop-blur-sm">
+                    Autonomous Agent
+                  </Badge>
+                </div>
+                <p className="text-xs text-gray-600">
+                  /Users/tvonlinz/Dev_Master/InnovareAI/sketch-to-react-story
+                </p>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Bot className="h-3 w-3" />
+                    Sales Agent
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Target className="h-3 w-3" />
+                    Lead Generation
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Workspace Overview Banner with Account Info */}
         <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl backdrop-blur-xl bg-white/80 border border-white/20 p-4 lg:p-8 shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10" />

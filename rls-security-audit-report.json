@@ -1,0 +1,8 @@
+{
+  "tables": [],
+  "policies": [],
+  "issues": [
+    "Audit execution error: supabaseService.rpc(...).catch is not a function"
+  ],
+  "recommendations": []
+}

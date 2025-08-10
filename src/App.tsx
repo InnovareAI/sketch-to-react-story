@@ -19,6 +19,7 @@ import Members from "./pages/Members";
 import Roles from "./pages/Roles";
 import WorkspaceSettings from "./pages/WorkspaceSettings";
 import Agent from "./pages/Agent";
+import LinkedInIntegration from "./pages/LinkedInIntegration";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,8 @@ const App: React.FC = () => {
             <Route path="/members" element={<Members />} />
             <Route path="/roles" element={<Roles />} />
             <Route path="/workspace-settings" element={<WorkspaceSettings />} />
+            <Route path="/linkedin" element={<LinkedInIntegration />} />
+            <Route path="/linkedin-integration" element={<LinkedInIntegration />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
