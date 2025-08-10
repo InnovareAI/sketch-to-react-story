@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function WorkspaceSettings() {
   const { toast } = useToast();
   const [isConversational, setIsConversational] = useState(false);
+  const [linkedinActiveSection, setLinkedinActiveSection] = useState("account-header");
   const [inactiveDates, setInactiveDates] = useState([
     { id: 1, date: "25 Dec, 2023 - 25 Dec, 2023", label: "Christmas Day" },
     { id: 2, date: "01 Jan, 2024 - 01 Jan, 2024", label: "New Year's Day" }
@@ -251,7 +252,47 @@ export default function WorkspaceSettings() {
           </TabsContent>
 
           <TabsContent value="linkedin" className="space-y-6">
-            {/* LinkedIn Account Header */}
+            <div className="flex gap-6">
+              {/* Left Navigation */}
+              <div className="w-64 flex-shrink-0">
+                <Card>
+                  <CardContent className="p-4">
+                    <nav className="space-y-1">
+                      {[
+                        { id: "account-header", label: "LinkedIn Settings", icon: Linkedin },
+                        { id: "account-limit", label: "LinkedIn account limit", icon: Users },
+                        { id: "activity-schedule", label: "Activity schedule settings", icon: Clock },
+                        { id: "proxy-location", label: "Proxy location", icon: MapPin },
+                        { id: "integrations", label: "Integrations Apps", icon: Link },
+                        { id: "webhooks", label: "Webhooks", icon: Webhook },
+                        { id: "blacklists", label: "Blacklists", icon: UserX },
+                        { id: "general-settings", label: "General settings", icon: Settings },
+                        { id: "disconnect", label: "Disconnect LinkedIn Account", icon: XCircle }
+                      ].map((section) => {
+                        const Icon = section.icon;
+                        return (
+                          <button
+                            key={section.id}
+                            onClick={() => setLinkedinActiveSection(section.id)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm ${
+                              linkedinActiveSection === section.id
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium leading-tight">{section.label}</span>
+                          </button>
+                        );
+                      })}
+                    </nav>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Content Area */}
+              <div className="flex-1">
+                {linkedinActiveSection === "account-header" && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -271,10 +312,11 @@ export default function WorkspaceSettings() {
                 </div>
               </CardHeader>
             </Card>
+                )}
 
-            {/* LinkedIn account limit */}
-            <Card>
-              <CardHeader>
+                {linkedinActiveSection === "account-limit" && (
+                  <Card>
+                    <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
                   LinkedIn account limit
@@ -298,11 +340,12 @@ export default function WorkspaceSettings() {
                   <Input type="number" defaultValue="50" className="w-20" />
                 </div>
               </CardContent>
-            </Card>
+                  </Card>
+                )}
 
-            {/* Activity schedule settings */}
-            <Card>
-              <CardHeader>
+                {linkedinActiveSection === "activity-schedule" && (
+                  <Card>
+                    <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
                   Activity schedule settings
@@ -452,11 +495,12 @@ export default function WorkspaceSettings() {
                   )}
                 </div>
               </CardContent>
-            </Card>
+                  </Card>
+                )}
 
-            {/* Proxy location */}
-            <Card>
-              <CardHeader>
+                {linkedinActiveSection === "proxy-location" && (
+                  <Card>
+                    <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
                   Proxy location
@@ -557,11 +601,12 @@ export default function WorkspaceSettings() {
                   <Button className="w-fit">Apply Proxy Settings</Button>
                 </div>
               </CardContent>
-            </Card>
+                  </Card>
+                )}
 
-            {/* Integrations Apps */}
-            <Card>
-              <CardHeader>
+                {linkedinActiveSection === "integrations" && (
+                  <Card>
+                    <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Link className="h-5 w-5" />
                   Integrations Apps
@@ -593,11 +638,12 @@ export default function WorkspaceSettings() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+                  </Card>
+                )}
 
-            {/* Webhooks */}
-            <Card>
-              <CardHeader>
+                {linkedinActiveSection === "webhooks" && (
+                  <Card>
+                    <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
@@ -728,11 +774,12 @@ export default function WorkspaceSettings() {
                   )}
                 </div>
               </CardContent>
-            </Card>
+                  </Card>
+                )}
 
-            {/* Blacklists */}
-            <Card>
-              <CardHeader>
+                {linkedinActiveSection === "blacklists" && (
+                  <Card>
+                    <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
@@ -834,11 +881,12 @@ export default function WorkspaceSettings() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+                  </Card>
+                )}
 
-            {/* General settings */}
-            <Card>
-              <CardHeader>
+                {linkedinActiveSection === "general-settings" && (
+                  <Card>
+                    <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
                   General settings
@@ -935,10 +983,11 @@ export default function WorkspaceSettings() {
                   <Switch defaultChecked />
                 </div>
               </CardContent>
-            </Card>
+                  </Card>
+                )}
 
-            {/* Disconnect LinkedIn Account */}
-            <Card className="border-destructive">
+                {linkedinActiveSection === "disconnect" && (
+                  <Card className="border-destructive">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-destructive">
                   <XCircle className="h-5 w-5" />
@@ -1000,6 +1049,9 @@ export default function WorkspaceSettings() {
                 </div>
               </CardContent>
             </Card>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="email" className="space-y-6">
