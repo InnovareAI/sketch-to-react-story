@@ -163,16 +163,26 @@ export default function Requests() {
             <Input
               placeholder="Search requests..."
               className="pl-10"
+              onClick={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
             />
           </div>
-          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+          <select 
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            onClick={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
+          >
             <option>All Status</option>
             <option>Pending</option>
             <option>Accepted</option>
             <option>Declined</option>
             <option>Completed</option>
           </select>
-          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+          <select 
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            onClick={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
+          >
             <option>All Types</option>
             <option>Connection</option>
             <option>Meeting</option>
@@ -265,12 +275,14 @@ export default function Requests() {
               <Input
                 placeholder="Search requests..."
                 className="pl-10 w-64"
+                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => e.stopPropagation()}
               />
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList>
               <TabsTrigger value="all">All Requests</TabsTrigger>
               <TabsTrigger value="pending">Pending ({requests.filter(r => r.status === "pending").length})</TabsTrigger>
@@ -278,7 +290,7 @@ export default function Requests() {
               <TabsTrigger value="completed">Completed</TabsTrigger>
             </TabsList>
 
-            <TabsContent value={activeTab} className="space-y-4 mt-6">
+            <TabsContent value={activeTab} className="space-y-4 mt-6" onClick={(e) => e.stopPropagation()}>
               {filteredRequests.map((request) => (
                 <Card key={request.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">

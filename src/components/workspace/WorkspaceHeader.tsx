@@ -54,6 +54,8 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
               <Input
                 placeholder="Jump into page..."
                 className="pl-10 w-48 lg:w-64 bg-muted/50"
+                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => e.stopPropagation()}
               />
             </div>
           )}
