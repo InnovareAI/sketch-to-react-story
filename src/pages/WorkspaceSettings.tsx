@@ -215,10 +215,11 @@ export default function WorkspaceSettings() {
               
               <div className="space-y-6">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="linkedin">LinkedIn Account</TabsTrigger>
             <TabsTrigger value="email">Email Account</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp Account</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
@@ -1026,30 +1027,124 @@ export default function WorkspaceSettings() {
                 </CardTitle>
                 <CardDescription>Configure your email accounts for outreach campaigns</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-address">Email Address</Label>
-                  <Input id="email-address" type="email" placeholder="your.email@company.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="smtp-server">SMTP Server</Label>
-                  <Input id="smtp-server" placeholder="smtp.gmail.com" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp-port">SMTP Port</Label>
-                    <Input id="smtp-port" type="number" defaultValue="587" />
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-red-100 rounded flex items-center justify-center">
+                        <Mail className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Gmail / Google Workspace</h3>
+                        <p className="text-xs text-muted-foreground">Connect your Gmail account</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">Configure</Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="encryption">Encryption</Label>
-                    <Input id="encryption" defaultValue="TLS" />
+                  
+                  <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
+                        <Mail className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Microsoft 365</h3>
+                        <p className="text-xs text-muted-foreground">Connect your Microsoft 365 account</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">Configure</Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-indigo-100 rounded flex items-center justify-center">
+                        <Mail className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Outlook</h3>
+                        <p className="text-xs text-muted-foreground">Connect your Outlook account</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">Configure</Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center">
+                        <Settings className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Custom SMTP</h3>
+                        <p className="text-xs text-muted-foreground">Configure custom SMTP server</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">Configure</Button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email-password">App Password</Label>
-                  <Input id="email-password" type="password" placeholder="Enter app password" />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="calendar" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-purple-600" />
+                  Calendar Integration
+                </CardTitle>
+                <CardDescription>Connect your calendar accounts for scheduling and availability</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-red-100 rounded flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Gmail</h3>
+                        <p className="text-xs text-muted-foreground">Google Calendar integration</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">Connect</Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-100 rounded flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Google Workspace</h3>
+                        <p className="text-xs text-muted-foreground">Business Google Calendar</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">Connect</Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Outlook</h3>
+                        <p className="text-xs text-muted-foreground">Microsoft Outlook Calendar</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">Connect</Button>
+                  </div>
                 </div>
-                <Button>Connect Email Account</Button>
+                
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-2">Calendar Features</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Automatic availability checking before scheduling</li>
+                    <li>• Smart scheduling based on time zones</li>
+                    <li>• Meeting conflict prevention</li>
+                    <li>• Calendar event creation for scheduled outreach</li>
+                  </ul>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
