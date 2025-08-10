@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Search, Bell, Plus, User, MessageSquare, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { NotificationCenter } from "@/components/ui/notification-center";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NewCampaignDialog } from "./NewCampaignDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +21,14 @@ interface WorkspaceHeaderProps {
 }
 
 export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHeaderProps) {
+  const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
+
   return (
+    <>
+      <NewCampaignDialog 
+        open={showNewCampaignDialog} 
+        onOpenChange={setShowNewCampaignDialog} 
+      />
     <header className={`border-b px-4 lg:px-6 py-4 ${isConversational ? 'bg-gray-900 border-gray-700' : 'bg-background border-border'}`}>
       <div className="flex items-center justify-between">
         {/* Left Section - Mode Toggle */}
@@ -69,7 +78,9 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>New Campaign</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowNewCampaignDialog(true)}>
+                New Campaign
+              </DropdownMenuItem>
               <DropdownMenuItem>New Contact</DropdownMenuItem>
               <DropdownMenuItem>New Company</DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -101,5 +112,6 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
         </div>
       </div>
     </header>
+    </>
   );
 }
