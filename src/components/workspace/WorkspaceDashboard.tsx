@@ -137,16 +137,6 @@ export function WorkspaceDashboard() {
                 <p className="text-xs text-gray-600">
                   /Users/tvonlinz/Dev_Master/InnovareAI/sketch-to-react-story
                 </p>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Bot className="h-3 w-3" />
-                    Sales Agent
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Target className="h-3 w-3" />
-                    Lead Generation
-                  </span>
-                </div>
               </div>
             </CardContent>
           </Card>
