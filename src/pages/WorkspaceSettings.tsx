@@ -34,7 +34,8 @@ import {
   MapPin,
   ChevronDown,
   CalendarDays,
-  Trash
+  Trash,
+  Upload
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -44,6 +45,20 @@ export default function WorkspaceSettings() {
   const [inactiveDates, setInactiveDates] = useState([
     { id: 1, date: "25 Dec, 2023 - 25 Dec, 2023", label: "Christmas Day" },
     { id: 2, date: "01 Jan, 2024 - 01 Jan, 2024", label: "New Year's Day" }
+  ]);
+  const [webhooks, setWebhooks] = useState([
+    {
+      id: 1,
+      name: "Reply Messages",
+      event: "Contact Replied",
+      campaign: "Any campaign",
+      tags: "No Contact tagged",
+      targetUrl: "https://hook.eu1.make.com/8ydxmrgu1zrxpc7kuuan8mltk0me0kdj",
+      sendAllAtOnce: true,
+      timeDelta: "1 hour",
+      active: true,
+      description: "Whos Who - Contact Replied to Campaign Message"
+    }
   ]);
   const [weeklyHours, setWeeklyHours] = useState({
     monday: { start: "7:00", end: "22:00" },
@@ -121,6 +136,46 @@ export default function WorkspaceSettings() {
         [timeType]: value
       }
     }));
+  };
+
+  const handleAddWebhook = () => {
+    const newWebhook = {
+      id: Date.now(),
+      name: "New Webhook",
+      event: "Contact Replied",
+      campaign: "Any campaign",
+      tags: "No Contact tagged",
+      targetUrl: "",
+      sendAllAtOnce: false,
+      timeDelta: "Immediate",
+      active: false,
+      description: ""
+    };
+    setWebhooks(prev => [...prev, newWebhook]);
+  };
+
+  const handleToggleWebhook = (webhookId: number) => {
+    setWebhooks(prev => prev.map(webhook => 
+      webhook.id === webhookId 
+        ? { ...webhook, active: !webhook.active }
+        : webhook
+    ));
+  };
+
+  const handleTestWebhook = (webhookId: number) => {
+    toast({
+      title: "Webhook Test",
+      description: "Test webhook sent successfully",
+    });
+  };
+
+  const handleRemoveWebhook = (webhookId: number) => {
+    setWebhooks(prev => prev.filter(webhook => webhook.id !== webhookId));
+    toast({
+      title: "Webhook Removed",
+      description: "Webhook has been deleted successfully",
+      variant: "destructive"
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -479,64 +534,241 @@ export default function WorkspaceSettings() {
             {/* Webhooks */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Webhook className="h-5 w-5" />
-                  Webhooks
-                </CardTitle>
-                <CardDescription>With webhooks you can easily notify another system when the contact accepted your request or replied to a messenger campaign. The webhook will include the contact information that is available at that moment.</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Webhook className="h-5 w-5" />
+                      Webhooks
+                    </CardTitle>
+                    <CardDescription>With webhooks you can easily notify another system when the contact accepted your request or replied to a messenger campaign. The webhook will include the contact information that is available at that moment.</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm">
+                      WebhooksHistory
+                    </Button>
+                    <Button onClick={handleAddWebhook} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add a webhook
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-url">Webhook URL</Label>
-                  <Input id="webhook-url" placeholder="https://your-app.com/webhook" />
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <Input 
+                    placeholder="Type to search" 
+                    className="max-w-md"
+                  />
+                  
+                  {webhooks.length > 0 && (
+                    <div className="space-y-4">
+                      {/* Headers */}
+                      <div className="grid grid-cols-8 gap-4 text-xs font-medium text-muted-foreground border-b pb-2">
+                        <div>Event type</div>
+                        <div>Active</div>
+                        <div>Test</div>
+                        <div>Name</div>
+                        <div>Event</div>
+                        <div>Campaign</div>
+                        <div>Tags</div>
+                        <div>Target URL</div>
+                      </div>
+
+                      {/* Webhook rows */}
+                      {webhooks.map((webhook) => (
+                        <div key={webhook.id} className="space-y-4 border-b pb-4 last:border-b-0">
+                          <div className="grid grid-cols-8 gap-4 items-center text-sm">
+                            <div className="text-muted-foreground">-</div>
+                            <div>
+                              <Switch 
+                                checked={webhook.active}
+                                onCheckedChange={() => handleToggleWebhook(webhook.id)}
+                              />
+                            </div>
+                            <div>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleTestWebhook(webhook.id)}
+                              >
+                                Test
+                              </Button>
+                            </div>
+                            <div className="font-medium">{webhook.name}</div>
+                            <div>{webhook.event}</div>
+                            <div className="text-muted-foreground">{webhook.campaign}</div>
+                            <div className="text-muted-foreground">{webhook.tags}</div>
+                            <div className="font-mono text-xs text-blue-600 truncate">
+                              {webhook.targetUrl}
+                            </div>
+                          </div>
+                          
+                          {/* Additional details row */}
+                          <div className="grid grid-cols-8 gap-4 text-xs text-muted-foreground">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div>Send all at once</div>
+                            <div>Time delta</div>
+                            <div>Actions</div>
+                            <div></div>
+                            <div></div>
+                          </div>
+                          
+                          <div className="grid grid-cols-8 gap-4 items-center text-sm">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div>
+                              <Switch 
+                                checked={webhook.sendAllAtOnce}
+                                size="sm"
+                              />
+                            </div>
+                            <div className="font-medium">{webhook.timeDelta}</div>
+                            <div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleRemoveWebhook(webhook.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div></div>
+                            <div></div>
+                          </div>
+
+                          {webhook.description && (
+                            <div className="text-sm text-muted-foreground pl-4 border-l-2 border-muted">
+                              {webhook.description}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {webhooks.length === 0 && (
+                    <div className="text-center py-8">
+                      <Webhook className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="font-medium mb-2">No webhooks configured</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Add webhooks to receive real-time notifications about campaign events
+                      </p>
+                      <Button onClick={handleAddWebhook}>
+                        Add Your First Webhook
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Enable Connection Accepted Webhook</Label>
-                    <p className="text-sm text-muted-foreground">Trigger when someone accepts your connection request</p>
-                  </div>
-                  <Switch />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Enable Message Reply Webhook</Label>
-                    <p className="text-sm text-muted-foreground">Trigger when someone replies to your message</p>
-                  </div>
-                  <Switch />
-                </div>
-                <Button>Save Webhook Settings</Button>
               </CardContent>
             </Card>
 
             {/* Blacklists */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserX className="h-5 w-5" />
-                  Blacklists
-                </CardTitle>
-                <CardDescription>The blacklist feature provides opportunity to block outreaching specific people by different criteria</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <UserX className="h-5 w-5" />
+                      Blacklists
+                    </CardTitle>
+                    <CardDescription>The blacklist feature provides opportunity to block outreaching specific people by different criteria</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload CSV
+                    </Button>
+                    <Button size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add blacklist
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Blacklisted Domains</Label>
-                  <Input placeholder="example.com, spam-domain.com" />
-                  <p className="text-xs text-muted-foreground">Comma-separated list of domains to exclude</p>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800 leading-relaxed">
+                      With the blacklist feature you can easily add companies which you want to ignore connecting to. You can set this up per company or per linkedin account. The moment you'll try to assign people to a campaign, or when the system reaches out to them on linkedin it will recognize the blacklisted company, first name, last name, job title or profile link and stop the request.
+                    </p>
+                    <p className="text-sm text-blue-700 mt-3 font-medium">
+                      <strong>Important note:</strong> When overriding company name in dynamic placeholders, we only take 'company_name', 'first_name', 'last_name', 'job_title' or 'profile_link' into consideration for the blacklist feature.
+                    </p>
+                  </div>
+
+                  <Input 
+                    placeholder="Type to search" 
+                    className="max-w-md"
+                  />
+
+                  {/* Blacklist table headers */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-5 gap-4 text-xs font-medium text-muted-foreground border-b pb-2">
+                      <div>Blacklist type</div>
+                      <div>Comparison type</div>
+                      <div>Keyword</div>
+                      <div>Comparison type</div>
+                      <div>Actions</div>
+                    </div>
+
+                    {/* Sample blacklist entry */}
+                    <div className="grid grid-cols-5 gap-4 items-center text-sm border-b pb-4">
+                      <div className="font-medium">Profile link</div>
+                      <div className="text-muted-foreground">Contains</div>
+                      <div className="font-mono text-xs text-blue-600 break-all">
+                        https://www.linkedin.com/in/margaret-herzog-pe-pmp-phd/
+                      </div>
+                      <div className="text-muted-foreground">Contains</div>
+                      <div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Add new blacklist form */}
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <h4 className="font-medium mb-3">Add New Blacklist Rule</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                          <Label>Blacklist Type</Label>
+                          <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                            <option value="profile_link">Profile link</option>
+                            <option value="company_name">Company name</option>
+                            <option value="first_name">First name</option>
+                            <option value="last_name">Last name</option>
+                            <option value="job_title">Job title</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Comparison Type</Label>
+                          <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                            <option value="contains">Contains</option>
+                            <option value="equals">Equals</option>
+                            <option value="starts_with">Starts with</option>
+                            <option value="ends_with">Ends with</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Keyword/Value</Label>
+                          <Input placeholder="Enter keyword or value to blacklist" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="invisible">Action</Label>
+                          <Button className="w-full">Add Rule</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <Separator />
-                <div className="space-y-2">
-                  <Label>Blacklisted Companies</Label>
-                  <Input placeholder="Company A, Company B" />
-                  <p className="text-xs text-muted-foreground">Comma-separated list of companies to exclude</p>
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                  <Label>Blacklisted Keywords</Label>
-                  <Input placeholder="competitor, not interested" />
-                  <p className="text-xs text-muted-foreground">Exclude profiles containing these keywords</p>
-                </div>
-                <Button>Save Blacklist Settings</Button>
               </CardContent>
             </Card>
 
@@ -549,15 +781,88 @@ export default function WorkspaceSettings() {
                 </CardTitle>
                 <CardDescription>Here you select whether this is your default account.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Set as Default Account</Label>
-                    <p className="text-sm text-muted-foreground">Use this account for all new campaigns</p>
+              <CardContent className="space-y-6">
+                {/* LinkedIn Security (2FA) */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold">LinkedIn Security (2FA)</Label>
+                    <p className="text-sm text-muted-foreground">Keep your LinkedIn account securely connected and avoid unexpected logouts by activating two-step verification.</p>
                   </div>
-                  <Switch defaultChecked />
+                  
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <div>
+                      <h4 className="font-medium">Activate LinkedIn two-step verification</h4>
+                      <p className="text-sm text-muted-foreground">Secure your LinkedIn connection and prevent disruptions by activating the two-step verification.</p>
+                    </div>
+                    <Button variant="outline">Set up</Button>
+                  </div>
                 </div>
+
                 <Separator />
+
+                {/* Switch LinkedIn account company */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold">Switch LinkedIn account company</Label>
+                    <p className="text-sm text-muted-foreground">Here, you can switch your LinkedIn account to another company. Performing this action all of your campaigns will be moved to the new company</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <select className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <option value="impact-finance">Impact Finance Center</option>
+                      <option value="company-b">Company B</option>
+                      <option value="company-c">Company C</option>
+                    </select>
+                    <Button>Apply</Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Ignore titles */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold">Ignore titles</Label>
+                    <p className="text-sm text-muted-foreground">This setting allows Innovareai to automatically skip formal titles, such as "Mr.", "Dr.", "MD." and others if they are included in the contact's first, middle, or last name.</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ignore-name">Name</Label>
+                      <Input id="ignore-name" placeholder="Please, write name here" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ignore-job-title">Job title</Label>
+                      <Input id="ignore-job-title" placeholder="Please, write job title here" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ignore-company-name">Company name</Label>
+                      <Input id="ignore-company-name" placeholder="Please, write company name here" />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Default LinkedIn account */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold">Default LinkedIn account</Label>
+                    <p className="text-sm text-muted-foreground">Here, you select whether this is your default account. This will be the account that you will be using after logging in. The default account can be recognized by the star displayed next to it.</p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Make this the default LinkedIn account (after login)</Label>
+                      <p className="text-sm text-muted-foreground">Use this account for all new campaigns and as primary login</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Auto-pause on Warnings */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Auto-pause on Warnings</Label>
@@ -577,18 +882,38 @@ export default function WorkspaceSettings() {
                 </CardTitle>
                 <CardDescription>Here you can disconnect your LinkedIn Account</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="bg-destructive/10 p-4 rounded-lg mb-4">
+              <CardContent className="space-y-6">
+                <div className="bg-destructive/10 p-4 rounded-lg">
                   <p className="text-sm text-destructive font-medium mb-2">⚠️ Warning</p>
                   <p className="text-sm text-muted-foreground">
                     Disconnecting your LinkedIn account will stop all active campaigns and remove access to this account. 
                     This action cannot be undone.
                   </p>
                 </div>
-                <Button variant="destructive" onClick={() => handleRemoveAccount(1)}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Disconnect Account
-                </Button>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold">Current Subscription</Label>
+                    <div className="mt-2 p-4 border rounded-lg bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Plan Name: By invoice</p>
+                          <p className="text-sm text-muted-foreground">Your current subscription details</p>
+                        </div>
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          Active
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <Button variant="destructive" onClick={() => handleRemoveAccount(1)} className="w-fit">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Disconnect account
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
