@@ -64,8 +64,8 @@ const SEARCH_PRESETS: SearchPreset[] = [
     category: 'sales',
     params: {
       title: 'CEO OR CTO OR "Vice President" OR VP',
-      industryUrns: ['technology', 'software', 'internet'],
-      seniorityLevel: ['director', 'vp', 'cxo']
+      industry: ['technology', 'software', 'internet'],
+      seniority_level: ['director', 'vp', 'cxo']
     }
   },
   {
@@ -75,8 +75,8 @@ const SEARCH_PRESETS: SearchPreset[] = [
     category: 'recruiting',
     params: {
       title: 'Software Engineer OR Developer OR "Full Stack"',
-      functionAreas: ['engineering', 'information-technology'],
-      yearsOfExperience: ['2-5', '5-10']
+      function_area: ['engineering', 'information-technology'],
+      years_of_experience: { min: 2, max: 10 }
     }
   },
   {
@@ -86,8 +86,8 @@ const SEARCH_PRESETS: SearchPreset[] = [
     category: 'marketing',
     params: {
       title: 'Marketing Manager OR "Marketing Director"',
-      functionAreas: ['marketing'],
-      seniorityLevel: ['manager', 'director']
+      function_area: ['marketing'],
+      seniority_level: ['manager', 'director']
     }
   },
   {
@@ -97,7 +97,7 @@ const SEARCH_PRESETS: SearchPreset[] = [
     category: 'sales',
     params: {
       title: 'Founder OR "Co-founder" OR CEO',
-      companySize: ['1-10', '11-50', '51-200']
+      company_size: ['1-10', '11-50', '51-200']
     }
   }
 ];
@@ -153,6 +153,34 @@ const SENIORITY_LEVELS = [
   { value: 'executive', label: 'Executive' }
 ];
 
+const FUNCTION_AREAS = [
+  { value: 'accounting', label: 'Accounting' },
+  { value: 'administrative', label: 'Administrative' },
+  { value: 'arts', label: 'Arts and Design' },
+  { value: 'business-development', label: 'Business Development' },
+  { value: 'consulting', label: 'Consulting' },
+  { value: 'education', label: 'Education' },
+  { value: 'engineering', label: 'Engineering' },
+  { value: 'entrepreneurship', label: 'Entrepreneurship' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'healthcare', label: 'Healthcare Services' },
+  { value: 'human-resources', label: 'Human Resources' },
+  { value: 'information-technology', label: 'Information Technology' },
+  { value: 'legal', label: 'Legal' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'media', label: 'Media and Communications' },
+  { value: 'military', label: 'Military and Protective Services' },
+  { value: 'operations', label: 'Operations' },
+  { value: 'product-management', label: 'Product Management' },
+  { value: 'program-management', label: 'Program and Project Management' },
+  { value: 'purchasing', label: 'Purchasing' },
+  { value: 'quality-assurance', label: 'Quality Assurance' },
+  { value: 'real-estate', label: 'Real Estate' },
+  { value: 'research', label: 'Research' },
+  { value: 'sales', label: 'Sales' },
+  { value: 'support', label: 'Support' }
+];
+
 export function SearchConfigurationBuilder({
   searchType,
   initialParams = {},
@@ -184,7 +212,7 @@ export function SearchConfigurationBuilder({
             result = LinkedInUrlGenerator.generateSalesNavigatorUrl(params);
             break;
           case 'recruiter-search':
-            result = LinkedInUrlGenerator.generateRecruiterSearchUrl(params);
+            result = linkedInUrlUtils.generateRecruiterUrl(params);
             break;
           default:
             result = LinkedInUrlGenerator.generateBasicSearchUrl(params);
@@ -237,9 +265,16 @@ export function SearchConfigurationBuilder({
 
   // Get optimization suggestions
   const optimizationSuggestions = useMemo(() => {
-    const { suggestions, warnings } = LinkedInUrlGenerator.optimizeSearchParameters(params);
-    return { suggestions, warnings };
-  }, [params]);
+    try {
+      const optimizer = LinkedInUrlGenerator.optimizeSearchParameters(searchType, params);
+      return { 
+        suggestions: optimizer.suggestions || [], 
+        warnings: [] 
+      };
+    } catch (error) {
+      return { suggestions: [], warnings: [] };
+    }
+  }, [params, searchType]);
 
   // Copy URL to clipboard
   const copyUrl = () => {
@@ -352,8 +387,8 @@ export function SearchConfigurationBuilder({
                   <Label htmlFor="firstName" className="text-sm font-medium">First Name</Label>
                   <Input
                     id="firstName"
-                    value={params.firstName || ''}
-                    onChange={(e) => updateParam('firstName', e.target.value)}
+                    value={params.first_name || ''}
+                    onChange={(e) => updateParam('first_name', e.target.value)}
                     placeholder="e.g., John, Sarah"
                     className="mt-1"
                   />
@@ -363,8 +398,8 @@ export function SearchConfigurationBuilder({
                   <Label htmlFor="lastName" className="text-sm font-medium">Last Name</Label>
                   <Input
                     id="lastName"
-                    value={params.lastName || ''}
-                    onChange={(e) => updateParam('lastName', e.target.value)}
+                    value={params.last_name || ''}
+                    onChange={(e) => updateParam('last_name', e.target.value)}
                     placeholder="e.g., Smith, Johnson"
                     className="mt-1"
                   />
@@ -402,47 +437,44 @@ export function SearchConfigurationBuilder({
             <CardContent className="pt-6 space-y-4">
               <div>
                 <Label htmlFor="location" className="text-sm font-medium">Location</Label>
-                <Select value={params.location || ''} onValueChange={(value) => updateParam('location', value)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select location or type custom..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LOCATION_SUGGESTIONS.map(location => (
-                      <SelectItem key={location} value={location}>{location}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <Input
+                  id="location"
                   value={params.location || ''}
                   onChange={(e) => updateParam('location', e.target.value)}
-                  placeholder="Or type custom location..."
-                  className="mt-2"
+                  placeholder="e.g., San Francisco Bay Area"
+                  className="mt-1"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Start typing to see suggestions
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="country" className="text-sm font-medium">Country</Label>
-                  <Input
-                    id="country"
-                    value={params.country || ''}
-                    onChange={(e) => updateParam('country', e.target.value)}
-                    placeholder="e.g., United States, Canada"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="region" className="text-sm font-medium">Region/State</Label>
-                  <Input
-                    id="region"
-                    value={params.region || ''}
-                    onChange={(e) => updateParam('region', e.target.value)}
-                    placeholder="e.g., California, New York"
-                    className="mt-1"
-                  />
+              <div>
+                <Label className="text-sm font-medium">Quick Location Suggestions</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                  {LOCATION_SUGGESTIONS.map(location => (
+                    <Button
+                      key={location}
+                      variant={params.location === location ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => updateParam('location', location)}
+                      className="justify-start text-xs h-8"
+                    >
+                      {location}
+                    </Button>
+                  ))}
                 </div>
               </div>
+
+              {params.location && (
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">Selected Location:</span>
+                    <span className="text-sm text-blue-700">{params.location}</span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -452,14 +484,24 @@ export function SearchConfigurationBuilder({
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div>
-                <Label className="text-sm font-medium">Current Company</Label>
-                <Textarea
-                  value={(params.currentCompany || []).join(', ')}
-                  onChange={(e) => updateParam('currentCompany', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                  placeholder="Enter company names separated by commas..."
-                  rows={3}
-                  className="mt-1"
-                />
+                <Label className="text-sm font-medium">Industries</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                  {INDUSTRY_OPTIONS.map(industry => (
+                    <div key={industry.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`industry-${industry.value}`}
+                        checked={(params.industry || []).includes(industry.value)}
+                        onCheckedChange={() => toggleArrayValue('industry', industry.value)}
+                      />
+                      <Label
+                        htmlFor={`industry-${industry.value}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {industry.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -468,11 +510,14 @@ export function SearchConfigurationBuilder({
                   {COMPANY_SIZE_OPTIONS.map(size => (
                     <div key={size.value} className="flex items-center space-x-2">
                       <Checkbox
-                        id={`company-size-${size.value}`}
-                        checked={(params.companySize || []).includes(size.value)}
-                        onCheckedChange={() => toggleArrayValue('companySize', size.value)}
+                        id={`size-${size.value}`}
+                        checked={(params.company_size || []).includes(size.value)}
+                        onCheckedChange={() => toggleArrayValue('company_size', size.value)}
                       />
-                      <Label htmlFor={`company-size-${size.value}`} className="text-xs">
+                      <Label
+                        htmlFor={`size-${size.value}`}
+                        className="text-xs font-normal cursor-pointer"
+                      >
                         {size.label}
                       </Label>
                     </div>
@@ -481,21 +526,28 @@ export function SearchConfigurationBuilder({
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Industry</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                  {INDUSTRY_OPTIONS.map(industry => (
-                    <div key={industry.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`industry-${industry.value}`}
-                        checked={(params.industryUrns || []).includes(industry.value)}
-                        onCheckedChange={() => toggleArrayValue('industryUrns', industry.value)}
-                      />
-                      <Label htmlFor={`industry-${industry.value}`} className="text-xs">
-                        {industry.label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+                <Label htmlFor="currentCompany" className="text-sm font-medium">Current Company</Label>
+                <Input
+                  id="currentCompany"
+                  value={(params.current_company || []).join(', ')}
+                  onChange={(e) => updateParam('current_company', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                  placeholder="e.g., Google, Microsoft, Apple"
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Separate multiple companies with commas
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="pastCompany" className="text-sm font-medium">Past Company</Label>
+                <Input
+                  id="pastCompany"
+                  value={(params.past_company || []).join(', ')}
+                  onChange={(e) => updateParam('past_company', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                  placeholder="e.g., Facebook, Amazon, Netflix"
+                  className="mt-1"
+                />
               </div>
             </CardContent>
           </Card>
@@ -512,10 +564,13 @@ export function SearchConfigurationBuilder({
                     <div key={level.value} className="flex items-center space-x-2">
                       <Checkbox
                         id={`seniority-${level.value}`}
-                        checked={(params.seniorityLevel || []).includes(level.value)}
-                        onCheckedChange={() => toggleArrayValue('seniorityLevel', level.value)}
+                        checked={(params.seniority_level || []).includes(level.value)}
+                        onCheckedChange={() => toggleArrayValue('seniority_level', level.value)}
                       />
-                      <Label htmlFor={`seniority-${level.value}`} className="text-xs">
+                      <Label
+                        htmlFor={`seniority-${level.value}`}
+                        className="text-xs font-normal cursor-pointer"
+                      >
                         {level.label}
                       </Label>
                     </div>
@@ -523,86 +578,101 @@ export function SearchConfigurationBuilder({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="connectionOf" className="text-sm font-medium">Connection Of</Label>
-                  <Input
-                    id="connectionOf"
-                    value={params.connectionOf || ''}
-                    onChange={(e) => updateParam('connectionOf', e.target.value)}
-                    placeholder="LinkedIn profile URL"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2 pt-6">
-                  <Checkbox
-                    id="openToOpportunities"
-                    checked={params.openToOpportunities || false}
-                    onCheckedChange={(checked) => updateParam('openToOpportunities', checked)}
-                  />
-                  <Label htmlFor="openToOpportunities" className="text-sm">
-                    Open to opportunities
-                  </Label>
+              <div>
+                <Label className="text-sm font-medium">Function Areas</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2 max-h-60 overflow-y-auto">
+                  {FUNCTION_AREAS.map(area => (
+                    <div key={area.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`function-${area.value}`}
+                        checked={(params.function_area || []).includes(area.value)}
+                        onCheckedChange={() => toggleArrayValue('function_area', area.value)}
+                      />
+                      <Label
+                        htmlFor={`function-${area.value}`}
+                        className="text-xs font-normal cursor-pointer"
+                      >
+                        {area.label}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Excluded Keywords</Label>
-                <Input
-                  value={(params.excludedKeywords || []).join(', ')}
-                  onChange={(e) => updateParam('excludedKeywords', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                  placeholder="Keywords to exclude, separated by commas..."
-                  className="mt-1"
-                />
+                <Label className="text-sm font-medium">Years of Experience</Label>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <Label htmlFor="minExperience" className="text-xs text-gray-500">Minimum</Label>
+                    <Input
+                      id="minExperience"
+                      type="number"
+                      value={params.years_of_experience?.min || ''}
+                      onChange={(e) => updateParam('years_of_experience', {
+                        ...params.years_of_experience,
+                        min: parseInt(e.target.value) || undefined
+                      })}
+                      placeholder="0"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maxExperience" className="text-xs text-gray-500">Maximum</Label>
+                    <Input
+                      id="maxExperience"
+                      type="number"
+                      value={params.years_of_experience?.max || ''}
+                      onChange={(e) => updateParam('years_of_experience', {
+                        ...params.years_of_experience,
+                        max: parseInt(e.target.value) || undefined
+                      })}
+                      placeholder="10"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
               </div>
+
+              {searchType === 'sales-navigator' && (
+                <div>
+                  <Label htmlFor="leadInterests" className="text-sm font-medium">Lead Interests</Label>
+                  <Input
+                    id="leadInterests"
+                    value={(params.lead_interests || []).join(', ')}
+                    onChange={(e) => updateParam('lead_interests', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                    placeholder="e.g., artificial intelligence, machine learning"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Sales Navigator premium feature
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Optimization Suggestions */}
-      {(optimizationSuggestions.suggestions.length > 0 || optimizationSuggestions.warnings.length > 0) && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Lightbulb className="h-4 w-4" />
-              Optimization Suggestions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-2">
-            {optimizationSuggestions.suggestions.map((suggestion, index) => (
-              <Alert key={index}>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">{suggestion}</AlertDescription>
-              </Alert>
-            ))}
-            {optimizationSuggestions.warnings.map((warning, index) => (
-              <Alert key={index} className="border-amber-200 bg-amber-50">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-sm text-amber-800">{warning}</AlertDescription>
-              </Alert>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* URL Preview */}
+      {/* URL Preview and Optimization */}
       {showPreview && urlResult && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4" />
-                Generated URL Preview
-                {isGenerating && <RefreshCw className="h-3 w-3 animate-spin" />}
-              </CardTitle>
+                <CardTitle className="text-sm">Generated URL</CardTitle>
+                {isGenerating && (
+                  <RefreshCw className="h-3 w-3 animate-spin text-blue-600" />
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Badge variant={urlResult.isValid ? "default" : "destructive"} className="text-xs">
-                  {urlResult.isValid ? 'Valid' : 'Invalid'}
+                  {urlResult.isValid ? "Valid" : "Invalid"}
                 </Badge>
-                {urlResult.premiumRequired && (
-                  <Badge variant="secondary" className="text-xs">Premium</Badge>
+                {urlResult.isValid && (
+                  <Badge variant="secondary" className="text-xs">
+                    {searchType.replace('-', ' ').toUpperCase()}
+                  </Badge>
                 )}
               </div>
             </div>
@@ -615,34 +685,48 @@ export function SearchConfigurationBuilder({
               <Button size="sm" variant="outline" onClick={copyUrl} className="shrink-0">
                 <Copy className="h-3 w-3" />
               </Button>
-              <Button size="sm" variant="outline" onClick={() => window.open(urlResult.url, '_blank')} className="shrink-0">
-                <ExternalLink className="h-3 w-3" />
-              </Button>
+              {urlResult.isValid && (
+                <Button size="sm" variant="outline" onClick={() => window.open(urlResult.url, '_blank')} className="shrink-0">
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              )}
             </div>
 
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Search Type:</span>
-                <div className="font-medium capitalize">{urlResult.searchType.replace('-', ' ')}</div>
+            {urlResult.isValid && (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Search Type:</span>
+                  <div className="font-medium capitalize">{urlResult.searchType?.replace('-', ' ')}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500">Parameters:</span>
+                  <div className="font-medium">{Object.keys(params).length} configured</div>
+                </div>
               </div>
-              <div>
-                <span className="text-gray-500">Estimated Results:</span>
-                <div className="font-medium">{urlResult.estimatedResults?.toLocaleString() || 'Unknown'}</div>
-              </div>
-              <div>
-                <span className="text-gray-500">Premium Required:</span>
-                <div className="font-medium">{urlResult.premiumRequired ? 'Yes' : 'No'}</div>
-              </div>
-            </div>
+            )}
 
-            {urlResult.validationErrors.length > 0 && (
+            {urlResult.errors && urlResult.errors.length > 0 && (
               <Alert className="border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4 text-red-600" />
                 <AlertDescription>
                   <div className="space-y-1">
                     <p className="font-medium text-red-800">Validation Errors:</p>
-                    {urlResult.validationErrors.map((error, index) => (
+                    {urlResult.errors.map((error, index) => (
                       <div key={index} className="text-xs text-red-700">• {error}</div>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {optimizationSuggestions.suggestions.length > 0 && (
+              <Alert className="border-amber-200 bg-amber-50">
+                <Lightbulb className="h-4 w-4 text-amber-600" />
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <p className="font-medium text-amber-800">Optimization Suggestions:</p>
+                    {optimizationSuggestions.suggestions.slice(0, 3).map((suggestion, index) => (
+                      <div key={index} className="text-xs text-amber-700">• {suggestion}</div>
                     ))}
                   </div>
                 </AlertDescription>
