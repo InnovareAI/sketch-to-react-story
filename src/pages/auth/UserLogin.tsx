@@ -69,9 +69,9 @@ export default function UserLogin() {
     setError('');
 
     try {
-      // For development mode, check if this is a test user
-      if (email.includes('@example.com') || email.includes('@test.com')) {
-        console.log('Using development mode for test user login');
+      // For development mode, check if this is a test user or invited user
+      if (email.includes('@example.com') || email.includes('@test.com') || password === email) {
+        console.log('Using development mode for user login');
         
         // Check if user exists in users table
         const { data: userRecord, error: userError } = await supabase
@@ -96,12 +96,13 @@ export default function UserLogin() {
           throw new Error('User account not found. Please contact your workspace administrator.');
         }
 
-        if (userRecord.status === 'invited') {
-          throw new Error('Account setup incomplete. Please check your email for setup instructions.');
-        }
-
         if (userRecord.role === 'owner') {
           throw new Error('Super admin accounts cannot login here. Please use the admin login page.');
+        }
+
+        // For invited users, accept email as password (development mode)
+        if (userRecord.status === 'invited' && password !== email) {
+          throw new Error('For invited users in development mode, please use your email address as the password.');
         }
 
         // Mock successful authentication for development
@@ -129,7 +130,7 @@ export default function UserLogin() {
         localStorage.setItem('user_auth_user', JSON.stringify(mockUser));
         localStorage.setItem('user_auth_profile', JSON.stringify(profile));
 
-        toast.success(`Welcome back, ${profile.full_name}! (Dev Mode)`);
+        toast.success(`Welcome, ${profile.full_name}! (Dev Mode)`);
         navigate('/workspace/dashboard');
         return;
       }
@@ -177,7 +178,7 @@ export default function UserLogin() {
         // Check if account setup is complete
         if (userRecord.status === 'invited') {
           await supabase.auth.signOut();
-          throw new Error('Account setup incomplete. Please check your email for setup instructions.');
+          throw new Error('Account setup incomplete. Please use "Set up password" below to activate your account.');
         }
 
         const profile = {
@@ -225,17 +226,42 @@ export default function UserLogin() {
 
     setResetLoading(true);
     try {
+      // First check if this user exists in our users table
+      const { data: userRecord, error: userError } = await supabase
+        .from('users')
+        .select('id, email, status')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (userError || !userRecord) {
+        throw new Error('Email not found. Please check your email address or contact your workspace administrator.');
+      }
+
+      if (userRecord.status === 'invited') {
+        // For development mode, show instructions instead of trying to send real email
+        toast.success(
+          `Account found! Since this is development mode, please contact your administrator to complete account setup. ` +
+          `Your email: ${email}`,
+          { duration: 8000 }
+        );
+        return;
+      }
+
+      // Try the normal password reset flow
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/login`
       });
 
       if (error) throw error;
 
-      toast.success('Password reset email sent! Check your inbox.');
+      toast.success(
+        'Password setup email sent! Check your inbox and follow the link to create your password.',
+        { duration: 6000 }
+      );
     } catch (error: any) {
       console.error('Password reset error details:', error);
       
-      let errorMessage = 'Password reset failed. Please try again.';
+      let errorMessage = 'Password setup failed. Please try again.';
       if (error.message?.includes('Failed to fetch')) {
         errorMessage = 'Connection failed. Please check your internet connection and try again.';
       } else if (error.message) {
@@ -346,14 +372,26 @@ export default function UserLogin() {
             </Button>
           </form>
 
-          <div className="mt-4 text-center space-y-2">
+          <div className="mt-4 text-center space-y-3">
+            <div className="bg-blue-50 p-3 rounded-lg text-center">
+              <p className="text-sm text-blue-800 font-medium mb-2">
+                Development Mode - Invited Users
+              </p>
+              <p className="text-xs text-blue-700 mb-1">
+                <strong>For invited users:</strong> Use your email address as the password
+              </p>
+              <p className="text-xs text-blue-600">
+                Example: If your email is john@company.com, use "john@company.com" as password
+              </p>
+            </div>
+            
             <button
               type="button"
               onClick={handlePasswordReset}
               disabled={resetLoading || loading}
-              className="text-sm text-blue-600 hover:text-blue-500 disabled:text-gray-400 block mx-auto"
+              className="text-sm text-gray-600 hover:text-gray-800 disabled:text-gray-400"
             >
-              {resetLoading ? 'Sending...' : 'Forgot your password?'}
+              {resetLoading ? 'Sending...' : 'Need help with account setup?'}
             </button>
           </div>
 
