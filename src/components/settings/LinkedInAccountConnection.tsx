@@ -83,6 +83,12 @@ export function LinkedInAccountConnection() {
       // Reload accounts after successful connection
       loadConnectedAccounts();
       setShowConnectionForm(false);
+      setIsConnecting(false);
+      toast.success('LinkedIn account connected successfully!');
+    } else if (event.data.type === 'linkedin_auth_error') {
+      console.error('LinkedIn auth error:', event.data.error);
+      toast.error(`LinkedIn connection failed: ${event.data.error}`);
+      setIsConnecting(false);
     }
   };
 
@@ -180,17 +186,23 @@ export function LinkedInAccountConnection() {
           try {
             if (authWindow.closed) {
               clearInterval(checkInterval);
-              setIsConnecting(false);
-              loadConnectedAccounts();
-              setShowConnectionForm(false);
-              setConnectionStep('proxy');
-              toast.info('Authentication window closed. Checking connection status...');
+              console.log('LinkedIn auth window closed');
+              // Wait a bit for the message event to fire
+              setTimeout(() => {
+                // Only show info if still connecting (no success/error message received)
+                if (isConnecting) {
+                  setIsConnecting(false);
+                  loadConnectedAccounts();
+                  toast.info('LinkedIn window closed. Checking for connection...');
+                }
+              }, 500);
             }
           } catch (e) {
             clearInterval(checkInterval);
+            console.error('Error checking auth window:', e);
             setIsConnecting(false);
           }
-        }, 1000);
+        }, 500);
         
         // Timeout after 5 minutes
         setTimeout(() => {
