@@ -9,6 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Shield, 
   Users, 
@@ -20,7 +24,8 @@ import {
   Eye,
   Trash2,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -51,6 +56,12 @@ export default function SuperAdminDashboard() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [createWorkspaceLoading, setCreateWorkspaceLoading] = useState(false);
+  const [newWorkspace, setNewWorkspace] = useState({
+    name: '',
+    plan: 'free'
+  });
   const [stats, setStats] = useState({
     totalWorkspaces: 0,
     totalUsers: 0,
@@ -182,6 +193,53 @@ export default function SuperAdminDashboard() {
     toast.success('Signed out successfully');
   };
 
+  const handleCreateWorkspace = async () => {
+    if (!newWorkspace.name.trim()) {
+      toast.error('Workspace name is required');
+      return;
+    }
+
+    setCreateWorkspaceLoading(true);
+    try {
+      // Create new tenant (workspace)
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .insert({
+          name: newWorkspace.name,
+          plan: newWorkspace.plan,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (tenantError) throw tenantError;
+
+      // Create corresponding organization
+      const { error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: newWorkspace.name,
+          slug: newWorkspace.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          subscription_tier: newWorkspace.plan
+        });
+
+      if (orgError) {
+        console.warn('Organization creation failed:', orgError);
+        // Continue anyway as tenant is the primary entity
+      }
+
+      toast.success(`Workspace "${newWorkspace.name}" created successfully`);
+      setCreateWorkspaceOpen(false);
+      setNewWorkspace({ name: '', plan: 'free' });
+      await loadDashboardData(); // Refresh the data
+    } catch (error: any) {
+      console.error('Error creating workspace:', error);
+      toast.error(`Failed to create workspace: ${error.message}`);
+    } finally {
+      setCreateWorkspaceLoading(false);
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'owner':
@@ -307,10 +365,62 @@ export default function SuperAdminDashboard() {
                     <CardTitle>Workspaces</CardTitle>
                     <CardDescription>Manage customer workspaces and subscriptions</CardDescription>
                   </div>
-                  <Button onClick={loadDashboardData}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
+                  <div className="flex gap-2">
+                    <Dialog open={createWorkspaceOpen} onOpenChange={setCreateWorkspaceOpen}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Create Workspace
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Create New Workspace</DialogTitle>
+                          <DialogDescription>
+                            Add a new workspace for a customer or team.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="workspace-name">Workspace Name</Label>
+                            <Input
+                              id="workspace-name"
+                              value={newWorkspace.name}
+                              onChange={(e) => setNewWorkspace({ ...newWorkspace, name: e.target.value })}
+                              placeholder="Enter workspace name"
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="workspace-plan">Subscription Plan</Label>
+                            <Select value={newWorkspace.plan} onValueChange={(value) => setNewWorkspace({ ...newWorkspace, plan: value })}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a plan" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="free">Free</SelectItem>
+                                <SelectItem value="starter">Starter</SelectItem>
+                                <SelectItem value="pro">Pro</SelectItem>
+                                <SelectItem value="enterprise">Enterprise</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setCreateWorkspaceOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleCreateWorkspace} disabled={createWorkspaceLoading}>
+                            {createWorkspaceLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Create Workspace
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" onClick={loadDashboardData}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
