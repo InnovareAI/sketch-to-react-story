@@ -17,7 +17,8 @@ export default function LinkedInCallback() {
 
   const handleCallback = async () => {
     try {
-      const code = searchParams.get('code');
+      const success = searchParams.get('success');
+      const data = searchParams.get('data');
       const state = searchParams.get('state');
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
@@ -27,21 +28,34 @@ export default function LinkedInCallback() {
         throw new Error(errorDescription || error);
       }
 
-      // Verify state parameter
-      const savedState = sessionStorage.getItem('linkedin_oauth_state');
-      if (state !== savedState) {
-        throw new Error('Invalid state parameter. Possible CSRF attack.');
-      }
+      // Check if we have success data from Netlify function
+      if (success === 'true' && data) {
+        // Decode the data from Netlify function
+        const decodedData = JSON.parse(atob(data));
+        const { access_token, refresh_token, expires_in, profile } = decodedData;
+        
+        // Use this data instead of making API calls
+        var tokenData = { access_token, refresh_token, expires_in };
+      } else {
+        // Fallback to client-side exchange (for local development)
+        const code = searchParams.get('code');
+        
+        // Verify state parameter
+        const savedState = sessionStorage.getItem('linkedin_oauth_state');
+        if (state && state !== savedState) {
+          throw new Error('Invalid state parameter. Possible CSRF attack.');
+        }
 
-      if (!code) {
-        throw new Error('No authorization code received');
-      }
+        if (!code) {
+          throw new Error('No authorization code received');
+        }
 
-      // Exchange code for token
-      const tokenData = await linkedInOAuth.exchangeCodeForToken(code);
-      
-      // Get user profile
-      const profile = await linkedInOAuth.getUserProfile(tokenData.access_token);
+        // Exchange code for token
+        var tokenData = await linkedInOAuth.exchangeCodeForToken(code);
+        
+        // Get user profile
+        var profile = await linkedInOAuth.getUserProfile(tokenData.access_token);
+      }
       
       // Save to Supabase
       const { data: { user } } = await supabase.auth.getUser();
