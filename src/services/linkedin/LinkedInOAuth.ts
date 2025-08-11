@@ -13,10 +13,8 @@ export class LinkedInOAuth {
     // These need to be configured in LinkedIn Developer Portal
     this.clientId = import.meta.env.VITE_LINKEDIN_CLIENT_ID || '';
     this.clientSecret = import.meta.env.VITE_LINKEDIN_CLIENT_SECRET || '';
-    // Use Netlify function for secure OAuth handling
-    this.redirectUri = window.location.hostname === 'localhost' 
-      ? `${window.location.origin}/auth/linkedin/callback`
-      : `${window.location.origin}/.netlify/functions/linkedin-callback`;
+    // Use direct callback for OAuth handling
+    this.redirectUri = `${window.location.origin}/auth/linkedin/callback`;
     this.scope = [
       'openid',
       'profile', 
