@@ -23,7 +23,7 @@
     <div class="credentials">
         <strong>LinkedIn App Credentials:</strong><br>
         Client ID: 78094ft3hvizqs<br>
-        Redirect URI: https://sameaisalesassistant.netlify.app/auth/linkedin/callback<br>
+        Redirect URI: https://sameaisalesassistant.netlify.app/.netlify/functions/linkedin-callback<br>
         Scopes: openid, profile, email
     </div>
 
@@ -36,7 +36,7 @@
     <script>
         function testLinkedInOAuth() {
             const clientId = '78094ft3hvizqs';
-            const redirectUri = 'https://sameaisalesassistant.netlify.app/auth/linkedin/callback';
+            const redirectUri = 'https://sameaisalesassistant.netlify.app/.netlify/functions/linkedin-callback';
             const scope = ['openid', 'profile', 'email'];
             const state = 'test-' + Math.random().toString(36).substr(2, 9);
             

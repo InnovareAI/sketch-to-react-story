@@ -1,6 +1,6 @@
 // Test LinkedIn OAuth URL generation
 const clientId = '78094ft3hvizqs';
-const redirectUri = 'https://sameaisalesassistant.netlify.app/auth/linkedin/callback';
+const redirectUri = 'https://sameaisalesassistant.netlify.app/.netlify/functions/linkedin-callback';
 const scope = ['openid', 'profile', 'email'];
 const state = 'test-state-' + Math.random().toString(36).substr(2, 9);
 
