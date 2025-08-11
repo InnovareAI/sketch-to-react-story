@@ -143,8 +143,22 @@ export default function SuperAdminLogin() {
         navigate('/admin/dashboard');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      setError(error.message || 'Login failed. Please try again.');
+      console.error('Login error details:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please check your credentials.';
+      } else if (error.message?.includes('Failed to fetch')) {
+        errorMessage = 'Connection failed. Please check your internet connection and try again.';
+      } else if (error.message?.includes('User record not found')) {
+        errorMessage = 'User account not found. Please contact support.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -171,8 +185,16 @@ export default function SuperAdminLogin() {
 
       toast.success('Password reset email sent! Check your inbox.');
     } catch (error: any) {
-      console.error('Password reset error:', error);
-      toast.error(`Password reset failed: ${error.message}`);
+      console.error('Password reset error details:', error);
+      
+      let errorMessage = 'Password reset failed. Please try again.';
+      if (error.message?.includes('Failed to fetch')) {
+        errorMessage = 'Connection failed. Please check your internet connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setResetLoading(false);
     }
