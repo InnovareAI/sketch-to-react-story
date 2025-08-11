@@ -15,6 +15,7 @@ import { MessageFormatter } from "./MessageFormatter";
 import { VoiceInterface } from "./VoiceInterface";
 import { ChatHistory } from "./ChatHistory";
 import { ContextMemory } from "./ContextMemory";
+import { SamThinkingDisplay, ThinkingStep } from "./SamThinkingDisplay";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { useVoice } from "@/hooks/useVoice";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -116,6 +117,8 @@ export function EnhancedConversationalInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [agentTrace, setAgentTrace] = useState<AgentTrace[]>([]);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
+  const [showThinking, setShowThinking] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize agent system
@@ -204,6 +207,7 @@ export function EnhancedConversationalInterface() {
     setProcessingProgress(0);
     setSamStatus("Initializing multi-agent processing...");
     setAgentTrace([]);
+    setThinkingSteps([]);
 
     try {
       if (!isAgentInitialized) {
@@ -251,11 +255,62 @@ export function EnhancedConversationalInterface() {
         }
       };
 
+      // Add initial thinking step
+      const initialStep: ThinkingStep = {
+        id: `step_${Date.now()}`,
+        type: 'thinking',
+        agent: 'orchestrator',
+        action: 'Analyzing your request...',
+        details: 'Determining the best approach to help you',
+        status: 'active',
+        timestamp: new Date()
+      };
+      setThinkingSteps([initialStep]);
+
+      // Simulate processing steps (in production, these would come from actual agent events)
+      setTimeout(() => {
+        setThinkingSteps(prev => [
+          ...prev.map(s => ({ ...s, status: 'completed' as const })),
+          {
+            id: `step_${Date.now() + 1}`,
+            type: 'routing',
+            agent: 'orchestrator',
+            action: 'Routing to specialist agents...',
+            details: 'Identifying the right experts for your needs',
+            status: 'active',
+            timestamp: new Date()
+          }
+        ]);
+        setProcessingProgress(30);
+      }, 500);
+
+      setTimeout(() => {
+        setThinkingSteps(prev => [
+          ...prev.map(s => s.status === 'active' ? { ...s, status: 'completed' as const } : s),
+          {
+            id: `step_${Date.now() + 2}`,
+            type: 'agent-comm',
+            agent: content.includes('lead') ? 'lead-research' : 
+                   content.includes('campaign') ? 'campaign-management' : 
+                   content.includes('LinkedIn') ? 'workflow-automation' : 'knowledge-base',
+            action: 'Processing with specialist agent...',
+            details: 'Gathering insights and recommendations',
+            status: 'active',
+            progress: 50,
+            timestamp: new Date()
+          }
+        ]);
+        setProcessingProgress(60);
+      }, 1000);
+
       // Process through multi-agent system
       const result = await agentFactory.processMessage(content, existingContext, sessionId);
       
       // Update agent trace for debugging
       setAgentTrace(result.agentTrace || []);
+      
+      // Complete all thinking steps
+      setThinkingSteps(prev => prev.map(s => ({ ...s, status: 'completed' as const })));
 
       // Create SAM response
       const samResponse: Message = {
@@ -454,6 +509,18 @@ export function EnhancedConversationalInterface() {
                 ))}
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* SAM Thinking Display - Devin.ai Style */}
+        {(isLoading || thinkingSteps.length > 0) && (
+          <div className="mb-6">
+            <SamThinkingDisplay
+              isVisible={showThinking}
+              currentSteps={thinkingSteps}
+              isProcessing={isLoading}
+              className="max-w-4xl mx-auto"
+            />
           </div>
         )}
 
