@@ -306,10 +306,14 @@ export default function SuperAdminDashboard() {
       // For development, we'll create a user record and show instructions
       // instead of trying to send actual invitations which require admin privileges
       
+      // Generate a UUID for the new user (in a real app this would come from auth.users)
+      const userId = crypto.randomUUID();
+      
       // Create user record directly
       const { error: userError } = await supabase
         .from('users')
         .insert({
+          id: userId,
           tenant_id: selectedWorkspace.id,
           email: inviteUserData.email,
           name: inviteUserData.email.split('@')[0],
@@ -320,6 +324,23 @@ export default function SuperAdminDashboard() {
       if (userError) {
         console.error('User record creation failed:', userError);
         throw new Error(`Failed to create user record: ${userError.message}`);
+      }
+
+      // Also create a user_profiles record for consistency
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: userId,
+          email: inviteUserData.email,
+          first_name: inviteUserData.email.split('@')[0],
+          last_name: '',
+          role: inviteUserData.role === 'workspace_manager' ? 'admin' : inviteUserData.role,
+          subscription_status: 'trial'
+        });
+
+      if (profileError) {
+        console.warn('User profile creation failed:', profileError);
+        // Continue anyway as main user record was created
       }
 
       // Show success message with instructions
