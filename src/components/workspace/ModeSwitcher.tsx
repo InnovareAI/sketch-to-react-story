@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { 
   Mail, 
   Send, 
@@ -68,45 +69,39 @@ export function ModeSwitcher({ currentMode, onModeChange, className }: ModeSwitc
 
   return (
     <div className={cn("relative", className)}>
-      {/* Mode Toggle */}
-      <div className="flex items-center gap-2 p-1 bg-gray-800 rounded-lg">
-        {Object.entries(modes).map(([mode, config]) => {
-          const isActive = currentMode === mode;
-          const Icon = config.icon;
-          
-          return (
-            <button
-              key={mode}
-              onClick={() => handleModeChange(mode as 'inbound' | 'outbound')}
-              className={cn(
-                "relative flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300",
-                isActive 
-                  ? `${config.bgColor} ${config.borderColor} border` 
-                  : "hover:bg-gray-700",
-                isTransitioning && "pointer-events-none"
-              )}
-            >
-              <Icon className={cn(
-                "h-4 w-4 transition-all duration-300",
-                isActive ? "text-white" : "text-gray-400"
-              )} />
-              <span className={cn(
-                "text-sm font-medium transition-all duration-300",
-                isActive ? "text-white" : "text-gray-400"
-              )}>
-                {config.title}
-              </span>
-              {isActive && (
-                <div className="absolute inset-0 rounded-md overflow-hidden pointer-events-none">
-                  <div className={cn(
-                    "absolute inset-0 bg-gradient-to-r opacity-20",
-                    config.color
-                  )} />
-                </div>
-              )}
-            </button>
-          );
-        })}
+      {/* Mode Toggle - Same style as Work/Agent switcher */}
+      <div className="flex items-center gap-3 lg:gap-6">
+        <div className="flex items-center gap-2 lg:gap-4 p-1.5 lg:p-2 rounded-xl border bg-gray-800 border-gray-600">
+          <div className="flex items-center gap-1 lg:gap-2">
+            <Send className={cn(
+              "h-3 w-3 lg:h-4 lg:w-4",
+              currentMode === 'outbound' ? "text-premium-purple" : "text-gray-400"
+            )} />
+            <span className={cn(
+              "text-xs lg:text-sm font-medium hidden sm:inline",
+              currentMode === 'outbound' ? "text-white" : "text-gray-400"
+            )}>
+              Outbound
+            </span>
+          </div>
+          <Switch 
+            checked={currentMode === 'inbound'}
+            onCheckedChange={(checked) => handleModeChange(checked ? 'inbound' : 'outbound')}
+            className="data-[state=checked]:bg-premium-purple"
+          />
+          <div className="flex items-center gap-1 lg:gap-2">
+            <Inbox className={cn(
+              "h-3 w-3 lg:h-4 lg:w-4",
+              currentMode === 'inbound' ? "text-premium-purple" : "text-gray-400"
+            )} />
+            <span className={cn(
+              "text-xs lg:text-sm font-medium hidden sm:inline",
+              currentMode === 'inbound' ? "text-white" : "text-gray-400"
+            )}>
+              Inbound
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Active Mode Info */}
