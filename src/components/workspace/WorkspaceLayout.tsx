@@ -135,17 +135,57 @@ export default function WorkspaceLayout() {
   };
 
   const getRoleBadge = (role: string) => {
+    const badgeClass = isConversational 
+      ? "border text-white backdrop-blur-sm"
+      : "border shadow-sm";
+    
     switch (role) {
       case 'workspace_manager':
-        return <Badge className="bg-blue-100 text-blue-800"><Crown className="h-3 w-3 mr-1" />Admin</Badge>;
+        return (
+          <Badge className={cn(
+            badgeClass,
+            "bg-premium-blue/10 text-premium-blue border-premium-blue/30"
+          )}>
+            <Crown className="h-3 w-3 mr-1" />
+            Admin
+          </Badge>
+        );
       case 'admin':
-        return <Badge className="bg-purple-100 text-purple-800"><Crown className="h-3 w-3 mr-1" />Admin</Badge>;
+        return (
+          <Badge className={cn(
+            badgeClass,
+            "bg-premium-purple/10 text-premium-purple border-premium-purple/30"
+          )}>
+            <Crown className="h-3 w-3 mr-1" />
+            Admin
+          </Badge>
+        );
       case 'user':
-        return <Badge className="bg-green-100 text-green-800"><User className="h-3 w-3 mr-1" />User</Badge>;
+        return (
+          <Badge className={cn(
+            badgeClass,
+            "bg-premium-green/10 text-premium-green border-premium-green/30"
+          )}>
+            <User className="h-3 w-3 mr-1" />
+            User
+          </Badge>
+        );
       case 'co_worker':
-        return <Badge className="bg-orange-100 text-orange-800"><UserCheck className="h-3 w-3 mr-1" />Co-Worker</Badge>;
+        return (
+          <Badge className={cn(
+            badgeClass,
+            "bg-premium-orange/10 text-premium-orange border-premium-orange/30"
+          )}>
+            <UserCheck className="h-3 w-3 mr-1" />
+            Co-Worker
+          </Badge>
+        );
       default:
-        return <Badge variant="secondary">{role.replace('_', ' ')}</Badge>;
+        return (
+          <Badge variant="secondary" className={badgeClass}>
+            {role.replace('_', ' ')}
+          </Badge>
+        );
     }
   };
 
@@ -186,32 +226,109 @@ export default function WorkspaceLayout() {
       
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Top Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Building2 className="h-5 w-5 text-gray-500" />
-              <span className="text-sm font-medium text-gray-900">{user.workspace_name}</span>
-              <Badge variant="outline" className="text-xs">{user.workspace_plan}</Badge>
+        {/* Enhanced Top Header */}
+        <div className={cn(
+          "border-b px-6 py-4 flex items-center justify-between shrink-0 backdrop-blur-sm",
+          isConversational 
+            ? "bg-gray-900/95 border-gray-700/50" 
+            : "bg-white/95 border-gray-200 shadow-sm"
+        )}>
+          <div className="flex items-center space-x-6">
+            {/* Breadcrumb-style workspace info */}
+            <div className="flex items-center space-x-3">
+              <div className={cn(
+                "p-2 rounded-xl",
+                isConversational 
+                  ? "bg-premium-purple/20 text-premium-purple" 
+                  : "bg-primary/10 text-primary"
+              )}>
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "font-semibold text-base",
+                    isConversational ? "text-white" : "text-gray-900"
+                  )}>
+                    {user.workspace_name}
+                  </span>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-xs px-2 py-1 border",
+                      user.workspace_plan === 'premium'
+                        ? "border-premium-purple/30 text-premium-purple bg-premium-purple/5"
+                        : "border-gray-300 text-gray-600"
+                    )}
+                  >
+                    {user.workspace_plan.charAt(0).toUpperCase() + user.workspace_plan.slice(1)}
+                  </Badge>
+                </div>
+                <p className={cn(
+                  "text-sm flex items-center gap-1",
+                  isConversational ? "text-gray-300" : "text-gray-600"
+                )}>
+                  <Linkedin className="h-3 w-3" />
+                  LinkedIn Automation Platform
+                </p>
+              </div>
             </div>
           </div>
           
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-4 w-4" />
+            {/* Enhanced notification bell */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={cn(
+                "relative p-2 rounded-xl",
+                isConversational
+                  ? "text-gray-300 hover:text-white hover:bg-gray-800"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              )}
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5" />
+              {/* Notification indicator */}
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-premium-orange rounded-full border-2 border-white" />
             </Button>
             
-            <div className="flex items-center space-x-3">
+            {/* Enhanced user profile section */}
+            <div className="flex items-center space-x-4">
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
-                <div className="text-xs text-gray-500">{user.email}</div>
+                <div className={cn(
+                  "text-sm font-semibold",
+                  isConversational ? "text-white" : "text-gray-900"
+                )}>
+                  {user.full_name}
+                </div>
+                <div className={cn(
+                  "text-xs",
+                  isConversational ? "text-gray-400" : "text-gray-500"
+                )}>
+                  {user.email}
+                </div>
               </div>
-              {getRoleBadge(user.role)}
               
-              <Button variant="ghost" onClick={handleSignOut} size="sm">
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
+              {/* Enhanced role badge */}
+              <div className="flex items-center gap-3">
+                {getRoleBadge(user.role)}
+                
+                <Button 
+                  variant="ghost" 
+                  onClick={handleSignOut} 
+                  size="sm"
+                  className={cn(
+                    "px-3 py-2 rounded-xl transition-all",
+                    isConversational
+                      ? "text-gray-300 hover:text-white hover:bg-red-900/20 hover:border-red-500/50"
+                      : "text-gray-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
+                  )}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           </div>
         </div>
