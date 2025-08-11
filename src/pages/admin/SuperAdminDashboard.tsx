@@ -25,7 +25,9 @@ import {
   Trash2,
   RefreshCw,
   AlertCircle,
-  Loader2
+  Loader2,
+  UserPlus,
+  Mail
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -58,9 +60,16 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const [createWorkspaceLoading, setCreateWorkspaceLoading] = useState(false);
+  const [inviteUserOpen, setInviteUserOpen] = useState(false);
+  const [inviteUserLoading, setInviteUserLoading] = useState(false);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
   const [newWorkspace, setNewWorkspace] = useState({
     name: '',
     plan: 'free'
+  });
+  const [inviteUserData, setInviteUserData] = useState({
+    email: '',
+    role: 'member'
   });
   const [stats, setStats] = useState({
     totalWorkspaces: 0,
@@ -240,6 +249,63 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleInviteUser = async () => {
+    if (!inviteUserData.email.trim() || !selectedWorkspace) {
+      toast.error('Email and workspace are required');
+      return;
+    }
+
+    setInviteUserLoading(true);
+    try {
+      // Send invitation email through Supabase Auth
+      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+        inviteUserData.email,
+        {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            workspace_id: selectedWorkspace.id,
+            workspace_name: selectedWorkspace.name,
+            role: inviteUserData.role
+          }
+        }
+      );
+
+      if (inviteError) throw inviteError;
+
+      // Create user record in pending state
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          tenant_id: selectedWorkspace.id,
+          email: inviteUserData.email,
+          name: inviteUserData.email.split('@')[0],
+          role: inviteUserData.role,
+          status: 'invited'
+        });
+
+      if (userError) {
+        console.warn('User record creation failed:', userError);
+        // Continue anyway as invitation was sent
+      }
+
+      toast.success(`Invitation sent to ${inviteUserData.email}`);
+      setInviteUserOpen(false);
+      setInviteUserData({ email: '', role: 'member' });
+      setSelectedWorkspace(null);
+      await loadDashboardData(); // Refresh data
+    } catch (error: any) {
+      console.error('Error inviting user:', error);
+      toast.error(`Failed to invite user: ${error.message}`);
+    } finally {
+      setInviteUserLoading(false);
+    }
+  };
+
+  const openInviteDialog = (workspace: Workspace) => {
+    setSelectedWorkspace(workspace);
+    setInviteUserOpen(true);
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'owner':
@@ -348,6 +414,63 @@ export default function SuperAdminDashboard() {
           </Card>
         </div>
 
+        {/* Invite User Dialog */}
+        <Dialog open={inviteUserOpen} onOpenChange={setInviteUserOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Invite User to Workspace</DialogTitle>
+              <DialogDescription>
+                Send an invitation to join "{selectedWorkspace?.name}" workspace.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="invite-email">Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="invite-email"
+                    type="email"
+                    value={inviteUserData.email}
+                    onChange={(e) => setInviteUserData({ ...inviteUserData, email: e.target.value })}
+                    placeholder="user@example.com"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="invite-role">User Role</Label>
+                <Select value={inviteUserData.role} onValueChange={(value) => setInviteUserData({ ...inviteUserData, role: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedWorkspace && (
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-900">Workspace: {selectedWorkspace.name}</p>
+                    <p className="text-blue-700">Plan: {selectedWorkspace.subscription_tier}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInviteUserOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleInviteUser} disabled={inviteUserLoading}>
+                {inviteUserLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send Invitation
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Tabs */}
         <Tabs defaultValue="workspaces" className="space-y-6">
           <TabsList>
@@ -434,6 +557,10 @@ export default function SuperAdminDashboard() {
                       </div>
                       <div className="flex items-center space-x-3">
                         {getSubscriptionBadge(workspace.subscription_tier, workspace.subscription_status)}
+                        <Button size="sm" variant="outline" onClick={() => openInviteDialog(workspace)}>
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          Invite User
+                        </Button>
                         <Button size="sm" variant="outline">
                           <Eye className="h-4 w-4 mr-1" />
                           View
