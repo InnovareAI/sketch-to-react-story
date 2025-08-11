@@ -92,7 +92,7 @@ export default function SuperAdminLogin() {
 
         // If profile doesn't exist, create it for admin@innovareai.com
         if (profileError && data.user.email === 'admin@innovareai.com') {
-          console.log('Creating super admin profile for:', data.user.email);
+          console.log('Creating super admin profile for:', data.user.email, 'User ID:', data.user.id);
           
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
@@ -106,25 +106,30 @@ export default function SuperAdminLogin() {
             .select('role, workspace_id, full_name')
             .single();
           
+          console.log('Profile creation result:', { newProfile, createError });
+          
           if (createError) {
-            console.error('Failed to create super admin profile:', createError);
+            console.error('Profile creation failed:', createError);
             // Try to fetch existing profile instead
-            const { data: existingProfile } = await supabase
+            const { data: existingProfile, error: fetchError } = await supabase
               .from('profiles')
               .select('role, workspace_id, full_name')
               .eq('id', data.user.id)
               .single();
             
+            console.log('Fetch existing profile result:', { existingProfile, fetchError });
+            
             if (existingProfile) {
               profile = existingProfile;
             } else {
-              throw new Error('Failed to create admin profile. Contact system administrator.');
+              throw new Error(`Profile creation failed: ${createError.message}`);
             }
           } else {
             profile = newProfile;
           }
         } else if (profileError || !profile) {
-          throw new Error('User profile not found. Contact system administrator.');
+          console.error('Profile lookup failed:', profileError);
+          throw new Error(`User profile not found: ${profileError?.message || 'Unknown error'}`);
         }
 
         if (profile.role !== 'super_admin') {
