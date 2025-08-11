@@ -36,106 +36,32 @@ interface EnhancedConversationalInterfaceProps {
   operationMode?: 'inbound' | 'outbound';
 }
 
-// Enhanced conversation starters with categories
+// Limited conversation starters - only 4 key options
 const conversationStarters = {
-  "🚀 Quick Start": [
+  "Quick Actions": [
     {
-      title: "Upload my company info",
+      title: "Upload company info",
       prompt: "I want to upload information about my company and what we sell",
       icon: Upload,
       color: "from-blue-500 to-purple-600"
     },
     {
-      title: "Find 50 qualified leads",
-      prompt: "Find me 50 qualified leads that match my ideal customer profile",
+      title: "Find qualified leads",
+      prompt: "Find me qualified leads that match my ideal customer profile",
       icon: Target,
       color: "from-green-500 to-teal-600"
     },
     {
-      title: "Create my first campaign",
-      prompt: "Help me create my first outreach campaign with email and LinkedIn sequences",
+      title: "Create campaign",
+      prompt: "Help me create an outreach campaign with email and LinkedIn sequences",
       icon: Rocket,
       color: "from-orange-500 to-red-600"
-    }
-  ],
-  "🎯 Lead Generation": [
-    {
-      title: "Scrape LinkedIn profiles",
-      prompt: "I have a list of LinkedIn URLs I need to scrape for contact information",
-      icon: Linkedin,
-      color: "from-blue-600 to-blue-700"
     },
     {
-      title: "Search by job title",
-      prompt: "Find all VPs of Sales at SaaS companies with 50-200 employees",
-      icon: Search,
-      color: "from-purple-500 to-pink-600"
-    },
-    {
-      title: "Enrich my prospect list",
-      prompt: "I have a CSV of prospects - can you find their emails and phone numbers?",
-      icon: Database,
-      color: "from-cyan-500 to-blue-600"
-    }
-  ],
-  "📝 Content & Messaging": [
-    {
-      title: "Write cold email sequence",
-      prompt: "Write a 3-email cold outreach sequence for my target audience",
-      icon: Mail,
-      color: "from-red-500 to-orange-600"
-    },
-    {
-      title: "LinkedIn connection request",
-      prompt: "Create personalized LinkedIn connection request templates",
-      icon: MessageSquare,
-      color: "from-green-600 to-teal-600"
-    },
-    {
-      title: "Follow-up templates",
-      prompt: "Create follow-up message templates for different scenarios",
-      icon: Send,
-      color: "from-purple-600 to-pink-600"
-    }
-  ],
-  "📊 Analytics & Optimization": [
-    {
-      title: "Analyze my campaigns",
-      prompt: "Show me the performance of my active campaigns and what to improve",
+      title: "Analyze performance",
+      prompt: "Show me the performance of my campaigns and what to improve",
       icon: BarChart3,
-      color: "from-yellow-500 to-orange-600"
-    },
-    {
-      title: "A/B test ideas",
-      prompt: "Suggest A/B tests I should run to improve my response rates",
-      icon: TestTube,
-      color: "from-blue-500 to-cyan-600"
-    },
-    {
-      title: "Benchmark my metrics",
-      prompt: "How do my campaign metrics compare to industry benchmarks?",
-      icon: TrendingUp,
-      color: "from-green-500 to-teal-600"
-    }
-  ],
-  "🎓 Training & Setup": [
-    {
-      title: "Define my ICP",
-      prompt: "Help me define my Ideal Customer Profile with specific criteria",
-      icon: Users,
-      color: "from-purple-500 to-blue-600"
-    },
-    {
-      title: "Upload value proposition",
-      prompt: "I want to upload documents about our value proposition and differentiators",
-      icon: FileText,
-      color: "from-orange-500 to-red-600"
-    },
-    {
-      title: "Set up integrations",
-      prompt: "Help me connect my LinkedIn, email, and CRM accounts",
-      icon: Link,
-      color: "from-cyan-500 to-teal-600"
+      color: "from-indigo-500 to-purple-600"
     }
   ]
 };
