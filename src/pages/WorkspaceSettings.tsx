@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LLMSettings } from "@/components/settings/LLMSettings";
+import { TeamAccountsSettings } from "@/components/settings/TeamAccountsSettings";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
@@ -238,9 +239,10 @@ export default function WorkspaceSettings() {
               
               <div className="space-y-6">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="llm">AI Models</TabsTrigger>
+            <TabsTrigger value="team-accounts">Team Accounts</TabsTrigger>
             <TabsTrigger value="linkedin">LinkedIn</TabsTrigger>
             <TabsTrigger value="email">Email</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -252,6 +254,11 @@ export default function WorkspaceSettings() {
           {/* LLM Settings Tab */}
           <TabsContent value="llm" className="space-y-6">
             <LLMSettings />
+          </TabsContent>
+          
+          {/* Team Accounts Tab */}
+          <TabsContent value="team-accounts" className="space-y-6">
+            <TeamAccountsSettings />
           </TabsContent>
 
           <TabsContent value="general" className="space-y-6">
