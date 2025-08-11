@@ -88,6 +88,22 @@ export default function SuperAdminDashboard() {
   }, []);
 
   const checkAuth = async () => {
+    // Check for development auth bypass first
+    const devAuthUser = localStorage.getItem('dev_auth_user');
+    const devAuthProfile = localStorage.getItem('dev_auth_profile');
+
+    if (devAuthUser && devAuthProfile) {
+      console.log('Using development auth bypass for dashboard');
+      const user = JSON.parse(devAuthUser);
+      const profile = JSON.parse(devAuthProfile);
+      
+      setUser({ ...user, profile });
+      await loadDashboardData();
+      setLoading(false);
+      return;
+    }
+
+    // Normal Supabase Auth flow
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -215,7 +231,13 @@ export default function SuperAdminDashboard() {
   };
 
   const handleSignOut = async () => {
+    // Clear development auth state
+    localStorage.removeItem('dev_auth_user');
+    localStorage.removeItem('dev_auth_profile');
+    
+    // Sign out from Supabase (if applicable)
     await supabase.auth.signOut();
+    
     navigate('/admin/login');
     toast.success('Signed out successfully');
   };
