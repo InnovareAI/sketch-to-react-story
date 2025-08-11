@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Shield, 
@@ -71,6 +72,9 @@ export default function SuperAdminDashboard() {
     email: '',
     role: 'member'
   });
+  const [deleteWorkspaceOpen, setDeleteWorkspaceOpen] = useState(false);
+  const [deleteWorkspaceLoading, setDeleteWorkspaceLoading] = useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [stats, setStats] = useState({
     totalWorkspaces: 0,
     totalUsers: 0,
@@ -320,6 +324,58 @@ export default function SuperAdminDashboard() {
     setInviteUserOpen(true);
   };
 
+  const openDeleteDialog = (workspace: Workspace) => {
+    setWorkspaceToDelete(workspace);
+    setDeleteWorkspaceOpen(true);
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (!workspaceToDelete) return;
+
+    setDeleteWorkspaceLoading(true);
+    try {
+      // First, delete all users in this workspace
+      const { error: usersError } = await supabase
+        .from('users')
+        .delete()
+        .eq('tenant_id', workspaceToDelete.id);
+
+      if (usersError) {
+        console.warn('Error deleting users:', usersError);
+        // Continue anyway as we want to delete the workspace
+      }
+
+      // Delete the organization (if it exists)
+      const { error: orgError } = await supabase
+        .from('organizations')
+        .delete()
+        .eq('name', workspaceToDelete.name);
+
+      if (orgError) {
+        console.warn('Error deleting organization:', orgError);
+        // Continue anyway
+      }
+
+      // Finally, delete the tenant (workspace)
+      const { error: tenantError } = await supabase
+        .from('tenants')
+        .delete()
+        .eq('id', workspaceToDelete.id);
+
+      if (tenantError) throw tenantError;
+
+      toast.success(`Workspace "${workspaceToDelete.name}" deleted successfully`);
+      setDeleteWorkspaceOpen(false);
+      setWorkspaceToDelete(null);
+      await loadDashboardData(); // Refresh data
+    } catch (error: any) {
+      console.error('Error deleting workspace:', error);
+      toast.error(`Failed to delete workspace: ${error.message}`);
+    } finally {
+      setDeleteWorkspaceLoading(false);
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'owner':
@@ -485,6 +541,38 @@ export default function SuperAdminDashboard() {
           </DialogContent>
         </Dialog>
 
+        {/* Delete Workspace Confirmation Dialog */}
+        <AlertDialog open={deleteWorkspaceOpen} onOpenChange={setDeleteWorkspaceOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{workspaceToDelete?.name}"? This action cannot be undone.
+                <br /><br />
+                <strong>This will permanently delete:</strong>
+                <ul className="list-disc list-inside mt-2 text-sm">
+                  <li>All users in this workspace</li>
+                  <li>All workspace data</li>
+                  <li>All associated organizations</li>
+                </ul>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteWorkspaceLoading}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteWorkspace}
+                disabled={deleteWorkspaceLoading}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleteWorkspaceLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Delete Workspace
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Tabs */}
         <Tabs defaultValue="workspaces" className="space-y-6">
           <TabsList>
@@ -578,6 +666,15 @@ export default function SuperAdminDashboard() {
                         <Button size="sm" variant="outline">
                           <Eye className="h-4 w-4 mr-1" />
                           View
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => openDeleteDialog(workspace)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
                         </Button>
                       </div>
                     </div>
