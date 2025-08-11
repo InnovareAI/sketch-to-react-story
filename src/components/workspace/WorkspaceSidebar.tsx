@@ -17,6 +17,7 @@ import {
   MousePointer,
   Video,
   Folder,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 const mainNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Campaigns", url: "/campaigns", icon: Target },
+  { title: "Search", url: "/prospect-search", icon: Search },
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Inbox", url: "/inbox", icon: Mail },
   { title: "Templates", url: "/templates", icon: FileText },
