@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
+import { EnhancedConversationalInterface } from "@/components/workspace/EnhancedConversationalInterface";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function Agent() {
@@ -25,7 +25,7 @@ export default function Agent() {
             onToggleMode={onToggleMode}
           />
           <div className="flex-1 overflow-auto">
-            <ConversationalInterface />
+            <EnhancedConversationalInterface />
           </div>
         </div>
       </div>
