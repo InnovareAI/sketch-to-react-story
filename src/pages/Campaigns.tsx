@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
 import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
@@ -32,6 +33,7 @@ import {
 
 export default function Campaigns() {
   const [isConversational, setIsConversational] = useState(false);
+  const navigate = useNavigate();
 
   if (isConversational) {
     return (
@@ -152,7 +154,10 @@ export default function Campaigns() {
                   <p className="text-gray-600 mt-1">Manage your outreach campaigns across channels</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button className="bg-primary hover:bg-primary/90">
+                  <Button 
+                    className="bg-primary hover:bg-primary/90"
+                    onClick={() => navigate('/campaign-setup')}
+                  >
                     <Target className="h-4 w-4 mr-2" />
                     New Campaign
                   </Button>
@@ -280,11 +285,11 @@ export default function Campaigns() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/campaign-setup?id=${campaign.id}`)}>
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/campaign-setup?id=${campaign.id}`)}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Campaign
                     </DropdownMenuItem>
