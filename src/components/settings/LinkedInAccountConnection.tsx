@@ -132,8 +132,8 @@ export function LinkedInAccountConnection() {
       console.log('Initiating LinkedIn OAuth with proxy location:', proxyLocation);
       
       // For demonstration, create a mock connection if Unipile is not configured
-      if (!import.meta.env.VITE_UNIPILE_API_KEY || import.meta.env.VITE_UNIPILE_API_KEY === 'your_unipile_api_key_here') {
-        toast.warning('Unipile not configured. Creating demo connection for testing.');
+      if (!import.meta.env.VITE_UNIPILE_API_KEY || import.meta.env.VITE_UNIPILE_API_KEY === 'demo_key_not_configured') {
+        toast.warning('Running in demo mode. Creating test connection.');
         
         // Simulate a delay for authentication
         setTimeout(() => {
