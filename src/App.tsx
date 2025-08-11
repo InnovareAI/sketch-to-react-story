@@ -26,7 +26,9 @@ import AgentFullScreen from "./pages/AgentFullScreen";
 import UsersPermissions from "./pages/admin/UsersPermissions";
 import LinkedInCallback from "./pages/auth/LinkedInCallback";
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
+import UserLogin from "./pages/auth/UserLogin";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
+import WorkspaceDashboard from "./pages/workspace/WorkspaceDashboard";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +63,9 @@ const App: React.FC = () => {
             <Route path="/linkedin-integration" element={<LinkedInIntegration />} />
             <Route path="/users-permissions" element={<UsersPermissions />} />
             <Route path="/admin/users" element={<UsersPermissions />} />
+            <Route path="/login" element={<UserLogin />} />
+            <Route path="/auth/login" element={<UserLogin />} />
+            <Route path="/workspace/dashboard" element={<WorkspaceDashboard />} />
             <Route path="/admin/login" element={<SuperAdminLogin />} />
             <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
             <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
