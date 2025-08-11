@@ -20,7 +20,6 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 export default function AgentFullScreen() {
   const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -70,14 +69,7 @@ export default function AgentFullScreen() {
   ];
 
   return (
-    <div className="h-screen w-full bg-gray-900 flex flex-col">
-      <WorkspaceHeader 
-        isConversational={true}
-        onToggleMode={() => navigate('/')}
-        operationMode={operationMode}
-        onOperationModeChange={handleModeChange}
-      />
-
+    <div className="flex-1 bg-gray-900 flex flex-col">
       {/* Full Screen Chat Interface */}
       <main className="flex-1 overflow-hidden">
         <EnhancedConversationalInterface operationMode={operationMode} />
