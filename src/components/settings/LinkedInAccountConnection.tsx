@@ -117,6 +117,7 @@ export function LinkedInAccountConnection() {
       // Check if we have Unipile API key configured
       if (!import.meta.env.VITE_UNIPILE_API_KEY) {
         toast.error('Unipile API key not configured. Please add VITE_UNIPILE_API_KEY to your environment.');
+        setIsConnecting(false);
         return;
       }
 
@@ -128,12 +129,53 @@ export function LinkedInAccountConnection() {
         console.warn('Bright Data not configured. Proceeding without proxy.');
       }
 
+      console.log('Initiating LinkedIn OAuth with proxy location:', proxyLocation);
+      
+      // For demonstration, create a mock connection if Unipile is not configured
+      if (!import.meta.env.VITE_UNIPILE_API_KEY || import.meta.env.VITE_UNIPILE_API_KEY === 'your_unipile_api_key_here') {
+        toast.warning('Unipile not configured. Creating demo connection for testing.');
+        
+        // Simulate a delay for authentication
+        setTimeout(() => {
+          const mockAccount: LinkedInAccountData = {
+            id: crypto.randomUUID(),
+            provider: 'LINKEDIN',
+            email: `user${Math.floor(Math.random() * 1000)}@linkedin.com`,
+            name: `Test User ${Math.floor(Math.random() * 100)}`,
+            profileUrl: 'https://linkedin.com/in/testuser',
+            status: 'active',
+            unipileAccountId: `demo-${Date.now()}`,
+            metadata: {
+              proxy_location: proxyLocation,
+              proxy_provider: 'brightdata',
+              headline: 'Senior Professional',
+              connections_count: Math.floor(Math.random() * 500) + 100,
+              location: proxyLocations.find(l => l.code === proxyLocation)?.name || 'Unknown'
+            }
+          };
+          
+          setAccounts(prev => [...prev, mockAccount]);
+          toast.success('Demo LinkedIn account connected successfully!');
+          setShowConnectionForm(false);
+          setConnectionStep('proxy');
+          setIsConnecting(false);
+        }, 2000);
+        
+        return;
+      }
+
       // Initiate OAuth flow with Unipile, including proxy metadata
       const oauthResponse = await unipileService.initiateLinkedInOAuth(undefined, {
         proxyLocation,
         proxyProvider: 'brightdata',
         customerId: import.meta.env.VITE_BRIGHTDATA_CUSTOMER_ID
       });
+      
+      if (!oauthResponse || !oauthResponse.auth_url) {
+        throw new Error('Invalid response from Unipile API');
+      }
+      
+      console.log('OAuth URL received:', oauthResponse.auth_url);
       
       // Open OAuth URL in popup window
       const authWindow = window.open(
@@ -143,29 +185,46 @@ export function LinkedInAccountConnection() {
       );
 
       // Check if popup was blocked
-      if (!authWindow) {
-        toast.error('Popup blocked. Please allow popups for this site.');
+      if (!authWindow || authWindow.closed) {
+        toast.error('Popup blocked. Please allow popups for this site and try again.');
+        setIsConnecting(false);
         return;
       }
 
-      toast.info('Please complete LinkedIn authentication in the new window');
+      toast.success('LinkedIn authentication window opened. Please complete the authentication.');
       
       // Poll to check if popup is closed
       const checkInterval = setInterval(() => {
-        if (authWindow.closed) {
+        try {
+          if (authWindow.closed) {
+            clearInterval(checkInterval);
+            setIsConnecting(false);
+            // Reload accounts in case connection was successful
+            loadConnectedAccounts();
+            // Reset the form
+            setShowConnectionForm(false);
+            setConnectionStep('proxy');
+            toast.info('Authentication window closed. Checking connection status...');
+          }
+        } catch (e) {
+          // Window might be from different origin, just clear interval
           clearInterval(checkInterval);
           setIsConnecting(false);
-          // Reload accounts in case connection was successful
-          loadConnectedAccounts();
-          // Reset the form
-          setShowConnectionForm(false);
-          setConnectionStep('proxy');
         }
       }, 1000);
+      
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        setIsConnecting(false);
+        if (!authWindow.closed) {
+          authWindow.close();
+        }
+      }, 300000);
+      
     } catch (error: any) {
       console.error('Error initiating connection:', error);
-      toast.error(error.message || 'Failed to start LinkedIn connection');
-    } finally {
+      toast.error(error.message || 'Failed to start LinkedIn connection. Check console for details.');
       setIsConnecting(false);
     }
   };
@@ -395,6 +454,37 @@ export function LinkedInAccountConnection() {
                       </>
                     )}
                   </Button>
+                  {/* Demo Mode Button - Remove in production */}
+                  {import.meta.env.DEV && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        // Mock successful connection for demo
+                        const mockAccount: LinkedInAccountData = {
+                          id: crypto.randomUUID(),
+                          provider: 'LINKEDIN',
+                          email: 'demo@example.com',
+                          name: 'Demo User',
+                          profileUrl: 'https://linkedin.com/in/demo',
+                          status: 'active',
+                          unipileAccountId: 'demo-account',
+                          metadata: {
+                            proxy_location: selectedProxy,
+                            proxy_provider: 'brightdata',
+                            headline: 'Demo Account for Testing',
+                            connections_count: 500,
+                            location: 'San Francisco, CA'
+                          }
+                        };
+                        setAccounts([...accounts, mockAccount]);
+                        toast.success('Demo account added successfully!');
+                        setShowConnectionForm(false);
+                        setConnectionStep('proxy');
+                      }}
+                    >
+                      Add Demo Account
+                    </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     onClick={() => {
