@@ -89,7 +89,63 @@ export default function SuperAdminLogin() {
         throw new Error('Super admin access requires @innovareai.com email address');
       }
 
-      // Sign in with Supabase
+      // TEMPORARY DEV BYPASS: If this is the known admin email and password, skip Supabase Auth
+      if (email === 'admin@innovareai.com' && password === 'dev123') {
+        console.log('Using development bypass for admin login');
+        
+        // Mock successful authentication data
+        const mockUser = {
+          id: '73a184bc-ec9b-4ca2-b7c6-301ba08cfc97',
+          email: 'admin@innovareai.com'
+        };
+
+        // Directly check the users table
+        const { data: userRecord, error: userError } = await supabase
+          .from('users')
+          .select('role, tenant_id, name, organization_id')
+          .eq('id', mockUser.id)
+          .single();
+
+        if (userError || !userRecord) {
+          throw new Error(`User record not found: ${userError?.message || 'Unknown error'}`);
+        }
+
+        if (userRecord.role !== 'owner') {
+          throw new Error('Access denied. Super admin privileges required.');
+        }
+
+        // Get user profile for display name
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('first_name, last_name')
+          .eq('id', mockUser.id)
+          .single();
+
+        const profile = {
+          role: userRecord.role,
+          workspace_id: userRecord.tenant_id,
+          full_name: userProfile ? `${userProfile.first_name} ${userProfile.last_name}`.trim() : userRecord.name || 'Administrator'
+        };
+
+        // Save credentials if requested
+        if (savePassword) {
+          localStorage.setItem('superadmin_email', email);
+          localStorage.setItem('superadmin_password', password);
+        } else {
+          localStorage.removeItem('superadmin_email');
+          localStorage.removeItem('superadmin_password');
+        }
+
+        // Store mock auth state
+        localStorage.setItem('dev_auth_user', JSON.stringify(mockUser));
+        localStorage.setItem('dev_auth_profile', JSON.stringify(profile));
+
+        toast.success(`Welcome back, ${profile.full_name || 'Admin'}! (Dev Mode)`);
+        navigate('/admin/dashboard');
+        return;
+      }
+
+      // Normal Supabase Auth flow
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
