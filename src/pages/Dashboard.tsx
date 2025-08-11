@@ -8,6 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { AnalyticsChart } from "@/components/dashboard/AnalyticsChart";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { LinkedInAccountModal } from "@/components/linkedin/LinkedInAccountModal";
 import { 
   Users, 
   Mail, 
@@ -21,13 +22,29 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
-  Settings
+  Settings,
+  Plus,
+  UserPlus
 } from "lucide-react";
 
 export default function Dashboard() {
   const [isConversational, setIsConversational] = useState(false);
+  const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const navigate = useNavigate();
   const { analytics, chartData, campaignMetrics, refreshData, isLoading } = useAnalytics();
+  
+  // Mock workspaces data - in production this would come from your API
+  const workspaces = [
+    { id: '1', name: 'Acme Corporation' },
+    { id: '2', name: 'TechStart Inc' },
+    { id: '3', name: 'Global Sales Co' }
+  ];
+  
+  const handleLinkedInAccountAdded = (accountData: any) => {
+    console.log('LinkedIn account added:', accountData);
+    // Here you would save the account data to your backend
+    refreshData();
+  };
 
   const handleToggleMode = (conversational: boolean) => {
     if (conversational) {
@@ -72,6 +89,14 @@ export default function Dashboard() {
                     <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} mr-2`} />
                     Refresh
                   </Button>
+                  {/* Disabled for testing - integration moved to workspace settings
+                  <Button 
+                    onClick={() => setShowLinkedInModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add New Account
+                  </Button> */}
                   <Button className="bg-primary hover:bg-primary/90">
                     <Settings className="h-4 w-4 mr-2" />
                     Customize Reports
@@ -256,6 +281,14 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
+      
+      {/* LinkedIn Account Modal - Disabled for testing
+      <LinkedInAccountModal
+        open={showLinkedInModal}
+        onClose={() => setShowLinkedInModal(false)}
+        workspaces={workspaces}
+        onComplete={handleLinkedInAccountAdded}
+      /> */}
     </SidebarProvider>
   );
 }

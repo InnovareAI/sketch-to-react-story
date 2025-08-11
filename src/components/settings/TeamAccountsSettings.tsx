@@ -3,7 +3,7 @@
  * Manage multiple LinkedIn and Email accounts for the team
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,7 @@ export function TeamAccountsSettings() {
   const [teamAccounts] = useState(() => TeamAccountsService.getInstance());
   const [linkedInAccounts, setLinkedInAccounts] = useState<LinkedInAccount[]>([]);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
-  const [accountHealth, setAccountHealth] = useState<any>(null);
+  const [accountHealth, setAccountHealth] = useState<Record<string, unknown> | null>(null);
   const [showCredentials, setShowCredentials] = useState<Record<string, boolean>>({});
   
   // Form states
@@ -64,13 +64,13 @@ export function TeamAccountsSettings() {
 
   useEffect(() => {
     loadAccounts();
-  }, []);
+  }, [loadAccounts]);
 
-  const loadAccounts = () => {
+  const loadAccounts = useCallback(() => {
     setLinkedInAccounts(teamAccounts.getLinkedInAccounts());
     setEmailAccounts(teamAccounts.getEmailAccounts());
     setAccountHealth(teamAccounts.getAccountHealth());
-  };
+  }, [teamAccounts]);
 
   const addLinkedIn = async () => {
     if (!newLinkedInAccount.name || !newLinkedInAccount.email) return;

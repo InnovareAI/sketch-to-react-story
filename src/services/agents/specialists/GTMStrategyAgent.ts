@@ -54,13 +54,29 @@ interface GTMPlan {
   }[];
 }
 
+interface MarketIntelligence {
+  market: string;
+  size: number;
+  growth: number;
+  trends: string[];
+  opportunities: string[];
+  threats: string[];
+}
+
+interface PerformanceAnalysis {
+  metrics: Record<string, number>;
+  trends: string[];
+  benchmarks: Record<string, number>;
+  insights: string[];
+}
+
 export class GTMStrategyAgent extends BaseAgent {
-  private marketIntelligence: Map<string, any> = new Map();
+  private marketIntelligence: Map<string, MarketIntelligence> = new Map();
   private competitiveDatabase: Map<string, CompetitorAnalysis> = new Map();
-  private gtmFrameworks: Map<string, any> = new Map();
+  private gtmFrameworks: Map<string, Record<string, unknown>> = new Map();
 
   constructor(config: AgentConfig) {
-    super('campaign-strategy', config);
+    super('gtm-strategy', config);
     this.initializeCapabilities();
   }
 
@@ -275,7 +291,7 @@ export class GTMStrategyAgent extends BaseAgent {
     const startTime = Date.now();
 
     try {
-      let result: any = null;
+      let result: unknown = null;
 
       switch (task.type) {
         case 'campaign-optimization':
@@ -484,7 +500,7 @@ Week 7-8: Channel mix (email-first vs LinkedIn-first)
 Which specific area would you like me to elaborate on?`;
   }
 
-  private analyzeCurrentPerformance(performance: any): string {
+  private analyzeCurrentPerformance(performance: PerformanceAnalysis): string {
     if (!performance || Object.keys(performance).length === 0) {
       return "No current performance data provided. I recommend tracking these key metrics:\n• Open Rate: Industry average 21%\n• Response Rate: Industry average 4.2%\n• Conversion Rate: Industry average 2.1%\n• Sales Velocity: Average 45 days\n\n";
     }

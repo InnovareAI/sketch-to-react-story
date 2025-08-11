@@ -103,15 +103,15 @@ export class OrchestratorAgent extends BaseAgent {
 
   public async processMessage(
     message: string, 
-    existingContext: any, 
+    existingContext: Record<string, unknown>, 
     sessionId: string
   ): Promise<{
     response: Message;
     context: ConversationContext;
-    agentTrace: any[];
+    agentTrace: Array<Record<string, unknown>>;
   }> {
     const startTime = Date.now();
-    const agentTrace: any[] = [];
+    const agentTrace: Array<Record<string, unknown>> = [];
 
     try {
       // Get or create conversation context
@@ -275,8 +275,8 @@ export class OrchestratorAgent extends BaseAgent {
     };
   }
 
-  private extractParameters(message: string, intent: MessageIntent): Record<string, any> {
-    const parameters: Record<string, any> = {};
+  private extractParameters(message: string, intent: MessageIntent): Record<string, unknown> {
+    const parameters: Record<string, unknown> = {};
     
     // Basic parameter extraction patterns
     const patterns = {
@@ -300,10 +300,10 @@ export class OrchestratorAgent extends BaseAgent {
   private getSuggestedAgents(intent: MessageIntent): AgentType[] {
     const intentAgentMapping: Record<MessageIntent, AgentType[]> = {
       'lead-generation': ['lead-research', 'knowledge-base'],
-      'campaign-optimization': ['campaign-strategy', 'analytics', 'content-creation'],
+      'campaign-optimization': ['campaign-management', 'analytics', 'content-creation'],
       'content-creation': ['content-creation', 'knowledge-base'],
-      'performance-analysis': ['analytics', 'campaign-strategy'],
-      'automation-setup': ['outreach-automation', 'campaign-strategy'],
+      'performance-analysis': ['analytics', 'campaign-management'],
+      'automation-setup': ['outreach-automation', 'campaign-management'],
       'knowledge-query': ['knowledge-base'],
       'general-question': ['knowledge-base']
     };
@@ -339,9 +339,9 @@ export class OrchestratorAgent extends BaseAgent {
     routing: AgentRoutingDecision, 
     intent: IntentClassification,
     context: ConversationContext
-  ): Promise<{ results: TaskResponse[], traces: any[] }> {
+  ): Promise<{ results: TaskResponse[], traces: Array<Record<string, unknown>> }> {
     const results: TaskResponse[] = [];
-    const traces: any[] = [];
+    const traces: Array<Record<string, unknown>> = [];
 
     // Create task request
     const taskRequest: TaskRequest = {
@@ -580,7 +580,7 @@ export class OrchestratorAgent extends BaseAgent {
     return suggestionMap[intent] || suggestionMap['general-question'];
   }
 
-  private async getOrCreateContext(sessionId: string, existingContext: any): Promise<ConversationContext> {
+  private async getOrCreateContext(sessionId: string, existingContext: Record<string, unknown>): Promise<ConversationContext> {
     let context = this.activeContext.get(sessionId);
     
     if (!context) {

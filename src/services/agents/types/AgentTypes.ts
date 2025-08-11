@@ -3,14 +3,80 @@
  * Following Anthropic's best practices for agent design
  */
 
+// Define proper context and parameter types
+export interface AgentContext {
+  sessionId: string;
+  userId: string;
+  userProfile?: {
+    name: string;
+    company: string;
+    role: string;
+    targetAudience?: string;
+    productOffering?: string;
+  };
+  messageHistory?: Message[];
+  currentCampaign?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  [key: string]: unknown;
+}
+
+export interface TaskParameters {
+  query?: string;
+  targetAudience?: string;
+  companyName?: string;
+  productDescription?: string;
+  campaignType?: string;
+  requirements?: string[];
+  preferences?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface AgentMetadata {
+  timestamp: string;
+  agentVersion: string;
+  processingTime: number;
+  confidence: number;
+  sources?: string[];
+  [key: string]: unknown;
+}
+
+export interface AgentInput {
+  type: string;
+  data: Record<string, unknown>;
+  context?: AgentContext;
+}
+
+export interface AgentOutput {
+  type: string;
+  data: Record<string, unknown>;
+  metadata?: AgentMetadata;
+}
+
+export interface KnowledgeBase {
+  companies: Record<string, unknown>;
+  products: Record<string, unknown>;
+  campaigns: Record<string, unknown>;
+  templates: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export type AgentType = 
   | 'orchestrator'
   | 'lead-research'
-  | 'campaign-strategy' 
+  | 'campaign-management' 
   | 'content-creation'
   | 'outreach-automation'
   | 'analytics'
-  | 'knowledge-base';
+  | 'knowledge-base'
+  | 'gtm-strategy'
+  | 'meddic-qualification'
+  | 'workflow-automation'
+  | 'inbox-triage'
+  | 'spam-filter'
+  | 'auto-response';
 
 export type TaskComplexity = 'simple' | 'moderate' | 'complex' | 'expert';
 
@@ -30,15 +96,15 @@ export interface Message {
   timestamp: Date;
   intent?: MessageIntent;
   confidence?: number;
-  context?: Record<string, any>;
+  context?: AgentContext;
   agentTrace?: AgentTrace[];
 }
 
 export interface AgentTrace {
   agentType: AgentType;
   action: string;
-  input: any;
-  output: any;
+  input: AgentInput;
+  output: AgentOutput;
   duration: number;
   success: boolean;
   error?: string;
@@ -48,23 +114,23 @@ export interface TaskRequest {
   id: string;
   type: MessageIntent;
   description: string;
-  parameters: Record<string, any>;
+  parameters: TaskParameters;
   complexity: TaskComplexity;
   priority: number;
   deadline?: Date;
-  context: Record<string, any>;
+  context: AgentContext;
 }
 
 export interface TaskResponse {
   taskId: string;
   agentType: AgentType;
-  result: any;
+  result: AgentOutput;
   success: boolean;
   error?: string;
   suggestions?: string[];
   followUpTasks?: TaskRequest[];
   confidence: number;
-  metadata: Record<string, any>;
+  metadata: AgentMetadata;
 }
 
 export interface AgentCapability {
@@ -117,7 +183,7 @@ export interface ConversationContext {
   };
   currentTasks: TaskRequest[];
   completedTasks: TaskResponse[];
-  knowledgeBase: Record<string, any>;
+  knowledgeBase: KnowledgeBase;
 }
 
 export abstract class BaseAgent {
@@ -155,10 +221,10 @@ export abstract class BaseAgent {
 
   protected createTaskResponse(
     taskId: string,
-    result: any,
+    result: AgentOutput,
     success: boolean,
     error?: string,
-    metadata: Record<string, any> = {}
+    metadata: Partial<AgentMetadata> = {}
   ): TaskResponse {
     return {
       taskId,
@@ -169,8 +235,11 @@ export abstract class BaseAgent {
       confidence: success ? 0.9 : 0.1,
       metadata: {
         timestamp: new Date().toISOString(),
+        agentVersion: '1.0.0',
+        processingTime: 0,
+        confidence: success ? 0.9 : 0.1,
         ...metadata
-      }
+      } as AgentMetadata
     };
   }
 }
@@ -180,7 +249,7 @@ export type AgentInstance = BaseAgent;
 export interface IntentClassification {
   intent: MessageIntent;
   confidence: number;
-  parameters: Record<string, any>;
+  parameters: TaskParameters;
   suggestedAgents: AgentType[];
   complexity: TaskComplexity;
   estimatedTokens: number;

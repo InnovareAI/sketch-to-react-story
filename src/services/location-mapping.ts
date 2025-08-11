@@ -214,7 +214,7 @@ class LocationMappingService {
 
   private normalizeLocationString(location: string): string {
     return location
-      .replace(/[,\-\.]/g, ' ')
+      .replace(/[,\-.]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }

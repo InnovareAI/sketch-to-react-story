@@ -67,7 +67,12 @@ interface ClientProfile {
       goals: string[];
       challenges: string[];
     };
-    secondaryPersonas?: any[];
+    secondaryPersonas?: {
+      title: string;
+      department: string;
+      seniority: string;
+      relevance: number;
+    }[];
   };
   competitors: {
     primary: string[];
@@ -99,7 +104,7 @@ interface ClientProfile {
 export class OnboardingAgent extends BaseAgent {
   private onboardingStages: OnboardingStage[] = [];
   private ragPromptTemplate: string = "";
-  private supabaseClient: any = null;
+  private supabaseClient: unknown = null;
 
   constructor(config: AgentConfig) {
     super('knowledge-base', config);
@@ -684,7 +689,7 @@ Always prioritize prospects who match our ideal customer profile and demonstrate
     const startTime = Date.now();
 
     try {
-      let result: any = null;
+      let result: unknown = null;
 
       switch (task.type) {
         case 'automation-setup':
@@ -809,8 +814,8 @@ ${await this.generateStageQuestions(nextStage, previousAnswers)}`;
     return await this.generateStageQuestions(currentStage, previousAnswers);
   }
 
-  private async generateStageQuestions(stage: OnboardingStage, previousAnswers: any): Promise<string> {
-    let response = `**${stage.name}**\n${stage.description}\n\n`;
+  private async generateStageQuestions(stage: OnboardingStage, previousAnswers: Record<string, unknown>): Promise<string> {
+    const response = `**${stage.name}**\n${stage.description}\n\n`;
 
     // Get next unanswered question
     const unansweredQuestions = stage.questions.filter(q => 
@@ -841,7 +846,7 @@ ${await this.generateStageQuestions(nextStage, previousAnswers)}`;
     return response + "All questions in this stage are complete!";
   }
 
-  private formatQuestion(question: OnboardingQuestion, previousAnswers: any): string {
+  private formatQuestion(question: OnboardingQuestion, previousAnswers: Record<string, unknown>): string {
     let formatted = `**${question.question}**\n`;
 
     if (question.type === 'multiple-choice' && question.options) {
@@ -876,7 +881,7 @@ ${await this.generateStageQuestions(nextStage, previousAnswers)}`;
     return this.onboardingStages.find(s => s.order === nextOrder) || null;
   }
 
-  private async completeOnboarding(userId: string, allAnswers: any, context: ConversationContext): Promise<string> {
+  private async completeOnboarding(userId: string, allAnswers: Record<string, unknown>, context: ConversationContext): Promise<string> {
     // Build client profile from answers
     const clientProfile = await this.buildClientProfile(allAnswers, userId);
     
@@ -920,7 +925,7 @@ What would you like to work on first?
 *Remember: You can always update your profile by saying "update my profile" and I'll guide you through any changes.*`;
   }
 
-  private async buildClientProfile(answers: any, userId: string): Promise<ClientProfile> {
+  private async buildClientProfile(answers: Record<string, unknown>, userId: string): Promise<ClientProfile> {
     // This would process all the onboarding answers into a structured profile
     // For now, creating a sample structure
     return {
@@ -986,7 +991,7 @@ What would you like to work on first?
     };
   }
 
-  private parseMultiSelect(value: any): string[] {
+  private parseMultiSelect(value: unknown): string[] {
     if (!value) return [];
     if (Array.isArray(value)) return value;
     if (typeof value === 'string') {
@@ -996,7 +1001,7 @@ What would you like to work on first?
     return [];
   }
 
-  private async saveLinkedInConnection(userId: string, linkedinInfo: any): Promise<void> {
+  private async saveLinkedInConnection(userId: string, linkedinInfo: Record<string, unknown>): Promise<void> {
     // Save LinkedIn account connection info to Supabase
     try {
       // This would be actual Supabase call

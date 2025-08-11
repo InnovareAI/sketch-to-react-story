@@ -12,6 +12,20 @@ import {
   AgentCapability 
 } from '../types/AgentTypes';
 
+interface ClientProfile {
+  id: string;
+  name: string;
+  company: string;
+  industry: string;
+  role: string;
+  companySize: string;
+  targetAudience: string;
+  productOffering: string;
+  campaignGoals: string[];
+  budget?: string;
+  previousCampaigns?: CampaignResults[];
+}
+
 interface CampaignStrategy {
   id: string;
   name: string;
@@ -107,13 +121,37 @@ interface CampaignResults {
   };
 }
 
+interface IndustryBenchmark {
+  industry: string;
+  openRate: number;
+  clickRate: number;
+  replyRate: number;
+  conversionRate: number;
+  averageResponseTime: number;
+}
+
+interface OptimizationPlaybook {
+  id: string;
+  category: string;
+  strategies: string[];
+  expectedImpact: number;
+  difficulty: 'low' | 'medium' | 'high';
+}
+
+interface CampaignAnalysis {
+  insights: string[];
+  recommendations: string[];
+  performanceRating: number;
+  nextSteps: string[];
+}
+
 export class CampaignManagementAgent extends BaseAgent {
   private campaignTemplates: Map<string, CampaignStrategy> = new Map();
-  private industryBenchmarks: Map<string, any> = new Map();
-  private optimizationPlaybooks: Map<string, any> = new Map();
+  private industryBenchmarks: Map<string, IndustryBenchmark> = new Map();
+  private optimizationPlaybooks: Map<string, OptimizationPlaybook> = new Map();
 
   constructor(config: AgentConfig) {
-    super('campaign-strategy', config);
+    super('campaign-management', config);
     this.initializeCapabilities();
   }
 
@@ -591,7 +629,7 @@ export class CampaignManagementAgent extends BaseAgent {
     const startTime = Date.now();
 
     try {
-      let result: any = null;
+      let result: CampaignStrategy | CampaignResults | string | null = null;
 
       switch (task.type) {
         case 'campaign-optimization':
@@ -685,7 +723,7 @@ export class CampaignManagementAgent extends BaseAgent {
     return response;
   }
 
-  private selectOptimalCampaigns(clientProfile: any, objectives: string, budget: string): CampaignStrategy[] {
+  private selectOptimalCampaigns(clientProfile: ClientProfile, objectives: string, budget: string): CampaignStrategy[] {
     // Logic to select best campaigns based on client profile
     const campaigns: CampaignStrategy[] = [];
     
@@ -706,7 +744,7 @@ export class CampaignManagementAgent extends BaseAgent {
     return campaigns.slice(0, 3); // Return top 3 recommendations
   }
 
-  private getTargetDescription(audience: any): string {
+  private getTargetDescription(audience: { personas: string[]; companySize: string[]; industries: string[]; geography?: string[] }): string {
     const personas = audience.personas.join(' & ');
     const sizes = audience.companySize.join(', ');
     const industries = audience.industries.join(', ');
@@ -723,7 +761,7 @@ export class CampaignManagementAgent extends BaseAgent {
     return `${results.metrics.responses} responses → ${results.metrics.meetings} meetings → ${results.metrics.deals} deals (${Math.round(results.confidence * 100)}% confidence)`;
   }
 
-  private getStrategicRationale(campaign: CampaignStrategy, clientProfile: any): string {
+  private getStrategicRationale(campaign: CampaignStrategy, clientProfile: ClientProfile): string {
     const rationales = {
       'linkedin-warm-connect': 'Builds authentic relationships and trust, highest engagement rates for B2B',
       'enterprise-abm': 'Necessary for complex enterprise sales cycles and multiple stakeholders',
@@ -840,7 +878,7 @@ ${analysis.nextSteps.join('\n• ')}
     };
   }
 
-  private performResultsAnalysis(results: CampaignResults, benchmarks: any): any {
+  private performResultsAnalysis(results: CampaignResults, benchmarks: IndustryBenchmark): CampaignAnalysis {
     return {
       insights: [
         results.rates.openRate > (benchmarks.emailBenchmarks?.openRate?.avg || 20) 
@@ -892,7 +930,7 @@ ${analysis.nextSteps.join('\n• ')}
 **${roi}**`;
   }
 
-  private getBenchmarkComparison(actual: number, benchmark: any): string {
+  private getBenchmarkComparison(actual: number, benchmark: number): string {
     if (!benchmark) return '';
     
     if (actual >= benchmark.max) return '🟢 (Excellent)';

@@ -27,7 +27,7 @@ interface QuickAction {
   title: string;
   description: string;
   prompt: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
   complexity: 'simple' | 'moderate' | 'complex';
 }
@@ -151,7 +151,13 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
           prompts: {
             orchestrator: "You are SAM, an AI sales assistant orchestrator...",
             'lead-research': "You are a lead research specialist...",
-            'campaign-strategy': "You are a campaign strategy expert...",
+            'campaign-management': "You are a campaign management expert...",
+            'gtm-strategy': "You are a go-to-market strategy specialist...",
+            'meddic-qualification': "You are a MEDDIC qualification expert...",
+            'workflow-automation': "You are a workflow automation specialist...",
+            'inbox-triage': "You are an inbox triage specialist...",
+            'spam-filter': "You are a spam filter specialist...",
+            'auto-response': "You are an auto-response specialist...",
             'content-creation': "You are a content creation specialist...",
             'outreach-automation': "You are an outreach automation expert...",
             'analytics': "You are a performance analytics specialist...",
@@ -175,7 +181,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     };
 
     initializeAgents();
-  }, [agentFactory]);
+  }, [agentFactory, operationMode]);
   
   // Update operation mode when prop changes
   useEffect(() => {
@@ -353,8 +359,6 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         addMessageToSession(sessionId, samResponse);
       }
 
-    } catch (error) {
-      throw error;
     } finally {
       setSamIsActive(false);
       setIsLoading(false);

@@ -24,7 +24,7 @@ interface QuickAction {
   title: string;
   description: string;
   prompt: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
 }
 

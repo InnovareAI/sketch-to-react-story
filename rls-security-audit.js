@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://latxadqrvrrrcvkktrog.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdHhhZHFydnJycmN2a2t0cm9nIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjY5OTk4NiwiZXhwIjoyMDY4Mjc1OTg2fQ.b_DYgM15kRbWGY50n5zUQ7T9kVrLnCgD6-x7kh1SJME';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseServiceKey) {
+    console.error('❌ SECURITY ERROR: SUPABASE_SERVICE_KEY environment variable is required');
+    console.error('   Set it in your .env file: SUPABASE_SERVICE_KEY=your-service-role-key');
+    process.exit(1);
+}
 
 // Service role client for administrative queries
 const supabaseService = createClient(supabaseUrl, supabaseServiceKey);

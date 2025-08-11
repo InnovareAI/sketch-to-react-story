@@ -21,22 +21,10 @@ interface LLMProvider {
   description: string;
   models: { id: string; name: string; description: string }[];
   requiresApiKey: boolean;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 const providers: LLMProvider[] = [
-  {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    description: 'Access multiple models through one API',
-    models: [
-      { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', description: 'Best for complex reasoning' },
-      { id: 'openai/gpt-4-turbo-preview', name: 'GPT-4 Turbo', description: 'Fast and capable' },
-      { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', description: 'Open source alternative' }
-    ],
-    requiresApiKey: true,
-    icon: Zap
-  },
   {
     id: 'openai',
     name: 'OpenAI',
@@ -74,9 +62,8 @@ const providers: LLMProvider[] = [
 ];
 
 export function LLMSettings() {
-  const [selectedProvider, setSelectedProvider] = useState('openrouter');
+  const [selectedProvider, setSelectedProvider] = useState('openai');
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({
-    openrouter: '',
     openai: '',
     anthropic: '',
     custom: ''
@@ -93,7 +80,7 @@ export function LLMSettings() {
     const savedSettings = localStorage.getItem('llm_settings');
     if (savedSettings) {
       const settings = JSON.parse(savedSettings);
-      setSelectedProvider(settings.provider || 'openrouter');
+      setSelectedProvider(settings.provider || 'openai');
       setApiKeys(settings.apiKeys || {});
       setCustomEndpoint(settings.customEndpoint || '');
       setSelectedModel(settings.model || 'anthropic/claude-3.5-sonnet');
@@ -101,9 +88,13 @@ export function LLMSettings() {
     }
     
     // Check for environment variables
-    const envApiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
-    if (envApiKey) {
-      setApiKeys(prev => ({ ...prev, openrouter: envApiKey }));
+    const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+    if (openaiKey) {
+      setApiKeys(prev => ({ ...prev, openai: openaiKey }));
+    }
+    if (anthropicKey) {
+      setApiKeys(prev => ({ ...prev, anthropic: anthropicKey }));
     }
   }, []);
 
@@ -120,7 +111,7 @@ export function LLMSettings() {
     
     // Re-initialize LLM service with new settings
     LLMService.initialize({
-      provider: selectedProvider as any,
+      provider: selectedProvider as string,
       apiKey: apiKeys[selectedProvider],
       model: selectedModel,
       baseUrl: selectedProvider === 'custom' ? customEndpoint : undefined
@@ -151,7 +142,7 @@ export function LLMSettings() {
       } else {
         throw new Error('No response received');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setTestStatus('error');
       setTestMessage(`Connection failed: ${error.message}`);
     }
@@ -312,8 +303,7 @@ export function LLMSettings() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Quick Setup:</strong> We recommend OpenRouter for access to multiple models with a single API key. 
-          Get your free API key at <a href="https://openrouter.ai/keys" target="_blank" className="underline">openrouter.ai/keys</a>
+          <strong>Quick Setup:</strong> Configure your OpenAI and Anthropic API keys for direct access to GPT-4 and Claude models.
         </AlertDescription>
       </Alert>
 

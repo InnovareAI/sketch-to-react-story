@@ -1,4 +1,25 @@
 import { useState } from "react";
+
+export interface Account {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  whatsapp: string;
+  companyPhone: string;
+  company: string;
+  role: string;
+  location: string;
+  linkedin: string;
+  status: string;
+  lastContact: string;
+  responseRate: number;
+  avatar: string;
+  campaigns: number;
+  meetings: number;
+  revenue: string;
+  currentCampaigns: string[];
+}
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -51,7 +72,7 @@ import {
 export default function Accounts() {
   const [isConversational, setIsConversational] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
-  const [editingAccount, setEditingAccount] = useState<any>(null);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   
   const accounts = [
     {
@@ -156,7 +177,7 @@ export default function Accounts() {
     }
   ];
 
-  const handleEditAccount = (account: any) => {
+  const handleEditAccount = (account: Account) => {
     setEditingAccount({ ...account });
   };
 

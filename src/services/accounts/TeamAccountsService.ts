@@ -349,11 +349,12 @@ export class TeamAccountsService {
       case 'received':
         account.metrics.emailsReceived += value;
         break;
-      case 'bounced':
+      case 'bounced': {
         const totalSent = account.metrics.emailsSent;
         account.metrics.bounceRate = 
           totalSent > 0 ? (account.metrics.bounceRate * totalSent + value) / (totalSent + value) : 0;
         break;
+      }
       case 'opened':
         account.metrics.openRate = 
           account.metrics.emailsSent > 0 
@@ -504,7 +505,7 @@ export class TeamAccountsService {
       
       // Load LinkedIn accounts
       if (data.linkedInAccounts) {
-        this.linkedInAccounts = new Map(data.linkedInAccounts.map((entry: any) => [
+        this.linkedInAccounts = new Map(data.linkedInAccounts.map((entry: [string, LinkedInAccount & { lastUsed: string }]) => [
           entry[0],
           {
             ...entry[1],
@@ -515,7 +516,7 @@ export class TeamAccountsService {
       
       // Load email accounts
       if (data.emailAccounts) {
-        this.emailAccounts = new Map(data.emailAccounts.map((entry: any) => [
+        this.emailAccounts = new Map(data.emailAccounts.map((entry: [string, EmailAccount & { lastUsed: string }]) => [
           entry[0],
           {
             ...entry[1],

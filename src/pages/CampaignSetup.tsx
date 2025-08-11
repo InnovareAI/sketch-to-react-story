@@ -340,7 +340,7 @@ export default function CampaignSetup() {
                       </div>
 
                       {/* Prospect Methods */}
-                      <RadioGroup value={prospectMethod} onValueChange={setProspectMethod as any}>
+                      <RadioGroup value={prospectMethod} onValueChange={setProspectMethod}>
                         <div className="space-y-4">
                           <div className="flex items-start space-x-3 p-4 border rounded-lg">
                             <RadioGroupItem value="search" id="search" />

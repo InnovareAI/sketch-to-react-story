@@ -12,9 +12,39 @@ import {
   AgentCapability 
 } from '../types/AgentTypes';
 
+interface KnowledgeItem {
+  id: string;
+  type: 'company-info' | 'best-practices' | 'templates' | 'case-studies';
+  title: string;
+  content: string;
+  category: string;
+  tags: string[];
+  lastUpdated: Date;
+  metadata?: Record<string, unknown>;
+}
+
+interface CompanyInfo {
+  name: string;
+  industry: string;
+  size: string;
+  description: string;
+  products: string[];
+  services: string[];
+  targetMarkets: string[];
+  uniqueValue: string;
+  painPoints: string[];
+  [key: string]: unknown;
+}
+
+interface RAGSystemInterface {
+  query: (question: string, context?: string) => Promise<KnowledgeItem[]>;
+  index: (item: KnowledgeItem) => Promise<void>;
+  search: (query: string, filters?: Record<string, unknown>) => Promise<KnowledgeItem[]>;
+}
+
 export class KnowledgeBaseAgent extends BaseAgent {
-  private knowledgeStore: Map<string, any> = new Map();
-  private ragSystem: any = null; // Will integrate with vector database
+  private knowledgeStore: Map<string, KnowledgeItem> = new Map();
+  private ragSystem: RAGSystemInterface | null = null; // Will integrate with vector database
 
   constructor(config: AgentConfig) {
     super('knowledge-base', config);
@@ -164,7 +194,7 @@ Best,
     const startTime = Date.now();
 
     try {
-      let result: any = null;
+      let result: KnowledgeItem | null = null;
 
       switch (task.type) {
         case 'knowledge-query':
@@ -312,7 +342,7 @@ What specific area would you like to explore?`;
     return keywords.some(keyword => text.includes(keyword.toLowerCase()));
   }
 
-  private formatCompanyInfo(companyInfo: any, query: string): string {
+  private formatCompanyInfo(companyInfo: CompanyInfo, query: string): string {
     if (!companyInfo) return "I don't have specific company information stored yet. You can help me learn about your business!";
 
     return `**Company Overview:**
@@ -327,7 +357,7 @@ ${companyInfo.keyBenefits.map((benefit: string) => `• ${benefit}`).join('\n')}
 Would you like me to help you refine any of this information or create content based on it?`;
   }
 
-  private formatBestPractices(bestPractices: any, query: string): string {
+  private formatBestPractices(bestPractices: Record<string, unknown>, query: string): string {
     if (!bestPractices) return "I can provide best practices guidance. What specific area are you interested in?";
 
     // Determine which best practices are most relevant
@@ -357,7 +387,7 @@ ${bestPractices.campaignOptimization.slice(0, 3).map((tip: string) => `• ${tip
     return relevantPractices + "\n\nWould you like me to elaborate on any of these points or help you implement them?";
   }
 
-  private formatTemplates(templates: any, query: string): string {
+  private formatTemplates(templates: Record<string, unknown>, query: string): string {
     if (!templates) return "I can provide templates for various outreach scenarios. What type of template do you need?";
 
     // Determine which templates are most relevant

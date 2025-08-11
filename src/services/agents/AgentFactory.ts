@@ -98,9 +98,9 @@ export class AgentFactory {
    */
   public async processMessage(
     message: string,
-    context: any,
+    context: Record<string, unknown>,
     sessionId: string
-  ): Promise<any> {
+  ): Promise<unknown> {
     if (!this.orchestrator) {
       throw new Error('Agent system not initialized');
     }

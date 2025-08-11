@@ -254,7 +254,7 @@ export class MEDDICQualificationAgent extends BaseAgent {
     const startTime = Date.now();
 
     try {
-      let result: any = null;
+      let result: unknown = null;
 
       switch (task.type) {
         case 'lead-generation':
@@ -332,7 +332,7 @@ ${this.generateDiscoveryQuestions(meddic)}
 Would you like me to generate specific talk tracks or help you plan your next conversation?`;
   }
 
-  private calculateMEDDICScore(prospectData: any, context: ConversationContext): MEDDICScore {
+  private calculateMEDDICScore(prospectData: Record<string, unknown>, context: ConversationContext): MEDDICScore {
     // This would integrate with real data analysis in production
     // For now, simulating based on available information
     
@@ -415,7 +415,7 @@ Would you like me to generate specific talk tracks or help you plan your next co
     ];
 
     for (const category of categories) {
-      const data = meddic[category.key as keyof MEDDICScore] as any;
+      const data = meddic[category.key as keyof MEDDICScore] as { score: number; status: string; evidence: string[]; gaps: string[] };
       const scoreColor = data.score >= 70 ? '🟢' : data.score >= 50 ? '🟡' : '🔴';
       
       result += `\n**${category.name}** (${category.weight}): ${scoreColor} ${data.score}/100\n`;

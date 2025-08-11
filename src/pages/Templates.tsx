@@ -1,4 +1,23 @@
 import { useState } from "react";
+
+interface Template {
+  id: number;
+  name: string;
+  type: string;
+  channel: string;
+  subject: string;
+  content: string;
+  category: string;
+  tags: string[];
+  performance?: {
+    sent: number;
+    opened: number;
+    replied: number;
+    responseRate: number;
+  };
+  createdBy?: string;
+  lastUpdated?: string;
+}
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -39,7 +58,7 @@ import {
 
 export default function Templates() {
   const [isConversational, setIsConversational] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [newTemplate, setNewTemplate] = useState({ name: "", type: "email", subject: "", content: "" });
 
   const templates = [

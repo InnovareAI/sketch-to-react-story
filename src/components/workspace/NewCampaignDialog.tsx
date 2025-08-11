@@ -26,9 +26,21 @@ interface NewCampaignDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface CampaignType {
+  id: number;
+  name: string;
+  type: string;
+  description: string;
+  requirements: string;
+  icon: string;
+  category: string;
+  features: string[];
+  recommended: boolean;
+}
+
 export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps) {
   const [step, setStep] = useState(1);
-  const [selectedCampaignType, setSelectedCampaignType] = useState<any>(null);
+  const [selectedCampaignType, setSelectedCampaignType] = useState<CampaignType | null>(null);
   const [campaignMode, setCampaignMode] = useState<"type" | "blank" | "template">("type");
   const [campaignData, setCampaignData] = useState({
     name: "",
@@ -165,7 +177,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
     }
   ];
 
-  const handleCampaignTypeSelect = (campaignType: any) => {
+  const handleCampaignTypeSelect = (campaignType: CampaignType) => {
     setSelectedCampaignType(campaignType);
     setCampaignData({
       ...campaignData,

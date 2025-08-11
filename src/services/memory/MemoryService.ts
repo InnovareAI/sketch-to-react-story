@@ -9,7 +9,7 @@ export interface MemoryItem {
   category: 'business' | 'technical' | 'strategy' | 'performance';
   title: string;
   content: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   tags: string[];
   source: 'user_input' | 'document_upload' | 'conversation' | 'analysis';
   confidence: number; // 0-1 score of how confident SAM is about this info
@@ -303,7 +303,7 @@ export class MemoryService {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         const data = JSON.parse(stored);
-        data.forEach((item: any) => {
+        data.forEach((item: MemoryItem & { createdAt: string; updatedAt: string; lastAccessed: string; expiresAt?: string }) => {
           const memory: MemoryItem = {
             ...item,
             createdAt: new Date(item.createdAt),

@@ -18,7 +18,7 @@ import {
   Database,
   Target
 } from 'lucide-react';
-import { brightDataProxyService, type LinkedInScrapedProfile } from '@/services/brightdata-proxy';
+import { secureBrightDataService, type LinkedInScrapedProfile } from '@/services/brightdata-proxy-secure';
 
 interface BrightDataJob {
   id: string;
@@ -29,7 +29,7 @@ interface BrightDataJob {
   completed_at?: string;
   results_count: number;
   target_url?: string;
-  search_params?: any;
+  search_params?: Record<string, unknown>;
   error_message?: string;
 }
 

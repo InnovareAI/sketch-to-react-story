@@ -85,10 +85,94 @@ interface TimingRecommendation {
   reasoning: string;
 }
 
+interface DataEnrichmentProvider {
+  id: string;
+  name: string;
+  apiEndpoint: string;
+  capabilities: string[];
+  rateLimits: Record<string, number>;
+}
+
+interface ScrapingConfig {
+  platform: string;
+  selectors: Record<string, string>;
+  rateLimit: number;
+  userAgent: string;
+}
+
+interface ScoringModel {
+  name: string;
+  weights: Record<string, number>;
+  thresholds: Record<string, number>;
+  version: string;
+}
+
+interface LinkedInResearchResult {
+  profile: {
+    name: string;
+    title: string;
+    company: string;
+    location: string;
+    connectionDegree: string;
+  };
+  experience: Array<{
+    company: string;
+    title: string;
+    duration: string;
+    description?: string;
+  }>;
+  education: Array<{
+    institution: string;
+    degree: string;
+    field: string;
+    years?: string;
+  }>;
+  skills: string[];
+  recommendations: number;
+  mutualConnections: string[];
+  recentActivity: string[];
+}
+
+interface CompanyIntelligence {
+  basicInfo: {
+    name: string;
+    industry: string;
+    size: string;
+    founded: string;
+    headquarters: string;
+  };
+  financials: {
+    revenue: string;
+    funding: string;
+    investors: string[];
+  };
+  technology: {
+    stack: string[];
+    platforms: string[];
+    tools: string[];
+  };
+  recentNews: Array<{
+    title: string;
+    date: string;
+    source: string;
+    sentiment: 'positive' | 'neutral' | 'negative';
+  }>;
+}
+
+interface EnrichedLeadData {
+  personalInfo: Record<string, unknown>;
+  professionalInfo: Record<string, unknown>;
+  socialPresence: Record<string, unknown>;
+  companyInfo: Record<string, unknown>;
+  contactInfo: Record<string, unknown>;
+  enrichmentSources: string[];
+  confidence: number;
+}
+
 export class LeadResearchAgent extends BaseAgent {
-  private dataEnrichmentProviders: Map<string, any> = new Map();
-  private scrapingConfigs: Map<string, any> = new Map();
-  private scoringModels: Map<string, any> = new Map();
+  private dataEnrichmentProviders: Map<string, DataEnrichmentProvider> = new Map();
+  private scrapingConfigs: Map<string, ScrapingConfig> = new Map();
+  private scoringModels: Map<string, ScoringModel> = new Map();
 
   constructor(config: AgentConfig) {
     super('lead-research', config);
@@ -276,7 +360,7 @@ export class LeadResearchAgent extends BaseAgent {
     const startTime = Date.now();
 
     try {
-      let result: any = null;
+      let result: unknown = null;
 
       switch (task.type) {
         case 'lead-generation':
@@ -546,7 +630,7 @@ I can help you research and qualify prospects using advanced techniques:
 Share the details and I'll provide comprehensive intelligence for your outreach strategy!`;
   }
 
-  private generateMockLinkedInResearch(profileUrl: string, depth: string): any {
+  private generateMockLinkedInResearch(profileUrl: string, depth: string): LinkedInResearchResult {
     return {
       basicInfo: {
         name: 'Sarah Johnson',
@@ -618,7 +702,7 @@ Share the details and I'll provide comprehensive intelligence for your outreach 
     };
   }
 
-  private generateMockCompanyIntelligence(companyName: string): any {
+  private generateMockCompanyIntelligence(companyName: string): CompanyIntelligence {
     return {
       industry: 'B2B SaaS',
       size: '250',
@@ -693,7 +777,7 @@ Share the details and I'll provide comprehensive intelligence for your outreach 
     };
   }
 
-  private generateMockDataEnrichment(basicData: any, providers: string[]): any {
+  private generateMockDataEnrichment(basicData: Record<string, unknown>, providers: string[]): EnrichedLeadData {
     return {
       contact: {
         name: basicData.name || 'Sarah Johnson',

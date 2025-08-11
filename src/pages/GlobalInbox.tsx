@@ -1,4 +1,18 @@
 import { useState } from "react";
+
+interface Message {
+  id: number;
+  from: string;
+  avatar: string;
+  company: string;
+  channel: string;
+  subject: string;
+  preview: string;
+  time: string;
+  read: boolean;
+  priority?: string;
+  tags?: string[];
+}
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
 import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
@@ -40,7 +54,7 @@ import {
 
 export default function GlobalInbox() {
   const [isConversational, setIsConversational] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [activeTab, setActiveTab] = useState("all");
 
   if (isConversational) {

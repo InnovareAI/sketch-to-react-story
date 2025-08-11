@@ -51,7 +51,7 @@ export function SamThinkingDisplay({
         }, 500);
       }
     });
-  }, [currentSteps]);
+  }, [currentSteps, animatingSteps]);
 
   const getStepIcon = (step: ThinkingStep) => {
     switch (step.type) {

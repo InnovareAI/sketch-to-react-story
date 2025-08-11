@@ -1,11 +1,12 @@
 /**
  * LLM Service - Handles all AI model interactions
- * Uses OpenRouter for access to multiple models
+ * Uses direct OpenAI and Anthropic APIs
  */
 
 export interface LLMConfig {
-  provider: 'openrouter' | 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic';
   apiKey: string;
+  anthropicApiKey?: string;
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -32,27 +33,29 @@ export class LLMService {
   private static instance: LLMService;
   private config: LLMConfig;
   private defaultModels = {
-    // Free tier models
-    fast: 'meta-llama/llama-3.2-3b-instruct:free',
-    balanced: 'meta-llama/llama-3.1-8b-instruct:free',
+    // OpenAI models
+    fast: 'gpt-3.5-turbo',                   // Fast responses
+    balanced: 'gpt-4-turbo-preview',         // Balanced performance
+    gpt4: 'gpt-4-turbo-preview',            // GPT-4 Turbo
+    gpt5: 'gpt-5-turbo',                    // GPT-5 (when available)
     
-    // Premium models for production
-    quality: 'anthropic/claude-3.5-sonnet',  // PRIMARY: Claude 3.5 Sonnet
-    gpt4: 'openai/gpt-4-turbo-preview',      // Alternative: GPT-4 Turbo
-    gpt4o: 'openai/gpt-4o',                  // Alternative: GPT-4 Optimized
-    claude: 'anthropic/claude-3.5-sonnet',   // DEFAULT: Claude 3.5 Sonnet
+    // Anthropic models
+    claude: 'claude-3-opus-20240229',       // Claude 3 Opus
+    quality: 'claude-3-opus-20240229',      // PRIMARY: Claude 3 Opus
     
     // Specialized models
-    code: 'anthropic/claude-3.5-sonnet',     // Claude for code tasks
-    creative: 'anthropic/claude-3.5-sonnet', // Claude for creative content
-    analysis: 'anthropic/claude-3.5-sonnet'  // Claude for analysis
+    code: 'claude-3-opus-20240229',         // Claude for code tasks
+    creative: 'gpt-4-turbo-preview',        // GPT-4 for creative content
+    analysis: 'claude-3-opus-20240229'      // Claude for analysis
   };
 
   private constructor(config: LLMConfig) {
     this.config = {
       ...config,
-      baseUrl: config.baseUrl || 'https://openrouter.ai/api/v1',
-      model: config.model || this.defaultModels.claude, // Default to Claude
+      baseUrl: config.provider === 'openai' 
+        ? 'https://api.openai.com/v1'
+        : 'https://api.anthropic.com/v1',
+      model: config.model || (config.provider === 'openai' ? this.defaultModels.gpt4 : this.defaultModels.claude),
       temperature: config.temperature || 0.7,
       maxTokens: config.maxTokens || 2000
     };
@@ -67,17 +70,17 @@ export class LLMService {
   public static getInstance(): LLMService {
     if (!LLMService.instance) {
       // Initialize with environment variables if available
-      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || 
-                     import.meta.env.VITE_OPENAI_API_KEY || 
-                     '';
+      const openaiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
+      const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
       
-      if (!apiKey) {
-        console.warn('No API key found. Using mock responses.');
+      if (!openaiKey && !anthropicKey) {
+        console.warn('No API keys found. Using mock responses.');
       }
 
       LLMService.instance = new LLMService({
-        provider: 'openrouter',
-        apiKey: apiKey
+        provider: openaiKey ? 'openai' : 'anthropic',
+        apiKey: openaiKey || anthropicKey,
+        anthropicApiKey: anthropicKey
       });
     }
     return LLMService.instance;
@@ -292,7 +295,7 @@ export class LLMService {
   /**
    * Create a system prompt for the agent
    */
-  public createSystemPrompt(agentType: string, context?: any): string {
+  public createSystemPrompt(agentType: string, context?: Record<string, unknown>): string {
     const prompts: Record<string, string> = {
       orchestrator: `You are SAM, an AI Sales Assistant that orchestrates a team of specialist agents. You are helpful, professional, and focused on driving sales success. You coordinate between different specialists to provide comprehensive solutions.
 

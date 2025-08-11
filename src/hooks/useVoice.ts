@@ -23,7 +23,13 @@ export function useVoice(config?: VoiceConfig) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+        const SpeechRecognition = (window as unknown as {
+          webkitSpeechRecognition?: typeof SpeechRecognition;
+          SpeechRecognition?: typeof SpeechRecognition;
+        }).webkitSpeechRecognition || (window as unknown as {
+          webkitSpeechRecognition?: typeof SpeechRecognition;
+          SpeechRecognition?: typeof SpeechRecognition;
+        }).SpeechRecognition;
         const recognition = new SpeechRecognition();
         
         recognition.continuous = false;
@@ -39,14 +45,14 @@ export function useVoice(config?: VoiceConfig) {
           stream.getTracks().forEach(track => track.stop());
         };
         
-        recognition.onerror = (event: any) => {
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
           setError(`Speech recognition error: ${event.error}`);
           setIsListening(false);
           stream.getTracks().forEach(track => track.stop());
         };
         
         return new Promise<string>((resolve, reject) => {
-          recognition.onresult = (event: any) => {
+          recognition.onresult = (event: SpeechRecognitionEvent) => {
             const transcript = event.results[0][0].transcript;
             resolve(transcript);
           };

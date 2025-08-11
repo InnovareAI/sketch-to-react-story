@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Account } from "./Accounts";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
 import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
@@ -55,7 +56,7 @@ import {
 export default function Contacts() {
   const [isConversational, setIsConversational] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "tile">("list");
-  const [editingContact, setEditingContact] = useState<any>(null);
+  const [editingContact, setEditingContact] = useState<Account | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
   // Prevent view mode from changing when clicking on form elements
@@ -238,7 +239,7 @@ export default function Contacts() {
     }
   };
 
-  const handleEditContact = (contact: any) => {
+  const handleEditContact = (contact: Account) => {
     setEditingContact({ ...contact });
   };
 

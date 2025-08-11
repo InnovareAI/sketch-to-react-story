@@ -23,6 +23,7 @@ import Agent from "./pages/Agent";
 import LinkedInIntegration from "./pages/LinkedInIntegration";
 import CampaignSetup from "./pages/CampaignSetup";
 import AgentFullScreen from "./pages/AgentFullScreen";
+import UsersPermissions from "./pages/admin/UsersPermissions";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,8 @@ const App: React.FC = () => {
             <Route path="/workspace-settings" element={<WorkspaceSettings />} />
             <Route path="/linkedin" element={<LinkedInIntegration />} />
             <Route path="/linkedin-integration" element={<LinkedInIntegration />} />
+            <Route path="/users-permissions" element={<UsersPermissions />} />
+            <Route path="/admin/users" element={<UsersPermissions />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
