@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn OAuth Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .button { background: #0066cc; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin: 10px 0; }
+        .button:hover { background: #0052a3; }
+        .info { background: #f0f8ff; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .credentials { background: #f9f9f9; padding: 15px; border-radius: 4px; margin: 15px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>LinkedIn OAuth Test - Sam AI</h1>
+    
+    <div class="info">
+        <h3>LinkedIn OAuth Configuration Test</h3>
+        <p>This page tests the LinkedIn OAuth integration for Sam AI platform.</p>
+    </div>
+
+    <div class="credentials">
+        <strong>LinkedIn App Credentials:</strong><br>
+        Client ID: 78094ft3hvizqs<br>
+        Redirect URI: https://sameaisalesassistant.netlify.app/auth/linkedin/callback<br>
+        Scopes: openid, profile, email
+    </div>
+
+    <h3>Test LinkedIn OAuth Flow:</h3>
+    <a href="#" class="button" onclick="testLinkedInOAuth()">🔗 Connect LinkedIn Account</a>
+
+    <h3>Test Results:</h3>
+    <div id="results" style="margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #fff;"></div>
+
+    <script>
+        function testLinkedInOAuth() {
+            const clientId = '78094ft3hvizqs';
+            const redirectUri = 'https://sameaisalesassistant.netlify.app/auth/linkedin/callback';
+            const scope = ['openid', 'profile', 'email'];
+            const state = 'test-' + Math.random().toString(36).substr(2, 9);
+            
+            const params = new URLSearchParams({
+                response_type: 'code',
+                client_id: clientId,
+                redirect_uri: redirectUri,
+                state: state,
+                scope: scope.join(' ')
+            });
+
+            const authUrl = `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
+            
+            document.getElementById('results').innerHTML = `
+                <h4>Generated OAuth URL:</h4>
+                <p style="word-break: break-all; font-family: monospace; background: #f5f5f5; padding: 10px; border-radius: 4px;">${authUrl}</p>
+                <p><strong>State:</strong> ${state}</p>
+                <p><strong>Status:</strong> Opening LinkedIn authorization window...</p>
+            `;
+            
+            // Store state for verification
+            sessionStorage.setItem('linkedin_test_state', state);
+            
+            // Open OAuth window
+            const authWindow = window.open(authUrl, 'LinkedInAuth', 'width=600,height=700,left=200,top=100');
+            
+            if (!authWindow || authWindow.closed) {
+                document.getElementById('results').innerHTML += '<p style="color: red;"><strong>Error:</strong> Popup blocked. Please allow popups and try again.</p>';
+                return;
+            }
+            
+            // Monitor the popup window
+            const checkInterval = setInterval(() => {
+                try {
+                    if (authWindow.closed) {
+                        clearInterval(checkInterval);
+                        document.getElementById('results').innerHTML += '<p style="color: orange;"><strong>Update:</strong> Authorization window closed. Check callback results.</p>';
+                        
+                        // Check if callback was successful
+                        setTimeout(() => {
+                            const storedProfile = sessionStorage.getItem('linkedin_profile');
+                            const storedToken = sessionStorage.getItem('linkedin_token');
+                            
+                            if (storedProfile && storedToken) {
+                                const profile = JSON.parse(storedProfile);
+                                document.getElementById('results').innerHTML += `
+                                    <p style="color: green;"><strong>Success!</strong> LinkedIn account connected.</p>
+                                    <p><strong>Profile:</strong> ${profile.name} (${profile.email})</p>
+                                `;
+                            }
+                        }, 1000);
+                    }
+                } catch (e) {
+                    clearInterval(checkInterval);
+                }
+            }, 500);
+        }
+        
+        // Listen for messages from OAuth callback
+        window.addEventListener('message', function(event) {
+            if (event.origin !== window.location.origin) return;
+            
+            if (event.data.type === 'linkedin_auth_success') {
+                document.getElementById('results').innerHTML += `
+                    <p style="color: green;"><strong>OAuth Success!</strong></p>
+                    <p><strong>Profile:</strong> ${JSON.stringify(event.data.profile, null, 2)}</p>
+                `;
+            } else if (event.data.type === 'linkedin_auth_error') {
+                document.getElementById('results').innerHTML += `
+                    <p style="color: red;"><strong>OAuth Error:</strong> ${event.data.error}</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
