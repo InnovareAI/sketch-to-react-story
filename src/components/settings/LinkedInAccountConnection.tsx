@@ -689,6 +689,11 @@ export function LinkedInAccountConnection() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{account.name}</h3>
+                        {account.metadata?.proxy_location && (
+                          <span className="text-lg" title={`Proxy: ${proxyLocations.find(l => l.code === account.metadata.proxy_location)?.name}`}>
+                            {proxyLocations.find(l => l.code === account.metadata.proxy_location)?.flag}
+                          </span>
+                        )}
                         {getStatusBadge(account.status)}
                       </div>
                       <p className="text-sm text-muted-foreground">{account.email}</p>
