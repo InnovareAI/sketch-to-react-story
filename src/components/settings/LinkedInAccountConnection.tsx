@@ -93,7 +93,15 @@ export function LinkedInAccountConnection() {
   const loadConnectedAccounts = async () => {
     setLoading(true);
     try {
-      // Check for stored LinkedIn profile from OAuth
+      // First check localStorage for persisted LinkedIn accounts
+      const persistedAccounts = localStorage.getItem('linkedin_accounts');
+      if (persistedAccounts) {
+        const accounts = JSON.parse(persistedAccounts);
+        setAccounts(accounts);
+        console.log('Loaded persisted LinkedIn accounts:', accounts);
+      }
+      
+      // Then check for new OAuth data in sessionStorage
       const storedProfile = sessionStorage.getItem('linkedin_profile');
       const storedToken = sessionStorage.getItem('linkedin_token');
       
@@ -105,7 +113,9 @@ export function LinkedInAccountConnection() {
       
       if (storedProfile && storedToken) {
         const profile = JSON.parse(storedProfile);
-        const mockAccount: LinkedInAccountData = {
+        const proxyLocation = sessionStorage.getItem('linkedin_proxy_location') || 'US';
+        
+        const newAccount: LinkedInAccountData = {
           id: crypto.randomUUID(),
           provider: 'LINKEDIN',
           email: profile.email,
@@ -116,17 +126,26 @@ export function LinkedInAccountConnection() {
           unipileAccountId: `linkedin_${profile.sub}`,
           metadata: {
             locale: profile.locale,
-            email_verified: profile.email_verified
+            email_verified: profile.email_verified,
+            proxy_location: proxyLocation,
+            connected_at: new Date().toISOString()
           }
         };
-        setAccounts([mockAccount]);
         
-        // Clear stored data
+        // Add to existing accounts and persist
+        const existingAccounts = persistedAccounts ? JSON.parse(persistedAccounts) : [];
+        const updatedAccounts = [...existingAccounts, newAccount];
+        setAccounts(updatedAccounts);
+        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+        
+        // Clear session storage
         sessionStorage.removeItem('linkedin_profile');
         sessionStorage.removeItem('linkedin_token');
+        sessionStorage.removeItem('linkedin_proxy_location');
         
         toast.success('LinkedIn account connected successfully!');
-      } else {
+      } else if (!persistedAccounts) {
+        // No persisted accounts and no new OAuth data, try Unipile
         const connectedAccounts = await unipileService.getConnectedAccounts();
         setAccounts(connectedAccounts);
       }
@@ -330,11 +349,12 @@ export function LinkedInAccountConnection() {
         throw new Error('Account not found');
       }
 
-      // For direct LinkedIn OAuth accounts, just remove from local state
+      // For direct LinkedIn OAuth accounts, remove from both state and localStorage
       if (account.unipileAccountId.startsWith('linkedin_')) {
         // This is a direct LinkedIn OAuth account
         const updatedAccounts = accounts.filter(acc => acc.id !== accountId);
         setAccounts(updatedAccounts);
+        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
         toast.success('LinkedIn account disconnected');
       } else {
         // This is a Unipile account, use the original disconnect method
@@ -372,6 +392,7 @@ export function LinkedInAccountConnection() {
             : acc
         );
         setAccounts(updatedAccounts);
+        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
         
         toast.success('LinkedIn profile data refreshed successfully');
       } else {
