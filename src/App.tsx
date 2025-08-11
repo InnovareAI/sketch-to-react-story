@@ -32,6 +32,7 @@ import Integrations from "./pages/Integrations";
 import TeamSettings from "./pages/TeamSettings";
 import Analytics from "./pages/Analytics";
 import ProspectSearch from "./pages/ProspectSearch";
+import SearchResults from "./pages/SearchResults";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,7 @@ const App: React.FC = () => {
               <Route path="campaign-setup" element={<CampaignSetup />} />
               <Route path="prospect-search" element={<ProspectSearch />} />
               <Route path="search" element={<Search />} />
+              <Route path="search-results" element={<SearchResults />} />
               <Route path="message-queue" element={<MessageQueue />} />
               <Route path="requests" element={<Requests />} />
               <Route path="placeholders" element={<Placeholders />} />
