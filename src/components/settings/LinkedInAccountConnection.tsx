@@ -43,20 +43,9 @@ interface ProxyLocation {
 
 const proxyLocations: ProxyLocation[] = [
   { code: 'US', name: 'United States', flag: '🇺🇸', region: 'North America' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', region: 'North America' },
-  { code: 'UK', name: 'United Kingdom', flag: '🇬🇧', region: 'Europe' },
   { code: 'DE', name: 'Germany', flag: '🇩🇪', region: 'Europe' },
-  { code: 'FR', name: 'France', flag: '🇫🇷', region: 'Europe' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱', region: 'Europe' },
-  { code: 'AU', name: 'Australia', flag: '🇦🇺', region: 'Oceania' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵', region: 'Asia' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬', region: 'Asia' },
-  { code: 'IN', name: 'India', flag: '🇮🇳', region: 'Asia' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷', region: 'South America' },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽', region: 'North America' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹', region: 'Europe' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸', region: 'Europe' },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪', region: 'Europe' }
+  { code: 'AT', name: 'Austria', flag: '🇦🇹', region: 'Europe' },
+  { code: 'PH', name: 'The Philippines', flag: '🇵🇭', region: 'Asia' }
 ];
 
 export function LinkedInAccountConnection() {
