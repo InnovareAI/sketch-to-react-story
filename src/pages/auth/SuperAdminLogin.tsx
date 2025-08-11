@@ -96,7 +96,7 @@ export default function SuperAdminLogin() {
           
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
-            .insert({
+            .upsert({
               id: data.user.id,
               workspace_id: 'a0000000-0000-0000-0000-000000000000',
               email: data.user.email,
@@ -108,10 +108,21 @@ export default function SuperAdminLogin() {
           
           if (createError) {
             console.error('Failed to create super admin profile:', createError);
-            throw new Error('Failed to create admin profile. Contact system administrator.');
+            // Try to fetch existing profile instead
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('role, workspace_id, full_name')
+              .eq('id', data.user.id)
+              .single();
+            
+            if (existingProfile) {
+              profile = existingProfile;
+            } else {
+              throw new Error('Failed to create admin profile. Contact system administrator.');
+            }
+          } else {
+            profile = newProfile;
           }
-          
-          profile = newProfile;
         } else if (profileError || !profile) {
           throw new Error('User profile not found. Contact system administrator.');
         }
