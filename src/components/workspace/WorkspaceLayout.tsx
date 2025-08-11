@@ -181,7 +181,10 @@ export default function WorkspaceLayout() {
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen w-full">
         {/* Sidebar */}
-        <WorkspaceSidebar isConversational={isConversational} />
+        <WorkspaceSidebar 
+          isConversational={isConversational} 
+          workspaceName={user.workspace_name}
+        />
         
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-h-0">

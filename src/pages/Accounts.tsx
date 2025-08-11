@@ -20,9 +20,6 @@ export interface Account {
   revenue: string;
   currentCampaigns: string[];
 }
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,7 +67,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Accounts() {
-  const [isConversational, setIsConversational] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   
@@ -188,12 +184,8 @@ export default function Accounts() {
   };
 
   return (
-    <SidebarProvider open={true} onOpenChange={() => {}}>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <WorkspaceSidebar isConversational={isConversational} />
-        <div className="flex-1 flex flex-col">
-          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
-          <main className="flex-1 p-8">
+    <div className="flex-1 bg-gray-50">
+      <main className="flex-1 p-8">
             <div className="max-w-7xl mx-auto">
               <div className="p-6 space-y-6">
       {/* Header */}
@@ -692,8 +684,6 @@ export default function Accounts() {
               </div>
             </div>
           </main>
-        </div>
-      </div>
-    </SidebarProvider>
+    </div>
   );
 }

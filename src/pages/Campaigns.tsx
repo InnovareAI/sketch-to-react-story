@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCampaigns } from "@/hooks/useCampaigns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -29,23 +30,38 @@ import {
 
 export default function Campaigns() {
   const navigate = useNavigate();
-
-
-  const campaigns = [];
+  const { campaigns, loading, error, refetch, createCampaign } = useCampaigns();
   
+  const handleQuickCreateCampaign = async () => {
+    try {
+      const campaignName = `Campaign ${new Date().toLocaleDateString()}`;
+      await createCampaign(campaignName, 'draft');
+    } catch (error) {
+      console.error('Failed to create campaign:', error);
+    }
+  };
+
   // Empty state component
   const EmptyState = () => (
     <div className="text-center py-12">
       <Target className="mx-auto h-12 w-12 text-gray-400 mb-4" />
       <h3 className="text-lg font-medium text-gray-900 mb-2">No campaigns yet</h3>
       <p className="text-gray-600 mb-6">Get started by creating your first campaign</p>
-      <Button 
-        className="bg-primary hover:bg-primary/90"
-        onClick={() => navigate('/campaign-setup')}
-      >
-        <Target className="h-4 w-4 mr-2" />
-        Create Campaign
-      </Button>
+      <div className="flex gap-3 justify-center">
+        <Button 
+          className="bg-primary hover:bg-primary/90"
+          onClick={handleQuickCreateCampaign}
+        >
+          <Target className="h-4 w-4 mr-2" />
+          Quick Create
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => navigate('/campaign-setup')}
+        >
+          Advanced Setup
+        </Button>
+      </div>
     </div>
   );
 
@@ -170,7 +186,19 @@ export default function Campaigns() {
 
               {/* Campaign List */}
               <div className="space-y-4">
-                {campaigns.length === 0 ? (
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p>Loading campaigns...</p>
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-12">
+                    <p className="text-red-600 mb-4">Error: {error}</p>
+                    <Button onClick={refetch} variant="outline">
+                      Try Again
+                    </Button>
+                  </div>
+                ) : campaigns.length === 0 ? (
                   <EmptyState />
                 ) : (
                   campaigns.map((campaign) => (

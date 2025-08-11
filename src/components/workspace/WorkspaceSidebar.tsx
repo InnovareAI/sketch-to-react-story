@@ -5,7 +5,6 @@ import {
   MessageSquare,
   Users,
   Search,
-  Building2,
   Mail,
   Calendar,
   Settings,
@@ -16,6 +15,7 @@ import {
   Bot,
   Inbox,
   LayoutDashboard,
+  Building2,
   ChevronDown,
   ChevronRight,
   GraduationCap,
@@ -86,7 +86,13 @@ const agentDocumentItems = [
   { title: "Link to Documents", url: "/agent/documents", icon: Folder },
 ];
 
-export function WorkspaceSidebar({ isConversational = false }: { isConversational?: boolean }) {
+export function WorkspaceSidebar({ 
+  isConversational = false, 
+  workspaceName = "Workspace" 
+}: { 
+  isConversational?: boolean;
+  workspaceName?: string;
+}) {
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -131,13 +137,21 @@ export function WorkspaceSidebar({ isConversational = false }: { isConversationa
   return (
     <Sidebar className={`w-64 lg:w-64 md:w-56 border-r sticky top-0 h-screen lg:block ${isConversational ? 'bg-gray-900 border-gray-700' : 'border-border'}`} collapsible="none">
       <SidebarContent className={`p-4 h-full overflow-y-auto ${isConversational ? 'bg-gray-900' : ''}`}>
-        {/* Brand Header */}
+        {/* Workspace Header */}
         <div className="flex items-center gap-3 mb-6 px-2">
-          <img 
-            src="/lovable-uploads/f38e3099-bf46-483c-9a94-d1b4f8b34cb6.png" 
-            alt="Sam AI" 
-            className={`h-8 ${isConversational ? '' : 'dark:invert'}`}
-          />
+          <div className={`flex items-center justify-center w-8 h-8 rounded-md ${
+            isConversational ? 'bg-gray-800 text-gray-300' : 'bg-primary text-white'
+          }`}>
+            <Building2 className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className={`font-semibold text-sm ${isConversational ? 'text-white' : 'text-gray-900'}`}>
+              {workspaceName}
+            </h2>
+            <p className={`text-xs ${isConversational ? 'text-gray-400' : 'text-gray-500'}`}>
+              SAM AI Workspace
+            </p>
+          </div>
         </div>
 
 
