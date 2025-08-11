@@ -49,14 +49,14 @@ export default function SuperAdminLogin() {
   const checkAuthStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      // Check if user is super admin
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, workspace_id')
+      // Check if user is owner (super admin)
+      const { data: userRecord } = await supabase
+        .from('users')
+        .select('role, tenant_id')
         .eq('id', user.id)
         .single();
       
-      if (profile?.role === 'super_admin') {
+      if (userRecord?.role === 'owner') {
         navigate('/admin/dashboard');
         return;
       }
@@ -83,59 +83,36 @@ export default function SuperAdminLogin() {
       if (error) throw error;
 
       if (data.user) {
-        // Check if user has super admin role
-        let { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role, workspace_id, full_name')
+        // Check if user has super admin role in users table
+        let { data: userRecord, error: userError } = await supabase
+          .from('users')
+          .select('role, tenant_id, name, organization_id')
           .eq('id', data.user.id)
           .single();
 
-        // If profile doesn't exist, create it for admin@innovareai.com
-        if (profileError && data.user.email === 'admin@innovareai.com') {
-          console.log('Creating super admin profile for:', data.user.email, 'User ID:', data.user.id);
-          
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              workspace_id: 'a0000000-0000-0000-0000-000000000000',
-              email: data.user.email,
-              full_name: 'InnovareAI Administrator',
-              role: 'super_admin'
-            })
-            .select('role, workspace_id, full_name')
-            .single();
-          
-          console.log('Profile creation result:', { newProfile, createError });
-          
-          if (createError) {
-            console.error('Full createError object:', JSON.stringify(createError, null, 2));
-            // Try to fetch existing profile instead
-            const { data: existingProfile, error: fetchError } = await supabase
-              .from('profiles')
-              .select('role, workspace_id, full_name')
-              .eq('id', data.user.id)
-              .single();
-            
-            console.log('Fetch existing profile result:', { existingProfile, fetchError });
-            
-            if (existingProfile) {
-              profile = existingProfile;
-            } else {
-              throw new Error(`Profile creation failed: ${JSON.stringify(createError)}`);
-            }
-          } else {
-            profile = newProfile;
-          }
-        } else if (profileError || !profile) {
-          console.error('Profile lookup failed:', profileError);
-          throw new Error(`User profile not found: ${profileError?.message || 'Unknown error'}`);
+        if (userError || !userRecord) {
+          console.error('User lookup failed:', userError);
+          throw new Error(`User record not found: ${userError?.message || 'Unknown error'}`);
         }
 
-        if (profile.role !== 'super_admin') {
+        // Check if user is owner (equivalent to super admin in this system)
+        if (userRecord.role !== 'owner') {
           await supabase.auth.signOut();
           throw new Error('Access denied. Super admin privileges required.');
         }
+
+        // Get user profile for display name
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('first_name, last_name')
+          .eq('id', data.user.id)
+          .single();
+
+        const profile = {
+          role: userRecord.role,
+          workspace_id: userRecord.tenant_id,
+          full_name: userProfile ? `${userProfile.first_name} ${userProfile.last_name}`.trim() : userRecord.name || 'Administrator'
+        };
 
         toast.success(`Welcome back, ${profile.full_name || 'Admin'}!`);
         navigate('/admin/dashboard');

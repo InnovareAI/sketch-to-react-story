@@ -72,17 +72,30 @@ export default function SuperAdminDashboard() {
     }
 
     // Verify super admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, full_name, workspace_id')
+    const { data: userRecord } = await supabase
+      .from('users')
+      .select('role, name, tenant_id')
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'super_admin') {
+    if (!userRecord || userRecord.role !== 'owner') {
       await supabase.auth.signOut();
       navigate('/admin/login');
       return;
     }
+
+    // Get user profile for display name
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('id', user.id)
+      .single();
+
+    const profile = {
+      role: userRecord.role,
+      workspace_id: userRecord.tenant_id,
+      full_name: userProfile ? `${userProfile.first_name} ${userProfile.last_name}`.trim() : userRecord.name || 'Administrator'
+    };
 
     setUser({ ...user, profile });
     await loadDashboardData();
@@ -91,20 +104,25 @@ export default function SuperAdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      // Load workspaces
-      const { data: workspacesData } = await supabase
-        .from('workspaces')
+      // Load tenants (workspaces)
+      const { data: tenantsData } = await supabase
+        .from('tenants')
         .select(`
           id,
           name,
-          slug,
-          subscription_tier,
-          subscription_status,
+          plan as subscription_tier,
+          status as subscription_status,
           created_at
         `)
         .order('created_at', { ascending: false });
 
-      if (workspacesData) {
+      if (tenantsData) {
+        // Transform to match workspace interface
+        const workspacesData = tenantsData.map(tenant => ({
+          ...tenant,
+          slug: tenant.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+        }));
+        
         setWorkspaces(workspacesData);
         
         // Calculate stats
@@ -123,22 +141,27 @@ export default function SuperAdminDashboard() {
 
       // Load users
       const { data: usersData } = await supabase
-        .from('profiles')
+        .from('users')
         .select(`
           id,
           email,
-          full_name,
+          name,
           role,
-          workspace_id,
+          tenant_id,
           created_at,
-          workspaces!inner(name, slug)
+          tenants!inner(name)
         `)
         .order('created_at', { ascending: false });
 
       if (usersData) {
         setUsers(usersData.map(user => ({
           ...user,
-          workspace: user.workspaces,
+          full_name: user.name,
+          workspace_id: user.tenant_id,
+          workspace: { 
+            name: user.tenants.name, 
+            slug: user.tenants.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+          },
           last_sign_in_at: '' // Would need auth.users join for this
         })));
         
@@ -161,7 +184,7 @@ export default function SuperAdminDashboard() {
 
   const getRoleBadge = (role: string) => {
     switch (role) {
-      case 'super_admin':
+      case 'owner':
         return <Badge className="bg-red-100 text-red-800">Super Admin</Badge>;
       case 'admin':
         return <Badge className="bg-purple-100 text-purple-800">Admin</Badge>;
@@ -387,7 +410,7 @@ export default function SuperAdminDashboard() {
                     </div>
                     <div>
                       <h4 className="font-medium">Admin Count</h4>
-                      <p className="text-sm text-gray-600">{users.filter(u => u.role === 'super_admin').length} super admin(s)</p>
+                      <p className="text-sm text-gray-600">{users.filter(u => u.role === 'owner').length} super admin(s)</p>
                     </div>
                   </div>
                 </div>
