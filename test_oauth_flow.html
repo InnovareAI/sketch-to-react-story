@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn OAuth Flow Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+            background: #f8f9fa;
+        }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 10px 10px 0;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { 
+            background: #6c757d; 
+            cursor: not-allowed; 
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .config-item:last-child { border-bottom: none; }
+        .status {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.ok { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 LinkedIn OAuth Flow Debugger</h1>
+        <p>This tool helps debug and test the LinkedIn OAuth integration for SAM AI.</p>
+
+        <!-- Configuration Check -->
+        <div class="step">
+            <h3>📋 Configuration Check</h3>
+            <div id="config-status">
+                <div class="config-item">
+                    <span>Production URL:</span>
+                    <span class="status ok">https://sketch-to-react-story.netlify.app</span>
+                </div>
+                <div class="config-item">
+                    <span>Client ID:</span>
+                    <span class="status ok">78094ft3hvizqs</span>
+                </div>
+                <div class="config-item">
+                    <span>Redirect URI:</span>
+                    <span class="status ok">https://sketch-to-react-story.netlify.app/.netlify/functions/linkedin-callback</span>
+                </div>
+                <div class="config-item">
+                    <span>OAuth Scopes:</span>
+                    <span class="status ok">openid, profile, email</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Netlify Function -->
+        <div class="step">
+            <h3>🔗 Test Netlify Function</h3>
+            <p>First, let's verify the Netlify function is accessible and working.</p>
+            <button onclick="testNetlifyFunction()">Test Function</button>
+            <div id="netlify-result" class="log"></div>
+        </div>
+
+        <!-- Test OAuth Authorization -->
+        <div class="step">
+            <h3>🔐 Test OAuth Authorization</h3>
+            <p>Test the complete OAuth flow. This will open a popup window for LinkedIn authorization.</p>
+            <button onclick="startOAuthTest()" id="oauth-btn">Start OAuth Test</button>
+            <div id="oauth-result" class="log"></div>
+        </div>
+
+        <!-- Manual Test -->
+        <div class="step">
+            <h3>🛠 Manual Test Links</h3>
+            <p>Use these links for manual testing:</p>
+            <div style="margin-top: 10px;">
+                <a href="https://sketch-to-react-story.netlify.app/.netlify/functions/linkedin-callback?test=1" 
+                   target="_blank" style="margin-right: 15px;">Test Netlify Function</a>
+                <a href="#" id="auth-link" target="_blank">LinkedIn Authorization URL</a>
+            </div>
+        </div>
+
+        <!-- Debug Info -->
+        <div class="step">
+            <h3>🐛 Debug Information</h3>
+            <div id="debug-info" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const CLIENT_ID = '78094ft3hvizqs';
+        const REDIRECT_URI = 'https://sketch-to-react-story.netlify.app/.netlify/functions/linkedin-callback';
+        const SCOPE = 'openid profile email';
+
+        let authWindow = null;
+        let debugLog = [];
+
+        function addDebugLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.push(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+            document.getElementById('debug-info').textContent = debugLog.join('\n');
+        }
+
+        async function testNetlifyFunction() {
+            addDebugLog('Testing Netlify function accessibility...');
+            const resultDiv = document.getElementById('netlify-result');
+            
+            try {
+                const response = await fetch(`${REDIRECT_URI}?test=1`);
+                const result = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.textContent = `✅ SUCCESS (${response.status}): ${result}`;
+                    resultDiv.className = 'log success';
+                    addDebugLog('Netlify function is accessible and working', 'success');
+                } else {
+                    resultDiv.textContent = `❌ ERROR (${response.status}): ${result}`;
+                    resultDiv.className = 'log error';
+                    addDebugLog(`Netlify function error: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ NETWORK ERROR: ${error.message}`;
+                resultDiv.className = 'log error';
+                addDebugLog(`Network error testing function: ${error.message}`, 'error');
+            }
+        }
+
+        function generateAuthUrl() {
+            const state = 'test_' + Date.now();
+            sessionStorage.setItem('oauth_test_state', state);
+            
+            const params = new URLSearchParams({
+                response_type: 'code',
+                client_id: CLIENT_ID,
+                redirect_uri: REDIRECT_URI,
+                state: state,
+                scope: SCOPE
+            });
+
+            return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
+        }
+
+        function startOAuthTest() {
+            const resultDiv = document.getElementById('oauth-result');
+            const button = document.getElementById('oauth-btn');
+            
+            button.disabled = true;
+            button.textContent = 'Testing...';
+            
+            addDebugLog('Starting OAuth test flow...');
+            resultDiv.textContent = 'Starting OAuth test...\nOpening LinkedIn authorization window...';
+            resultDiv.className = 'log';
+
+            const authUrl = generateAuthUrl();
+            addDebugLog(`Generated auth URL: ${authUrl}`);
+            
+            // Open popup
+            authWindow = window.open(
+                authUrl,
+                'LinkedInAuth',
+                'width=600,height=700,left=' + (screen.width / 2 - 300) + ',top=' + (screen.height / 2 - 350)
+            );
+
+            if (!authWindow) {
+                resultDiv.textContent = '❌ Popup blocked! Please allow popups and try again.';
+                resultDiv.className = 'log error';
+                addDebugLog('Popup window was blocked', 'error');
+                button.disabled = false;
+                button.textContent = 'Start OAuth Test';
+                return;
+            }
+
+            addDebugLog('OAuth popup opened successfully');
+            
+            // Monitor popup
+            const checkInterval = setInterval(() => {
+                try {
+                    if (authWindow.closed) {
+                        clearInterval(checkInterval);
+                        button.disabled = false;
+                        button.textContent = 'Start OAuth Test';
+                        
+                        // Check for success data
+                        const storedProfile = sessionStorage.getItem('linkedin_profile');
+                        const storedToken = sessionStorage.getItem('linkedin_token');
+                        
+                        if (storedProfile || storedToken) {
+                            resultDiv.textContent = `✅ OAuth flow completed successfully!\n\nProfile data: ${storedProfile || 'None'}\nToken data: ${storedToken ? 'Present' : 'None'}`;
+                            resultDiv.className = 'log success';
+                            addDebugLog('OAuth flow completed successfully', 'success');
+                        } else {
+                            resultDiv.textContent = '⚠️  OAuth popup closed without completion.\nCheck the browser console and network tab for errors.';
+                            resultDiv.className = 'log warning';
+                            addDebugLog('OAuth popup closed without completion', 'warning');
+                        }
+                    }
+                } catch (e) {
+                    // Cross-origin error - popup might still be open
+                    addDebugLog('Cross-origin access error (normal for external popup)');
+                }
+            }, 500);
+
+            // Timeout after 5 minutes
+            setTimeout(() => {
+                if (authWindow && !authWindow.closed) {
+                    authWindow.close();
+                }
+                clearInterval(checkInterval);
+                if (button.disabled) {
+                    button.disabled = false;
+                    button.textContent = 'Start OAuth Test';
+                    addDebugLog('OAuth test timed out', 'warning');
+                }
+            }, 300000);
+        }
+
+        // Listen for messages from OAuth popup
+        window.addEventListener('message', (event) => {
+            if (event.origin !== window.location.origin) return;
+            
+            addDebugLog(`Received message: ${JSON.stringify(event.data)}`);
+            
+            const resultDiv = document.getElementById('oauth-result');
+            
+            if (event.data.type === 'linkedin_auth_success') {
+                resultDiv.textContent = `✅ OAuth Success!\n\nProfile: ${JSON.stringify(event.data.profile, null, 2)}`;
+                resultDiv.className = 'log success';
+                addDebugLog('Received OAuth success message', 'success');
+            } else if (event.data.type === 'linkedin_auth_error') {
+                resultDiv.textContent = `❌ OAuth Error: ${event.data.error}`;
+                resultDiv.className = 'log error';
+                addDebugLog(`OAuth error: ${event.data.error}`, 'error');
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('auth-link').href = generateAuthUrl();
+            addDebugLog('OAuth test page loaded and ready');
+        });
+    </script>
+</body>
+</html>

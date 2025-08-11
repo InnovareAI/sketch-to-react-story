@@ -106,15 +106,24 @@ export default function LinkedInCallback() {
 
       // Notify parent window if in popup
       if (window.opener) {
+        // Store data in parent window's sessionStorage
+        try {
+          window.opener.sessionStorage.setItem('linkedin_profile', JSON.stringify(profile));
+          window.opener.sessionStorage.setItem('linkedin_token', JSON.stringify(tokenData));
+        } catch (e) {
+          console.error('Could not access parent sessionStorage:', e);
+        }
+        
         window.opener.postMessage({
           type: 'linkedin_auth_success',
-          profile: profile
+          profile: profile,
+          tokenData: tokenData
         }, window.location.origin);
         window.close();
       } else {
         // Redirect to settings
         toast.success('LinkedIn account connected successfully!');
-        navigate('/settings/workspace');
+        navigate('/workspace-settings');
       }
     } catch (error: any) {
       console.error('LinkedIn OAuth callback error:', error);

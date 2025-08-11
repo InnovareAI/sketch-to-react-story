@@ -80,6 +80,15 @@ export function LinkedInAccountConnection() {
     if (event.origin !== window.location.origin) return;
     
     if (event.data.type === 'linkedin_auth_success') {
+      console.log('Received OAuth success message:', event.data);
+      
+      // Store data in sessionStorage if not already there
+      if (event.data.profile && event.data.tokenData) {
+        sessionStorage.setItem('linkedin_profile', JSON.stringify(event.data.profile));
+        sessionStorage.setItem('linkedin_token', JSON.stringify(event.data.tokenData));
+        console.log('Stored OAuth data in sessionStorage');
+      }
+      
       // Reload accounts after successful connection
       loadConnectedAccounts();
       setShowConnectionForm(false);
