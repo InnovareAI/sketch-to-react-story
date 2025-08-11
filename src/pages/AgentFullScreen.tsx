@@ -20,6 +20,7 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 export default function AgentFullScreen() {
   const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -70,102 +71,17 @@ export default function AgentFullScreen() {
 
   return (
     <div className="h-screen w-full bg-gray-900 flex flex-col">
-      {/* Minimal Header Bar */}
-      <header className="h-auto md:h-14 border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between px-4 py-2 md:py-0">
-          <div className="flex items-center gap-4">
-            <button
-              className="text-sm font-semibold text-white/90 hover:text-white"
-              onClick={() => navigate('/')}
-              aria-label="Go to Work"
-            >
-              SAM AI
-            </button>
-
-            <div className="flex items-center gap-2 p-1.5 rounded-xl border bg-gray-800 border-gray-700">
-              <div className="flex items-center gap-1">
-                <BarChart3 className="h-4 w-4 text-premium-purple" />
-                <span className="text-xs text-gray-300">Work</span>
-              </div>
-              <Switch
-                checked={true}
-                onCheckedChange={(checked) => {
-                  if (!checked) navigate('/');
-                }}
-                className="data-[state=checked]:bg-premium-purple"
-              />
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-4 w-4 text-premium-purple" />
-                <span className="text-xs text-white">Agent</span>
-              </div>
-            </div>
-
-            {/* Command Palette Trigger */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden lg:flex items-center gap-2 text-xs bg-gray-800 border-gray-700 hover:bg-gray-700"
-              onClick={() => setCommandOpen(true)}
-            >
-              <Command className="h-3 w-3" />
-              <span>Commands</span>
-              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-gray-600 bg-gray-800 px-1.5 font-mono text-[10px] font-medium text-gray-400">
-                <span className="text-xs">⌘</span>K
-              </kbd>
-            </Button>
-          </div>
-          
-          {/* Mode Switcher - Inbound/Outbound */}
-          <div className="mt-2 md:mt-0 md:flex-1 md:flex md:justify-center">
-            <ModeSwitcher 
-              currentMode={operationMode}
-              onModeChange={handleModeChange}
-              className="w-full md:w-auto"
-            />
-          </div>
-
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-2">
-          {/* Help */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-gray-400 hover:text-white"
-            onClick={() => {}}
-          >
-            <HelpCircle className="h-5 w-5" />
-          </Button>
-
-          {/* Settings Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-gray-400 hover:text-white"
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
-              <DropdownMenuItem onClick={() => navigate('/workspace-settings')}>
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                <Home className="h-4 w-4 mr-2" />
-                Dashboard
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-gray-700" />
-              <DropdownMenuItem>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          </div>
-        </div>
-      </header>
+      <WorkspaceHeader 
+        isConversational={true}
+        onToggleMode={() => navigate('/')}
+      />
+      <div className="px-4 py-2 bg-gray-800 border-b border-gray-700">
+        <ModeSwitcher 
+          currentMode={operationMode}
+          onModeChange={handleModeChange}
+          className="max-w-2xl mx-auto"
+        />
+      </div>
 
       {/* Full Screen Chat Interface */}
       <main className="flex-1 overflow-hidden">
