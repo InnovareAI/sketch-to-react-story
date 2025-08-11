@@ -120,46 +120,6 @@ export function ModeSwitcher({ currentMode, onModeChange, className }: ModeSwitc
         </div>
       </div>
 
-      {/* Active Mode Info */}
-      <div className={cn(
-        "mt-3 p-3 rounded-lg border transition-all duration-300",
-        modes[currentMode].bgColor,
-        modes[currentMode].borderColor
-      )}>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            {(() => {
-              const Icon = modes[currentMode].icon;
-              return <Icon className="h-5 w-5 text-white" />;
-            })()}
-            <span className="text-sm font-semibold text-white">
-              {modes[currentMode].title} Mode Active
-            </span>
-          </div>
-          <Badge variant="outline" className="text-xs border-white/30 text-white">
-            {modes[currentMode].agents.length} Agents
-          </Badge>
-        </div>
-        
-        <p className="text-xs text-gray-300 mb-3">
-          {modes[currentMode].description}
-        </p>
-        
-        <div className="space-y-1">
-          <div className="text-xs text-gray-400 mb-1">Active Specialists:</div>
-          <div className="flex flex-wrap gap-2">
-            {modes[currentMode].agents.map((agent) => (
-              <div
-                key={agent.name}
-                className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-md"
-              >
-                <agent.icon className="h-3 w-3 text-white/70" />
-                <span className="text-xs text-white/90">{agent.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* Transition Overlay */}
       {isTransitioning && (
