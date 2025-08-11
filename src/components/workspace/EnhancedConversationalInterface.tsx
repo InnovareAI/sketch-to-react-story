@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus, Sparkles, Brain, Cpu, Activity } from "lucide-react";
+import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus, Sparkles, Brain, Cpu, Activity, Upload, Rocket, Linkedin, Search, Database, Mail, BarChart3, TestTube, FileText, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -32,56 +32,116 @@ interface QuickAction {
   complexity: 'simple' | 'moderate' | 'complex';
 }
 
-const quickActions: QuickAction[] = [
-  {
-    title: "Train Sam on my offer",
-    description: "Help Sam understand your product/service offering",
-    prompt: "I want to train you on my offer. Help me create a comprehensive description of what I'm selling, including key benefits, pricing, and unique selling points.",
-    icon: BookOpen,
-    color: "from-blue-500 to-purple-600",
-    complexity: 'moderate'
-  },
-  {
-    title: "Train Sam on my target audience",
-    description: "Define your ideal customer profile",
-    prompt: "Let's define my target audience together. Help me create detailed buyer personas including demographics, pain points, goals, and communication preferences.",
-    icon: Users,
-    color: "from-green-500 to-teal-600",
-    complexity: 'moderate'
-  },
-  {
-    title: "Find qualified leads",
-    description: "Generate targeted prospect lists",
-    prompt: "I need help finding qualified leads. Can you help me scrape LinkedIn Sales Navigator and enrich the data with contact information?",
-    icon: Target,
-    color: "from-orange-500 to-red-600",
-    complexity: 'complex'
-  },
-  {
-    title: "Create outreach sequences",
-    description: "Build effective multi-touch sequences",
-    prompt: "Help me create a multi-touch outreach sequence for my target audience. Include email and LinkedIn touchpoints with compelling messaging.",
-    icon: MessageSquare,
-    color: "from-purple-500 to-pink-600",
-    complexity: 'complex'
-  },
-  {
-    title: "Optimize my campaigns",
-    description: "Get suggestions for improving campaign performance",
-    prompt: "Analyze my current campaigns and provide recommendations for improving open rates, response rates, and conversions. What should I test or change?",
-    icon: TrendingUp,
-    color: "from-cyan-500 to-blue-600",
-    complexity: 'complex'
-  },
-  {
-    title: "Analyze performance",
-    description: "Deep dive into campaign metrics",
-    prompt: "Let's analyze my campaign performance data together. Help me understand what's working, what's not, and how to improve my results.",
-    icon: Zap,
-    color: "from-yellow-500 to-orange-600",
-    complexity: 'complex'
-  }
-];
+// Enhanced conversation starters with categories
+const conversationStarters = {
+  "🚀 Quick Start": [
+    {
+      title: "Upload my company info",
+      prompt: "I want to upload information about my company and what we sell",
+      icon: Upload,
+      color: "from-blue-500 to-purple-600"
+    },
+    {
+      title: "Find 50 qualified leads",
+      prompt: "Find me 50 qualified leads that match my ideal customer profile",
+      icon: Target,
+      color: "from-green-500 to-teal-600"
+    },
+    {
+      title: "Create my first campaign",
+      prompt: "Help me create my first outreach campaign with email and LinkedIn sequences",
+      icon: Rocket,
+      color: "from-orange-500 to-red-600"
+    }
+  ],
+  "🎯 Lead Generation": [
+    {
+      title: "Scrape LinkedIn profiles",
+      prompt: "I have a list of LinkedIn URLs I need to scrape for contact information",
+      icon: Linkedin,
+      color: "from-blue-600 to-blue-700"
+    },
+    {
+      title: "Search by job title",
+      prompt: "Find all VPs of Sales at SaaS companies with 50-200 employees",
+      icon: Search,
+      color: "from-purple-500 to-pink-600"
+    },
+    {
+      title: "Enrich my prospect list",
+      prompt: "I have a CSV of prospects - can you find their emails and phone numbers?",
+      icon: Database,
+      color: "from-cyan-500 to-blue-600"
+    }
+  ],
+  "📝 Content & Messaging": [
+    {
+      title: "Write cold email sequence",
+      prompt: "Write a 3-email cold outreach sequence for my target audience",
+      icon: Mail,
+      color: "from-red-500 to-orange-600"
+    },
+    {
+      title: "LinkedIn connection request",
+      prompt: "Create personalized LinkedIn connection request templates",
+      icon: MessageSquare,
+      color: "from-green-600 to-teal-600"
+    },
+    {
+      title: "Follow-up templates",
+      prompt: "Create follow-up message templates for different scenarios",
+      icon: Send,
+      color: "from-purple-600 to-pink-600"
+    }
+  ],
+  "📊 Analytics & Optimization": [
+    {
+      title: "Analyze my campaigns",
+      prompt: "Show me the performance of my active campaigns and what to improve",
+      icon: BarChart3,
+      color: "from-yellow-500 to-orange-600"
+    },
+    {
+      title: "A/B test ideas",
+      prompt: "Suggest A/B tests I should run to improve my response rates",
+      icon: TestTube,
+      color: "from-blue-500 to-cyan-600"
+    },
+    {
+      title: "Benchmark my metrics",
+      prompt: "How do my campaign metrics compare to industry benchmarks?",
+      icon: TrendingUp,
+      color: "from-green-500 to-teal-600"
+    }
+  ],
+  "🎓 Training & Setup": [
+    {
+      title: "Define my ICP",
+      prompt: "Help me define my Ideal Customer Profile with specific criteria",
+      icon: Users,
+      color: "from-purple-500 to-blue-600"
+    },
+    {
+      title: "Upload value proposition",
+      prompt: "I want to upload documents about our value proposition and differentiators",
+      icon: FileText,
+      color: "from-orange-500 to-red-600"
+    },
+    {
+      title: "Set up integrations",
+      prompt: "Help me connect my LinkedIn, email, and CRM accounts",
+      icon: Link,
+      color: "from-cyan-500 to-teal-600"
+    }
+  ]
+};
+
+// Flatten for backward compatibility
+const quickActions: QuickAction[] = Object.values(conversationStarters).flat().map(action => ({
+  ...action,
+  description: "",
+  complexity: 'moderate' as const
+}));
 
 export function EnhancedConversationalInterface() {
   const { 
@@ -524,28 +584,47 @@ export function EnhancedConversationalInterface() {
           </div>
         )}
 
-        {/* Quick Actions */}
+        {/* Conversation Starters */}
         {messages.length <= 1 && (
           <div className="mb-8">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-semibold text-white mb-2 flex items-center justify-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-400" />
-                Quick Start
-                {!isAgentInitialized && (
-                  <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-400">
-                    Simplified Mode
-                  </Badge>
-                )}
+              <h2 className="text-2xl font-bold text-white mb-2">
+                What would you like to do today?
               </h2>
-              <p className="text-gray-400 text-sm">
-                {isAgentInitialized 
-                  ? "Choose an action below to engage the multi-agent system"
-                  : "Basic assistance available while agent system initializes"
-                }
+              <p className="text-gray-400">
+                Choose a conversation starter or just type your request below
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Categorized Conversation Starters */}
+            <div className="space-y-6">
+              {Object.entries(conversationStarters).map(([category, actions]) => (
+                <div key={category}>
+                  <h3 className="text-sm font-semibold text-gray-400 mb-3">{category}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {actions.map((action, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSendMessage(action.prompt)}
+                        className="group relative p-4 text-left rounded-lg border border-gray-700 bg-gray-800/50 hover:bg-gray-700/50 hover:border-gray-600 transition-all duration-200 hover:scale-[1.02]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg bg-gradient-to-r ${action.color} opacity-80 group-hover:opacity-100 transition-opacity`}>
+                            <action.icon className="h-4 w-4 text-white" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                            {action.title}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Original Quick Actions Grid - Hidden but kept for reference */}
+            <div className="hidden grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {quickActions.map((action, index) => (
                 <Card
                   key={index}

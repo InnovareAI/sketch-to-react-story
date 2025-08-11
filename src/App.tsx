@@ -22,6 +22,7 @@ import WorkspaceSettings from "./pages/WorkspaceSettings";
 import Agent from "./pages/Agent";
 import LinkedInIntegration from "./pages/LinkedInIntegration";
 import CampaignSetup from "./pages/CampaignSetup";
+import AgentFullScreen from "./pages/AgentFullScreen";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +35,8 @@ const App: React.FC = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/agent" element={<Agent />} />
+            <Route path="/agent" element={<AgentFullScreen />} />
+            <Route path="/agent-old" element={<Agent />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/campaigns" element={<Campaigns />} />
