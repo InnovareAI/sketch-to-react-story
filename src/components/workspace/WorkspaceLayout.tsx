@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SidebarProvider } from '@/components/ui/sidebar';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { 
   LogOut,
@@ -178,52 +177,50 @@ export default function WorkspaceLayout() {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen w-full">
-        {/* Sidebar */}
-        <WorkspaceSidebar 
-          isConversational={isConversational} 
-          workspaceName={user.workspace_name}
-        />
-        
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Top Header */}
-          <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Building2 className="h-5 w-5 text-gray-500" />
-                <span className="text-sm font-medium text-gray-900">{user.workspace_name}</span>
-                <Badge variant="outline" className="text-xs">{user.workspace_plan}</Badge>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-4 w-4" />
-              </Button>
-              
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
-                  <div className="text-xs text-gray-500">{user.email}</div>
-                </div>
-                {getRoleBadge(user.role)}
-                
-                <Button variant="ghost" onClick={handleSignOut} size="sm">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </div>
+    <div className="flex h-screen w-full">
+      {/* Sidebar */}
+      <WorkspaceSidebar 
+        isConversational={isConversational} 
+        workspaceName={user.workspace_name}
+      />
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Top Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Building2 className="h-5 w-5 text-gray-500" />
+              <span className="text-sm font-medium text-gray-900">{user.workspace_name}</span>
+              <Badge variant="outline" className="text-xs">{user.workspace_plan}</Badge>
             </div>
           </div>
-
-          {/* Main Content */}
-          <div className="flex-1 overflow-hidden">
-            <Outlet />
+          
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex items-center space-x-3">
+              <div className="text-right">
+                <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
+                <div className="text-xs text-gray-500">{user.email}</div>
+              </div>
+              {getRoleBadge(user.role)}
+              
+              <Button variant="ghost" onClick={handleSignOut} size="sm">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-hidden">
+          <Outlet />
+        </div>
       </div>
-    </SidebarProvider>
+    </div>
   );
 }
