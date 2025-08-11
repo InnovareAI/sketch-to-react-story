@@ -2,7 +2,7 @@
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/bba3997b-0289-4c6b-aef5-aefb7e33e751
+**URL**: https://sketch-to-react-story.netlify.app
 
 ## How can I edit this code?
 
