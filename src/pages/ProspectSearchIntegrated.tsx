@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft,
   Search,
@@ -25,20 +24,18 @@ import {
   AlertCircle,
   Download,
   X,
-  Settings,
-  Eye,
-  BookOpen,
-  Zap,
-  History
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchConfigurations, useProspectProfiles, useSearchExecution, useCsvUpload, useCampaignAssignments } from '@/hooks/useProspectSearch';
 import { ProspectSearchService } from '@/services/prospect-search';
-import { SearchConfigurationBuilder } from '@/components/prospect-search/SearchConfigurationBuilder';
-import { SearchPreviewAnalytics } from '@/components/prospect-search/SearchPreviewAnalytics';
-import { SavedSearchManager } from '@/components/prospect-search/SavedSearchManager';
-import { LinkedInUrlGenerator, LinkedInSearchParams, SearchUrlResult, linkedInUrlUtils } from '@/services/linkedin-url-generator';
-import type { SearchType as DatabaseSearchType, SearchMethod as DatabaseSearchMethod, CreateSearchConfigurationRequest, ProspectProfileInsert, SearchConfiguration } from '@/types/prospect-search';
+import type { 
+  SearchType as DatabaseSearchType, 
+  SearchMethod as DatabaseSearchMethod, 
+  CreateSearchConfigurationRequest, 
+  ProspectProfileInsert,
+  ProspectProfile 
+} from '@/types/prospect-search';
 
 type SearchTypeUI = {
   id: DatabaseSearchType;
@@ -76,7 +73,7 @@ type CsvUploadError = {
   message: string;
 };
 
-export default function ProspectSearch() {
+export default function ProspectSearchIntegrated() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedSearchType, setSelectedSearchType] = useState<SearchTypeUI | null>(null);
@@ -86,14 +83,7 @@ export default function ProspectSearch() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Enhanced search configuration state
-  const [activeTab, setActiveTab] = useState<'search' | 'builder' | 'analytics' | 'saved'>('search');
-  const [currentSearchParams, setCurrentSearchParams] = useState<LinkedInSearchParams>({});
-  const [currentUrlResult, setCurrentUrlResult] = useState<SearchUrlResult | null>(null);
-  const [selectedSavedSearch, setSelectedSavedSearch] = useState<SearchConfiguration | null>(null);
-  const [isProcessingCsv, setIsProcessingCsv] = useState(false);
-  const [csvErrors, setCsvErrors] = useState<CsvUploadError[]>([]);
+  const [currentSearchConfig, setCurrentSearchConfig] = useState<string | null>(null);
 
   const campaignName = searchParams.get('campaign') || 'Current Campaign';
   const workspaceId = 'temp-workspace-id'; // TODO: Get from auth context
@@ -103,12 +93,21 @@ export default function ProspectSearch() {
   const { configurations, createConfiguration } = useSearchConfigurations(workspaceId);
   const { prospects, bulkCreateProspects } = useProspectProfiles(workspaceId);
   const { isSearching, executeSearch } = useSearchExecution();
-  const { uploadSession, isUploading, isProcessing, validationErrors, createUploadSession, processUpload, validateCsvData } = useCsvUpload(workspaceId, userId);
+  const { 
+    uploadSession, 
+    isUploading, 
+    isProcessing, 
+    validationErrors, 
+    createUploadSession, 
+    processUpload, 
+    validateCsvData,
+    setUploadSession 
+  } = useCsvUpload(workspaceId, userId);
   const { assignProspectsToCampaign } = useCampaignAssignments(workspaceId, userId);
 
   const searchTypes: SearchTypeUI[] = [
     {
-      id: 'basic-search' as DatabaseSearchType,
+      id: 'basic-search',
       name: 'Basic search',
       description: 'Here you can upload a list of leads from LinkedIn\'s basic search functionality.',
       icon: Search,
@@ -320,77 +319,91 @@ export default function ProspectSearch() {
     }
   ];
 
+  // Create search configuration and execute search
   const handleStartSearch = async () => {
-    if (!linkedInUrl.trim()) return;
-    
-    // Validate URL first
-    const validation = linkedInUrlUtils.validateSearchUrl(linkedInUrl, selectedSearchType?.id.replace('-search', '').replace('-', ' '));
-    if (!validation.isValid) {
-      toast.error(`Invalid LinkedIn URL: ${validation.errors.join(', ')}`);
-      return;
-    }
+    if (!linkedInUrl.trim() || !selectedSearchType) return;
     
     try {
-      // Create search configuration if using URL builder
-      if (currentUrlResult?.isValid) {
-        const searchConfig = await createConfiguration({
-          name: `Search - ${new Date().toLocaleDateString()}`,
-          search_type: selectedSearchType!.id,
-          search_method: selectedMethod || 'url-search',
-          parameters: currentSearchParams,
-          filters: {}
-        }, userId);
-        
-        // Execute the search
-        const result = await executeSearch({
-          search_configuration_id: searchConfig.id,
-          searchUrl: linkedInUrl,
-          brightDataOptions: {
-            maxResults: 50,
-            country: currentSearchParams.country,
-            filters: {
-              location: currentSearchParams.location ? [currentSearchParams.location] : undefined,
-              industry: currentSearchParams.industryUrns,
-              currentCompany: currentSearchParams.currentCompany,
-              jobTitle: currentSearchParams.title ? [currentSearchParams.title] : undefined
-            }
-          }
-        });
-        
-        if (result.status === 'started') {
-          toast.success(`Search started! Tracking ID: ${result.search_history_id}`);
-          
-          // Show budget status if relevant
-          if (result.budget_status === 'warning') {
-            toast.warning('Budget utilization is high - monitor usage carefully');
-          }
-          
-          // Mock results for immediate feedback
-          const mockResults: ProspectData[] = [
-            { name: 'John Doe', title: 'CEO', company: 'TechCorp', location: 'San Francisco', source: 'url_search' },
-            { name: 'Jane Smith', title: 'CTO', company: 'InnovateLabs', location: 'Austin', source: 'url_search' },
-            { name: 'Mike Johnson', title: 'VP Sales', company: 'GrowthCo', location: 'New York', source: 'url_search' }
-          ];
-          setSearchResults(mockResults);
-        }
-      } else {
-        // Fallback to simple mock search
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
+      // Create search configuration
+      const configRequest: CreateSearchConfigurationRequest = {
+        name: `${selectedSearchType.name} - ${new Date().toLocaleDateString()}`,
+        search_type: selectedSearchType.id,
+        search_method: selectedMethod || 'url-search',
+        parameters: {
+          search_url: linkedInUrl,
+          execution_date: new Date().toISOString(),
+        },
+        filters: {},
+      };
+
+      const config = await createConfiguration(configRequest, userId);
+      setCurrentSearchConfig(config.id);
+
+      // Execute the search
+      const response = await executeSearch({
+        search_configuration_id: config.id,
+        execution_type: 'manual',
+        search_url: linkedInUrl,
+      });
+
+      if (response.status === 'started') {
+        // For demo purposes, create some mock results
+        // In production, this would be handled by background jobs
         const mockResults: ProspectData[] = [
-          { name: 'John Doe', title: 'CEO', company: 'TechCorp', location: 'San Francisco', source: 'url_search' },
-          { name: 'Jane Smith', title: 'CTO', company: 'InnovateLabs', location: 'Austin', source: 'url_search' },
-          { name: 'Mike Johnson', title: 'VP Sales', company: 'GrowthCo', location: 'New York', source: 'url_search' }
+          { 
+            name: 'John Doe', 
+            title: 'CEO', 
+            company: 'TechCorp', 
+            location: 'San Francisco', 
+            linkedin_url: 'https://linkedin.com/in/johndoe',
+            source: 'url_search' 
+          },
+          { 
+            name: 'Jane Smith', 
+            title: 'CTO', 
+            company: 'InnovateLabs', 
+            location: 'Austin', 
+            email: 'jane@innovatelabs.com',
+            source: 'url_search' 
+          },
+          { 
+            name: 'Mike Johnson', 
+            title: 'VP Sales', 
+            company: 'GrowthCo', 
+            location: 'New York', 
+            phone: '+1-555-0123',
+            source: 'url_search' 
+          }
         ];
+        
         setSearchResults(mockResults);
+        
+        // Convert to database format and bulk create
+        const prospectsToCreate: ProspectProfileInsert[] = mockResults.map(result => ({
+          workspace_id: workspaceId,
+          full_name: result.name,
+          title: result.title,
+          company_name: result.company,
+          location: result.location,
+          email: result.email,
+          profile_url: result.linkedin_url,
+          phone: result.phone,
+          source: 'linkedin_search',
+          source_details: {
+            search_config_id: config.id,
+            search_url: linkedInUrl,
+          },
+        }));
+
+        await bulkCreateProspects(prospectsToCreate);
       }
     } catch (error) {
       console.error('Search execution error:', error);
-      toast.error('Failed to execute search');
+      toast.error(error instanceof Error ? error.message : 'Search execution failed');
     }
   };
 
-  // CSV Parsing Functions
+  // CSV Parsing Functions (updated to use database service)
   const parseCsvFile = async (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -407,7 +420,7 @@ export default function ProspectSearch() {
           const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
           const data = lines.slice(1).map((line, index) => {
             const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
-            const row: any = { _rowNumber: index + 2 }; // +2 because we start from line 2
+            const row: any = { _rowNumber: index + 2 };
             headers.forEach((header, i) => {
               row[header] = values[i] || '';
             });
@@ -424,115 +437,87 @@ export default function ProspectSearch() {
     });
   };
 
-  const validateCsvDataLocal = (data: any[]): { prospects: ProspectData[]; errors: CsvUploadError[] } => {
-    const prospects: ProspectData[] = [];
-    const errors: CsvUploadError[] = [];
-    
-    // Required field mappings
-    const fieldMappings = {
-      name: ['name', 'full_name', 'fullname', 'full name'],
-      title: ['title', 'position', 'job_title', 'job title', 'role'],
-      company: ['company', 'company_name', 'company name', 'organization'],
-      location: ['location', 'city', 'region', 'country'],
-      email: ['email', 'email_address', 'email address'],
-      linkedin_url: ['linkedin_url', 'linkedin', 'linkedin_profile', 'profile_url', 'linkedin url'],
-      phone: ['phone', 'phone_number', 'phone number', 'mobile']
-    };
+  const handleCsvUpload = async (file: File) => {
+    if (!file || !selectedSearchType) return;
 
-    data.forEach((row, index) => {
-      const prospect: Partial<ProspectData> = { source: 'csv_upload' };
+    try {
+      // Parse CSV file first
+      const rawData = await parseCsvFile(file);
+      setCsvData(rawData);
+
+      // Create field mappings (simplified for demo)
+      const fieldMappings = {
+        full_name: 'name',
+        company_name: 'company',
+        title: 'title',
+        email: 'email',
+        profile_url: 'linkedin_url',
+        location: 'location',
+        phone: 'phone',
+      };
+
+      // Validate CSV data
+      const validation = validateCsvData(rawData, fieldMappings);
       
-      // Map fields using flexible field names
-      Object.entries(fieldMappings).forEach(([targetField, possibleNames]) => {
-        const foundField = possibleNames.find(name => row[name] && row[name].trim());
-        if (foundField) {
-          (prospect as any)[targetField] = row[foundField].trim();
-        }
+      if (validation.errors.length > 0) {
+        toast.error(`Found ${validation.errors.length} validation errors in CSV`);
+        return;
+      }
+
+      // Create upload session
+      const uploadResponse = await createUploadSession({
+        filename: file.name,
+        file_size: file.size,
+        field_mappings: fieldMappings,
       });
 
-      // Validate required fields
-      if (!prospect.name) {
-        errors.push({
-          row: row._rowNumber,
-          field: 'name',
-          message: 'Name is required'
+      if (uploadResponse.status === 'created' && uploadResponse.session_id) {
+        // Process the upload
+        const processResponse = await processUpload({
+          session_id: uploadResponse.session_id,
+          create_prospects: true,
+          auto_enrich: true,
+          deduplicate: true,
         });
-      }
-      
-      if (!prospect.company) {
-        errors.push({
-          row: row._rowNumber,
-          field: 'company',
-          message: 'Company is required'
-        });
-      }
 
-      // Validate LinkedIn URL format if provided
-      if (prospect.linkedin_url && !prospect.linkedin_url.includes('linkedin.com')) {
-        errors.push({
-          row: row._rowNumber,
-          field: 'linkedin_url',
-          message: 'LinkedIn URL must contain "linkedin.com"'
-        });
-      }
+        if (processResponse.status === 'processing') {
+          // Convert CSV data to prospects and create them
+          const prospectsToCreate: ProspectProfileInsert[] = rawData.map(row => ({
+            workspace_id: workspaceId,
+            full_name: row[fieldMappings.full_name] || '',
+            company_name: row[fieldMappings.company_name] || '',
+            title: row[fieldMappings.title],
+            email: row[fieldMappings.email],
+            profile_url: row[fieldMappings.profile_url],
+            location: row[fieldMappings.location],
+            phone: row[fieldMappings.phone],
+            source: 'csv_upload',
+            source_details: {
+              upload_session_id: uploadResponse.session_id,
+              filename: file.name,
+            },
+          }));
 
-      // Validate email format if provided
-      if (prospect.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(prospect.email)) {
-        errors.push({
-          row: row._rowNumber,
-          field: 'email',
-          message: 'Invalid email format'
-        });
-      }
+          const result = await bulkCreateProspects(prospectsToCreate, true);
+          
+          // Convert to display format
+          const displayResults: ProspectData[] = result.created.map(prospect => ({
+            name: prospect.full_name,
+            title: prospect.title || '',
+            company: prospect.company_name || '',
+            location: prospect.location,
+            email: prospect.email,
+            linkedin_url: prospect.profile_url,
+            phone: prospect.phone,
+            source: 'csv_upload',
+          }));
 
-      // If required fields are present, add to prospects
-      if (prospect.name && prospect.company) {
-        prospects.push(prospect as ProspectData);
-      }
-    });
-
-    return { prospects, errors };
-  };
-
-  const handleCsvUpload = async (file: File) => {
-    if (!file) return;
-
-    setIsProcessingCsv(true);
-    setCsvErrors([]);
-    
-    try {
-      // Parse CSV file
-      const rawData = await parseCsvFile(file);
-      
-      // Validate and clean data
-      const { prospects, errors } = validateCsvDataLocal(rawData);
-      
-      setCsvData(rawData);
-      setCsvErrors(errors);
-      
-      if (errors.length > 0) {
-        toast.error(`Found ${errors.length} validation errors in CSV file`);
-      }
-      
-      if (prospects.length > 0) {
-        // Check if we have LinkedIn URLs for enrichment
-        const prospectsWithLinkedIn = prospects.filter(p => p.linkedin_url);
-        
-        if (prospectsWithLinkedIn.length > 0) {
-          toast.info(`Found ${prospectsWithLinkedIn.length} prospects with LinkedIn URLs - enrichment available`);
+          setSearchResults(displayResults);
         }
-        
-        setSearchResults(prospects);
-        toast.success(`Successfully loaded ${prospects.length} prospects from CSV`);
-      } else {
-        toast.warning('No valid prospects found in CSV file');
       }
-      
     } catch (error) {
       console.error('CSV processing error:', error);
       toast.error(`Failed to process CSV: ${(error as Error).message}`);
-    } finally {
-      setIsProcessingCsv(false);
     }
   };
 
@@ -576,75 +561,39 @@ Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/m
     
     toast.success('Sample CSV downloaded');
   };
-  
-  // Handle search configuration changes
-  const handleConfigurationChange = (params: LinkedInSearchParams, urlResult: SearchUrlResult) => {
-    setCurrentSearchParams(params);
-    setCurrentUrlResult(urlResult);
-    if (urlResult.isValid) {
-      setLinkedInUrl(urlResult.url);
-    }
-  };
-  
-  // Handle URL generation
-  const handleUrlGenerated = (url: string) => {
-    setLinkedInUrl(url);
-  };
-  
-  // Handle saved search selection
-  const handleSavedSearchSelect = (config: SearchConfiguration) => {
-    setSelectedSavedSearch(config);
-    
-    // Find corresponding search type UI
-    const searchTypeUI = searchTypes.find(st => st.id === config.search_type);
-    if (searchTypeUI) {
-      setSelectedSearchType(searchTypeUI);
-      setSelectedMethod(config.search_method);
-      
-      // Try to generate URL from saved parameters
-      const params = config.parameters as LinkedInSearchParams;
-      setCurrentSearchParams(params);
-      
-      // Generate URL based on search type
-      let urlResult: SearchUrlResult;
-      switch (config.search_type) {
-        case 'basic-search':
-          urlResult = LinkedInUrlGenerator.generateBasicSearchUrl(params);
-          break;
-        case 'sales-navigator':
-          urlResult = LinkedInUrlGenerator.generateSalesNavigatorUrl(params);
-          break;
-        case 'recruiter-search':
-          urlResult = LinkedInUrlGenerator.generateRecruiterSearchUrl(params);
-          break;
-        default:
-          urlResult = LinkedInUrlGenerator.generateBasicSearchUrl(params);
-      }
-      
-      if (urlResult.isValid) {
-        setLinkedInUrl(urlResult.url);
-        setCurrentUrlResult(urlResult);
-      }
-      
-      toast.success(`Loaded search configuration: ${config.name}`);
-    }
-  };
-  
-  // Handle saved search execution
-  const handleSavedSearchExecute = async (config: SearchConfiguration) => {
+
+  // Handle adding prospects to campaign
+  const handleAddProspectsToCampaign = async () => {
+    if (searchResults.length === 0) return;
+
     try {
-      const result = await executeSearch({
-        search_configuration_id: config.id,
-        execution_type: 'manual'
-      });
+      // First, we need to get the prospect IDs from the database
+      // For demo purposes, we'll use the prospects from our hook
+      const prospectIds = prospects.slice(0, searchResults.length).map(p => p.id);
       
-      if (result.status === 'started') {
-        toast.success(`Search "${config.name}" started successfully!`);
-      } else {
-        toast.error(`Failed to start search: ${result.message}`);
+      if (prospectIds.length === 0) {
+        toast.error('No prospects found to assign');
+        return;
       }
+
+      const campaignId = 'temp-campaign-id'; // TODO: Get actual campaign ID
+      
+      await assignProspectsToCampaign({
+        prospect_ids: prospectIds,
+        campaign_id: campaignId,
+        segment: selectedSearchType?.name,
+        priority: 1,
+        custom_fields: {
+          search_type: selectedSearchType?.id,
+          search_method: selectedMethod,
+          import_date: new Date().toISOString(),
+        },
+      });
+
+      navigate('/campaign-setup');
     } catch (error) {
-      toast.error('Failed to execute saved search');
+      console.error('Assignment error:', error);
+      toast.error('Failed to assign prospects to campaign');
     }
   };
 
@@ -652,49 +601,20 @@ Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/m
     return (
       <div className="flex-1 bg-gray-50">
         <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
               <Button variant="ghost" onClick={() => setSelectedSearchType(null)}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Search Types
               </Button>
-              <div className="flex-1">
+              <div>
                 <h1 className="text-2xl font-bold text-gray-900">{selectedSearchType.name}</h1>
                 <p className="text-gray-600">Create new search for {campaignName}</p>
               </div>
-              {selectedSavedSearch && (
-                <Badge variant="outline" className="px-3 py-1">
-                  <BookOpen className="h-3 w-3 mr-1" />
-                  Using: {selectedSavedSearch.name}
-                </Badge>
-              )}
             </div>
-            
-            {/* Enhanced Tabs Navigation */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="search" className="flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Quick Search
-                </TabsTrigger>
-                <TabsTrigger value="builder" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  Advanced Builder
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" />
-                  URL Analytics
-                </TabsTrigger>
-                <TabsTrigger value="saved" className="flex items-center gap-2">
-                  <History className="h-4 w-4" />
-                  Saved Searches
-                </TabsTrigger>
-              </TabsList>
-              
-              {/* Quick Search Tab */}
-              <TabsContent value="search">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Side - Search Configuration */}
               <div className="space-y-6">
                 <Card>
@@ -753,7 +673,7 @@ Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/m
                         >
                           {isSearching ? (
                             <>
-                              <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                               Searching...
                             </>
                           ) : (
@@ -810,8 +730,8 @@ Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/m
                               onClick={() => {
                                 setCsvFile(null);
                                 setCsvData([]);
-                                setCsvErrors([]);
                                 setSearchResults([]);
+                                setUploadSession(null);
                                 if (fileInputRef.current) {
                                   fileInputRef.current.value = '';
                                 }
@@ -822,22 +742,46 @@ Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/m
                           </div>
                         )}
 
-                        {/* CSV Errors Display */}
-                        {csvErrors.length > 0 && (
+                        {/* CSV Processing Status */}
+                        {uploadSession && (
+                          <div className="bg-blue-50 p-4 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              {isProcessing ? (
+                                <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              )}
+                              <span className="text-sm font-medium">
+                                CSV Status: {uploadSession.status.replace('_', ' ').toUpperCase()}
+                              </span>
+                            </div>
+                            {uploadSession.total_rows > 0 && (
+                              <div className="text-xs text-gray-600 space-y-1">
+                                <p>Total rows: {uploadSession.total_rows}</p>
+                                <p>Valid rows: {uploadSession.valid_rows}</p>
+                                <p>Invalid rows: {uploadSession.invalid_rows}</p>
+                                <p>Processed: {uploadSession.processed_rows}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* CSV Validation Errors */}
+                        {validationErrors.length > 0 && (
                           <Alert className="border-red-200 bg-red-50">
                             <AlertCircle className="h-4 w-4 text-red-600" />
                             <AlertDescription>
                               <div className="space-y-2">
-                                <p className="font-medium text-red-800">Found {csvErrors.length} validation errors:</p>
+                                <p className="font-medium text-red-800">Found {validationErrors.length} validation errors:</p>
                                 <div className="max-h-32 overflow-y-auto space-y-1">
-                                  {csvErrors.slice(0, 5).map((error, index) => (
+                                  {validationErrors.slice(0, 5).map((error, index) => (
                                     <div key={index} className="text-xs text-red-700">
                                       Row {error.row}: {error.message} ({error.field})
                                     </div>
                                   ))}
-                                  {csvErrors.length > 5 && (
+                                  {validationErrors.length > 5 && (
                                     <div className="text-xs text-red-600">
-                                      ... and {csvErrors.length - 5} more errors
+                                      ... and {validationErrors.length - 5} more errors
                                     </div>
                                   )}
                                 </div>
@@ -867,10 +811,12 @@ Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/m
                           </Button>
                         </div>
 
-                        {isProcessingCsv && (
+                        {(isUploading || isProcessing) && (
                           <div className="flex items-center justify-center p-4">
-                            <div className="w-6 h-6 mr-2 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                            <span className="text-sm text-gray-600">Processing CSV file...</span>
+                            <RefreshCw className="w-6 h-6 mr-2 animate-spin text-blue-600" />
+                            <span className="text-sm text-gray-600">
+                              {isUploading ? 'Uploading CSV file...' : 'Processing CSV data...'}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -996,7 +942,7 @@ Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/m
                               )}
                             </div>
                           </div>
-                          <Button className="w-full" onClick={() => navigate('/campaign-setup')}>
+                          <Button className="w-full" onClick={handleAddProspectsToCampaign}>
                             <Plus className="h-4 w-4 mr-2" />
                             Add {searchResults.length} Prospects to Campaign
                           </Button>
@@ -1012,128 +958,7 @@ Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/m
                   </CardContent>
                 </Card>
               </div>
-                </div>
-              </TabsContent>
-              
-              {/* Advanced Builder Tab */}
-              <TabsContent value="builder">
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  <div className="xl:col-span-2">
-                    <SearchConfigurationBuilder
-                      searchType={selectedSearchType.id}
-                      initialParams={currentSearchParams}
-                      onConfigurationChange={handleConfigurationChange}
-                      onUrlGenerated={handleUrlGenerated}
-                      showPreview={true}
-                      className=""
-                    />
-                  </div>
-                  
-                  {/* Search Results Preview */}
-                  <div className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <Zap className="h-4 w-4" />
-                          Quick Actions
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <Button 
-                          onClick={handleStartSearch} 
-                          disabled={!currentUrlResult?.isValid || isSearching}
-                          className="w-full"
-                        >
-                          {isSearching ? (
-                            <>
-                              <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              Searching...
-                            </>
-                          ) : (
-                            <>
-                              <Search className="h-4 w-4 mr-2" />
-                              Start Search
-                            </>
-                          )}
-                        </Button>
-                        
-                        {currentUrlResult?.isValid && (
-                          <Button 
-                            variant="outline" 
-                            onClick={() => window.open(currentUrlResult.url, '_blank')}
-                            className="w-full"
-                          >
-                            <Link className="h-4 w-4 mr-2" />
-                            Preview in LinkedIn
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                    
-                    {/* Search Results */}
-                    {searchResults.length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-sm">Search Results Preview</CardTitle>
-                          <CardDescription>
-                            Showing {searchResults.length} prospects found
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3 max-h-96 overflow-y-auto">
-                          {searchResults.slice(0, 5).map((result, index) => (
-                            <div key={index} className="p-3 border rounded-lg">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-medium text-sm">{result.name}</h4>
-                                <Badge variant="secondary" className="text-xs">
-                                  {result.source === 'url_search' ? 'LinkedIn' : 'CSV'}
-                                </Badge>
-                              </div>
-                              {result.title && (
-                                <p className="text-xs text-gray-600">
-                                  {result.title} {result.company && `at ${result.company}`}
-                                </p>
-                              )}
-                              {result.location && (
-                                <p className="text-xs text-gray-500">{result.location}</p>
-                              )}
-                            </div>
-                          ))}
-                          
-                          {searchResults.length > 5 && (
-                            <p className="text-xs text-gray-500 text-center py-2">
-                              +{searchResults.length - 5} more prospects
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
-              
-              {/* URL Analytics Tab */}
-              <TabsContent value="analytics">
-                <SearchPreviewAnalytics
-                  searchUrl={linkedInUrl}
-                  onUrlChange={setLinkedInUrl}
-                  showVariations={true}
-                  showOptimization={true}
-                  className=""
-                />
-              </TabsContent>
-              
-              {/* Saved Searches Tab */}
-              <TabsContent value="saved">
-                <SavedSearchManager
-                  workspaceId={workspaceId}
-                  userId={userId}
-                  onSearchSelect={handleSavedSearchSelect}
-                  onSearchExecute={handleSavedSearchExecute}
-                  showExecuteActions={true}
-                  className=""
-                />
-              </TabsContent>
-            </Tabs>
+            </div>
           </div>
         </main>
       </div>
