@@ -18,6 +18,8 @@ import {
   AgentConfig,
   AgentCapability
 } from '../types/AgentTypes';
+import { LLMService, LLMMessage } from '../../llm/LLMService';
+import { MemoryService } from '../../memory/MemoryService';
 
 export type OperationMode = 'outbound' | 'inbound';
 
@@ -25,12 +27,16 @@ export class OrchestratorAgent extends BaseAgent {
   private specialists: Map<AgentType, AgentInstance> = new Map();
   private activeContext: Map<string, ConversationContext> = new Map();
   private operationMode: OperationMode = 'outbound';
+  private llmService: LLMService;
+  private memoryService: MemoryService;
   public readonly name = 'SAM';
   public readonly description = 'Your AI Sales & Communications Expert';
 
   constructor(config: AgentConfig) {
     super('orchestrator', config);
     this.initializeCapabilities();
+    this.llmService = LLMService.getInstance();
+    this.memoryService = MemoryService.getInstance();
   }
 
   public setOperationMode(mode: OperationMode): void {
@@ -428,47 +434,90 @@ export class OrchestratorAgent extends BaseAgent {
     taskResults: TaskResponse[],
     context: ConversationContext
   ): Promise<string> {
-    // If no successful results, provide helpful fallback
-    const successfulResults = taskResults.filter(r => r.success);
+    // Get relevant memories for context
+    const memories = this.memoryService.getRelevantMemories({
+      tags: [intent.intent]
+    });
     
-    if (successfulResults.length === 0) {
+    // Build LLM messages with context
+    const messages: LLMMessage[] = [
+      {
+        role: 'system',
+        content: this.llmService.createSystemPrompt('orchestrator', {
+          mode: this.operationMode,
+          intent: intent.intent,
+          memories: memories.slice(0, 3) // Include top 3 relevant memories
+        })
+      }
+    ];
+
+    // Add conversation history
+    const recentMessages = context.messageHistory.slice(-5);
+    recentMessages.forEach(msg => {
+      messages.push({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    });
+
+    // Add current message
+    messages.push({
+      role: 'user',
+      content: originalMessage
+    });
+
+    // If we have task results, add them as context
+    if (taskResults.length > 0) {
+      const resultsContext = taskResults
+        .filter(r => r.success && r.result)
+        .map(r => r.result)
+        .join('\n\n');
+      
+      if (resultsContext) {
+        messages.push({
+          role: 'system',
+          content: `Task results from specialist agents:\n${resultsContext}`
+        });
+      }
+    }
+
+    try {
+      // Get LLM response
+      const llmResponse = await this.llmService.chat(messages, {
+        model: this.getModelForIntent(intent.intent),
+        temperature: 0.7,
+        maxTokens: 1500
+      });
+
+      // Extract and store any new context from the conversation
+      await this.memoryService.extractFromConversation(originalMessage, llmResponse.content);
+
+      // Add follow-up suggestions if appropriate
+      const suggestions = this.generateFollowUpSuggestions(intent.intent, taskResults);
+      if (suggestions.length > 0) {
+        return `${llmResponse.content}\n\n**Suggested next steps:**\n${suggestions.map(s => `• ${s}`).join('\n')}`;
+      }
+
+      return llmResponse.content;
+    } catch (error) {
+      console.error('LLM synthesis failed, using fallback:', error);
       return this.generateFallbackResponse(intent.intent, originalMessage);
     }
+  }
 
-    // Synthesize response based on intent and results
-    const primaryResult = successfulResults[0];
-    let response = "";
+  private getModelForIntent(intent: MessageIntent): string {
+    // Use different models based on intent complexity
+    const modelMap: Record<MessageIntent, string> = {
+      'lead-generation': 'quality',
+      'campaign-optimization': 'quality',
+      'content-creation': 'creative',
+      'performance-analysis': 'analysis',
+      'automation-setup': 'quality',
+      'knowledge-query': 'balanced',
+      'general-question': 'fast'
+    };
 
-    switch (intent.intent) {
-      case 'lead-generation':
-        response = this.synthesizeLeadGenerationResponse(primaryResult, successfulResults);
-        break;
-      case 'campaign-optimization':
-        response = this.synthesizeCampaignOptimizationResponse(primaryResult, successfulResults);
-        break;
-      case 'content-creation':
-        response = this.synthesizeContentCreationResponse(primaryResult, successfulResults);
-        break;
-      case 'performance-analysis':
-        response = this.synthesizeAnalyticsResponse(primaryResult, successfulResults);
-        break;
-      case 'automation-setup':
-        response = this.synthesizeAutomationResponse(primaryResult, successfulResults);
-        break;
-      case 'knowledge-query':
-      case 'general-question':
-      default:
-        response = this.synthesizeKnowledgeResponse(primaryResult, successfulResults, originalMessage);
-        break;
-    }
-
-    // Add suggestions for follow-up actions
-    const suggestions = this.generateFollowUpSuggestions(intent.intent, successfulResults);
-    if (suggestions.length > 0) {
-      response += `\n\n**What would you like to do next?**\n${suggestions.map(s => `• ${s}`).join('\n')}`;
-    }
-
-    return response;
+    return modelMap[intent] || 'balanced';
   }
 
   private generateFallbackResponse(intent: MessageIntent, originalMessage: string): string {
