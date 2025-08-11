@@ -518,6 +518,7 @@ export default function Templates() {
             )}
           </CardContent>
         </Card>
+      </div>
             </div>
           </main>
         </div>
