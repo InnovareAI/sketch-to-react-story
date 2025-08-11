@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { 
   ArrowLeft,
@@ -471,7 +472,7 @@ export default function CampaignSetup() {
                         <Plus className="h-4 w-4 mr-2" />
                         Add follow up
                       </Button>
-                      <Button onClick={handleSaveCampaign}>
+                      <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveCampaign}>
                         <Save className="h-4 w-4 mr-2" />
                         Save messages
                       </Button>
@@ -603,89 +604,393 @@ export default function CampaignSetup() {
 
                 {/* Settings Tab */}
                 <TabsContent value="settings" className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Campaign Settings</CardTitle>
-                      <CardDescription>Configure your campaign parameters and behavior</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="daily-limit">Daily connection requests limit</Label>
-                            <Input id="daily-limit" type="number" defaultValue="15" />
-                          </div>
-                          <div>
-                            <Label htmlFor="weekly-limit">Weekly connection requests limit</Label>
-                            <Input id="weekly-limit" type="number" defaultValue="100" />
-                          </div>
-                          <div>
-                            <Label htmlFor="timezone">Timezone</Label>
-                            <Select defaultValue="pst">
-                              <SelectTrigger>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">Set campaign parameters to run the campaign</h3>
+                      </div>
+                      <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveCampaign}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save
+                      </Button>
+                    </div>
+
+                    {/* Campaign Name */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Campaign name</CardTitle>
+                        <CardDescription>Rename your campaign here for easier campaign management.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <Label htmlFor="campaign-name-settings">Enter campaign name</Label>
+                          <Input 
+                            id="campaign-name-settings"
+                            value={campaignName}
+                            onChange={(e) => setCampaignName(e.target.value)}
+                            placeholder="New Campaign - 11 Aug, 2025"
+                            maxLength={100}
+                          />
+                          <p className="text-xs text-gray-500">Characters: {campaignName.length}/100</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Campaign Limits */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Campaign limits</CardTitle>
+                        <CardDescription>Specify the daily limit for this campaign. These limits will be applied to reach out to your leads.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="daily-contacts">Set the number of new people to be contacted by this campaign daily:</Label>
+                          <Input id="daily-contacts" type="number" defaultValue="20" className="mt-2" />
+                        </div>
+                        <div>
+                          <Label htmlFor="daily-followups">Set the number of follow up messages to be sent from this campaign daily:</Label>
+                          <Input id="daily-followups" type="number" defaultValue="50" className="mt-2" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Campaign Priority */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Campaign Priority</CardTitle>
+                        <CardDescription>If enabled, each campaign will have a default priority value "Medium". If a campaign priority is changed to "High" more actions will be scheduled to be sent from it in comparison to campaigns with lower priority.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label>Priority level</Label>
+                          <div className="flex items-center gap-3">
+                            <Checkbox id="use-priority" />
+                            <Label htmlFor="use-priority" className="text-sm">Use priority</Label>
+                            <Select defaultValue="medium">
+                              <SelectTrigger className="w-32">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="pst">Pacific Standard Time (PST)</SelectItem>
-                                <SelectItem value="est">Eastern Standard Time (EST)</SelectItem>
-                                <SelectItem value="utc">Coordinated Universal Time (UTC)</SelectItem>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="start-time">Start time</Label>
-                            <Input id="start-time" type="time" defaultValue="09:00" />
+                      </CardContent>
+                    </Card>
+
+                    {/* Schedule Campaign */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Schedule campaign</CardTitle>
+                        <CardDescription>You can schedule when campaign will be active. Just set date and time. Once the campaign is set to active, messages will start being sent as soon as the associated LinkedIn profile has entered its active hours</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label>Select date and time</Label>
+                          <div className="flex items-center gap-3 mt-2">
+                            <RadioGroup defaultValue="immediately">
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="immediately" id="start-immediately" />
+                                <Label htmlFor="start-immediately">Start immediately</Label>
+                              </div>
+                              <div className="flex items-center space-x-2 mt-2">
+                                <RadioGroupItem value="scheduled" id="scheduled" />
+                                <Label htmlFor="scheduled">Schedule for:</Label>
+                              </div>
+                            </RadioGroup>
+                            <Input type="datetime-local" placeholder="mm/dd/yyyy, --:-- --" className="ml-4" />
                           </div>
-                          <div>
-                            <Label htmlFor="end-time">End time</Label>
-                            <Input id="end-time" type="time" defaultValue="17:00" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Active days</Label>
-                            <div className="flex gap-2">
-                              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                                <div key={day} className="flex items-center space-x-2">
-                                  <Checkbox id={day} defaultChecked={day !== 'Sat' && day !== 'Sun'} />
-                                  <Label htmlFor={day} className="text-sm">{day}</Label>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+                          <p className="text-xs text-gray-500 mt-2">Times are set according to the time zone US/Mountain (GMT -0600), which can also be set from the account settings.</p>
                         </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Prospects */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Prospects</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label>Override and allow outreaching to LinkedIn profiles from the same company</Label>
+                          </div>
+                          <Checkbox id="override-company" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label>Override LinkedIn profiles</Label>
+                          </div>
+                          <Checkbox id="override-profiles" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label>Enable duplicating leads between company campaigns</Label>
+                          </div>
+                          <Checkbox id="duplicate-leads" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Campaign Status */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Campaign status</CardTitle>
+                        <CardDescription>You can turn this campaign on and off. An active campaign will send out actions according to your campaign and profile settings. If the campaign is disabled, all campaign activity will be paused.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="text-gray-600">
+                            Inactive
+                          </Badge>
+                          <Button onClick={handleActivateCampaign}>
+                            <Play className="h-4 w-4 mr-2" />
+                            Activate Campaign
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Delete Campaign */}
+                    <Card className="border-red-200">
+                      <CardHeader>
+                        <CardTitle className="text-red-600">Delete campaign</CardTitle>
+                        <CardDescription>Deleting a campaign will stop all the campaign's activity. Contacts from the campaign will remain in 'My Network' and in your 'Inbox', however, they will no longer receive messages from the deleted campaign. You will be able to continue manual communication with these contacts.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button variant="destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete campaign
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* Stats Tab */}
+                <TabsContent value="stats" className="space-y-6">
+                  {/* Connection Statistics Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Connection Statistics</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-2xl font-bold">0</span>
+                            <span className="text-sm text-gray-600">Connected out of all requests sent</span>
+                          </div>
+                          <Progress value={0} className="h-2" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Reply Statistics</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-2xl font-bold">0</span>
+                            <span className="text-sm text-gray-600">Total replied after connecting</span>
+                          </div>
+                          <Progress value={0} className="h-2" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Day by Day Statistics */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Day by day statistics</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="date" 
+                            className="w-36"
+                            placeholder="Start date"
+                          />
+                          <span className="text-gray-500">to</span>
+                          <Input 
+                            type="date" 
+                            className="w-36"
+                            placeholder="End date"
+                          />
+                          <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4 mr-2" />
+                            Download CSV
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Chart Area */}
+                      <div className="h-64 flex items-center justify-center border rounded-lg bg-gray-50">
+                        <div className="text-center text-gray-500">
+                          <BarChart3 className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                          <p>No data available for the selected period</p>
+                        </div>
+                      </div>
+                      
+                      {/* Filter Checkboxes */}
+                      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="company-follows" defaultChecked />
+                          <Label htmlFor="company-follows" className="text-sm font-normal">
+                            Company follows
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="connected" defaultChecked />
+                          <Label htmlFor="connected" className="text-sm font-normal">
+                            Connected
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="emails" defaultChecked />
+                          <Label htmlFor="emails" className="text-sm font-normal">
+                            Emails
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="failed-connections" defaultChecked />
+                          <Label htmlFor="failed-connections" className="text-sm font-normal">
+                            Failed connections
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="follow-message" defaultChecked />
+                          <Label htmlFor="follow-message" className="text-sm font-normal">
+                            Follow message
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="invitations" defaultChecked />
+                          <Label htmlFor="invitations" className="text-sm font-normal">
+                            Invitations
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="invitations-sent" defaultChecked />
+                          <Label htmlFor="invitations-sent" className="text-sm font-normal">
+                            Invitations sent
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="network-size" defaultChecked />
+                          <Label htmlFor="network-size" className="text-sm font-normal">
+                            Network size
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="pending" defaultChecked />
+                          <Label htmlFor="pending" className="text-sm font-normal">
+                            Pending
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="people-follows" defaultChecked />
+                          <Label htmlFor="people-follows" className="text-sm font-normal">
+                            People follows
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="profile-viewed" defaultChecked />
+                          <Label htmlFor="profile-viewed" className="text-sm font-normal">
+                            Profile viewed
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="replied" defaultChecked />
+                          <Label htmlFor="replied" className="text-sm font-normal">
+                            Replied
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="skills-endorsed" defaultChecked />
+                          <Label htmlFor="skills-endorsed" className="text-sm font-normal">
+                            Skills endorsed
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="successful-calls" defaultChecked />
+                          <Label htmlFor="successful-calls" className="text-sm font-normal">
+                            Successful calls
+                          </Label>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Detailed Statistics Table */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Campaign Performance Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="rounded-lg border">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b">
+                            <tr>
+                              <th className="text-left p-3 font-medium text-gray-700">Metric</th>
+                              <th className="text-center p-3 font-medium text-gray-700">Total</th>
+                              <th className="text-center p-3 font-medium text-gray-700">This Week</th>
+                              <th className="text-center p-3 font-medium text-gray-700">Today</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b">
+                              <td className="p-3 text-gray-900">Invitations Sent</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-3 text-gray-900">Connections Made</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-3 text-gray-900">Messages Sent</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-3 text-gray-900">Replies Received</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-3 text-gray-900">Profile Views</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                              <td className="p-3 text-center">0</td>
+                            </tr>
+                            <tr>
+                              <td className="p-3 text-gray-900 font-medium">Response Rate</td>
+                              <td className="p-3 text-center font-medium">0%</td>
+                              <td className="p-3 text-center font-medium">0%</td>
+                              <td className="p-3 text-center font-medium">0%</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                {/* Stats Tab */}
-                <TabsContent value="stats" className="space-y-6">
+                {/* Analytics Tab */}
+                <TabsContent value="analytics" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-2xl font-bold text-gray-900">0</div>
-                            <div className="text-sm text-gray-600">Total Prospects</div>
-                          </div>
-                          <Users className="h-8 w-8 text-blue-600" />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-2xl font-bold text-gray-900">0</div>
-                            <div className="text-sm text-gray-600">Connections Sent</div>
-                          </div>
-                          <UserPlus className="h-8 w-8 text-green-600" />
-                        </div>
-                      </CardContent>
-                    </Card>
-
                     <Card>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">

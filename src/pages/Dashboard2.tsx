@@ -41,7 +41,7 @@ export default function Dashboard() {
       value: analytics.totalContacts,
       change: { value: 12.5, type: 'increase' as const, period: 'last month' },
       icon: Users,
-      iconColor: "text-blue-600"
+      iconColor: "text-premium-cyan"
     },
     {
       title: "Response Rate", 
@@ -55,14 +55,14 @@ export default function Dashboard() {
       value: `${analytics.openRate}%`, 
       change: { value: 5.3, type: 'increase' as const, period: 'last week' },
       icon: Mail,
-      iconColor: "text-purple-600"
+      iconColor: "text-premium-purple"
     },
     {
       title: "Active Campaigns",
       value: analytics.activeCampaigns,
       change: { value: 8.2, type: 'increase' as const, period: 'last month' },
       icon: Target,
-      iconColor: "text-orange-600"
+      iconColor: "text-premium-orange"
     }
   ];
 
@@ -90,19 +90,21 @@ export default function Dashboard() {
           <WorkspaceHeader isConversational={isConversational} onToggleMode={handleToggleMode} />
           <main className="p-6 space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-3xl font-bold">Dashboard</h1>
-                <p className="text-muted-foreground">Real-time insights into your outreach performance</p>
+                <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+                <p className="text-gray-600 mt-1">Real-time insights into your outreach performance</p>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={refreshData}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} mr-2`} />
-                {isLoading ? 'Refreshing...' : 'Refresh'}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={refreshData}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} mr-2`} />
+                  {isLoading ? 'Refreshing...' : 'Refresh'}
+                </Button>
+              </div>
             </div>
 
             {/* KPI Cards */}
@@ -235,7 +237,7 @@ export default function Dashboard() {
                       }`}>
                         <activity.icon className={`h-4 w-4 ${
                           activity.type === "success" ? "text-green-600 dark:text-green-300" :
-                          activity.type === "warning" ? "text-yellow-600 dark:text-yellow-300" : "text-blue-600 dark:text-blue-300"
+                          activity.type === "warning" ? "text-yellow-600 dark:text-yellow-300" : "text-premium-cyan dark:text-premium-cyan"
                         }`} />
                       </div>
                       <div className="flex-1">

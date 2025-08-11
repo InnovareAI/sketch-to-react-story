@@ -152,7 +152,7 @@ export default function Requests() {
           <main className="flex-1 p-8">
             <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">My Requests</h1>
           <p className="text-gray-600 mt-1">Manage connection requests, meeting invitations, and collaboration proposals</p>

@@ -357,7 +357,7 @@ export default function Accounts() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Accounts</CardTitle>
-            <Building2 className="h-4 w-4 text-premium-purple" />
+            <Building2 className="h-8 w-8 text-premium-purple" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">247</div>
@@ -371,7 +371,7 @@ export default function Accounts() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Hot Leads</CardTitle>
-            <Star className="h-4 w-4 text-premium-orange" />
+            <Star className="h-8 w-8 text-premium-orange" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">23</div>
@@ -385,7 +385,7 @@ export default function Accounts() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Pipeline Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-premium-cyan" />
+            <TrendingUp className="h-8 w-8 text-premium-cyan" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">$1.2M</div>
@@ -583,7 +583,7 @@ export default function Accounts() {
                   )}
                   {account.companyPhone && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Phone className="h-4 w-4 text-blue-600" />
+                      <Phone className="h-4 w-4 text-premium-cyan" />
                       <span>{account.companyPhone}</span>
                     </div>
                   )}

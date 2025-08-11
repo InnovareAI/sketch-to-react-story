@@ -159,10 +159,10 @@ export default function Placeholders() {
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case "Contact Info": return <User className="h-4 w-4 text-blue-600" />;
-      case "Company Info": return <Building2 className="h-4 w-4 text-purple-600" />;
+      case "Contact Info": return <User className="h-4 w-4 text-premium-cyan" />;
+      case "Company Info": return <Building2 className="h-4 w-4 text-premium-purple" />;
       case "Location": return <MapPin className="h-4 w-4 text-green-600" />;
-      case "Dynamic": return <Calendar className="h-4 w-4 text-orange-600" />;
+      case "Dynamic": return <Calendar className="h-4 w-4 text-premium-orange" />;
       case "Sender Info": return <User className="h-4 w-4 text-cyan-600" />;
       default: return <Hash className="h-4 w-4" />;
     }
@@ -188,7 +188,7 @@ export default function Placeholders() {
           <main className="flex-1 p-8">
             <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Placeholders</h1>
           <p className="text-gray-600 mt-1">Manage dynamic variables for your templates</p>

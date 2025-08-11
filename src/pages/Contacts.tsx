@@ -792,7 +792,7 @@ Sarah Williams,sarah@growth.com,+1-555-456-7890,GrowthMetrics,Marketing Head,New
                   </div>
                   {contact.companyPhone && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Phone className="h-4 w-4 text-blue-600" />
+                      <Phone className="h-4 w-4 text-premium-cyan" />
                       <span>{contact.companyPhone}</span>
                     </div>
                   )}

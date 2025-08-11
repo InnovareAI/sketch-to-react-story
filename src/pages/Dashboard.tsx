@@ -57,30 +57,25 @@ export default function Dashboard() {
           <WorkspaceHeader isConversational={isConversational} onToggleMode={handleToggleMode} />
           <main className="flex-1 p-4 lg:p-8">
             <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
-              {/* Header with glass morphism effect */}
-              <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl p-4 lg:p-8 shadow-2xl">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  <div>
-                    <h1 className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent">
-                      Analytics Dashboard
-                    </h1>
-                    <p className="text-slate-600 mt-2 text-base lg:text-lg">Real-time insights into your outreach performance</p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={refreshData}
-                      disabled={isLoading}
-                      className="backdrop-blur-sm bg-white/50 border border-white/30 hover:bg-white/70 transition-all duration-300 shadow-lg"
-                    >
-                      <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} mr-2`} />
-                      <span className="hidden sm:inline">Refresh</span>
-                    </Button>
-                    <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-xl text-white font-semibold px-4 lg:px-6 py-2 transition-all duration-300 hover:scale-105">
-                      <Settings className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">Customize </span>Reports
-                    </Button>
-                  </div>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+                  <p className="text-gray-600 mt-1">Real-time insights into your outreach performance</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={refreshData}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} mr-2`} />
+                    Refresh
+                  </Button>
+                  <Button className="bg-primary hover:bg-primary/90">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Customize Reports
+                  </Button>
                 </div>
               </div>
 
@@ -91,7 +86,7 @@ export default function Dashboard() {
                   value={analytics.totalContacts}
                   change={{ value: 12.5, type: 'increase', period: 'last month' }}
                   icon={Users}
-                  iconColor="text-blue-600"
+                  iconColor="text-premium-cyan"
                 />
                 <MetricCard
                   title="Response Rate"
@@ -105,14 +100,14 @@ export default function Dashboard() {
                   value={`${analytics.openRate}%`}
                   change={{ value: 5.3, type: 'increase', period: 'last week' }}
                   icon={Mail}
-                  iconColor="text-purple-600"
+                  iconColor="text-premium-purple"
                 />
                 <MetricCard
                   title="Active Campaigns"
                   value={analytics.activeCampaigns}
                   change={{ value: 8.2, type: 'increase', period: 'last month' }}
                   icon={Target}
-                  iconColor="text-orange-600"
+                  iconColor="text-premium-orange"
                 />
               </div>
 
@@ -245,7 +240,7 @@ export default function Dashboard() {
                         }`}>
                           <activity.icon className={`h-4 w-4 ${
                             activity.type === "success" ? "text-green-600" :
-                            activity.type === "warning" ? "text-yellow-600" : "text-blue-600"
+                            activity.type === "warning" ? "text-yellow-600" : "text-premium-cyan"
                           }`} />
                         </div>
                         <div className="flex-1">

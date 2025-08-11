@@ -117,7 +117,7 @@ export default function Templates() {
 
   const getChannelIcon = (channel: string) => {
     switch (channel) {
-      case "Email": return <Mail className="h-4 w-4 text-blue-600" />;
+      case "Email": return <Mail className="h-4 w-4 text-premium-cyan" />;
       case "LinkedIn": return <MessageSquare className="h-4 w-4 text-blue-700" />;
       case "WhatsApp": return <MessageSquare className="h-4 w-4 text-green-600" />;
       default: return <FileText className="h-4 w-4" />;
@@ -139,7 +139,7 @@ export default function Templates() {
           <main className="flex-1 p-8">
             <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Templates</h1>
           <p className="text-gray-600 mt-1">Manage your message templates and track performance</p>

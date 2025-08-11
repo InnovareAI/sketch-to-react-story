@@ -144,26 +144,27 @@ export default function Campaigns() {
         <div className="flex-1 flex flex-col">
           <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
           <main className="flex-1 p-8">
-            <div className="max-w-7xl mx-auto">
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
-          <p className="text-gray-600 mt-1">Manage your outreach campaigns across channels</p>
-        </div>
-        <Button className="bg-primary hover:bg-primary/90">
-          <Target className="h-4 w-4 mr-2" />
-          New Campaign
-        </Button>
-      </div>
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
+                  <p className="text-gray-600 mt-1">Manage your outreach campaigns across channels</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button className="bg-primary hover:bg-primary/90">
+                    <Target className="h-4 w-4 mr-2" />
+                    New Campaign
+                  </Button>
+                </div>
+              </div>
 
-      {/* Campaign Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {/* Campaign Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Campaigns</CardTitle>
-            <Target className="h-4 w-4 text-premium-purple" />
+            <Target className="h-8 w-8 text-premium-purple" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">12</div>
@@ -177,7 +178,7 @@ export default function Campaigns() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Active Campaigns</CardTitle>
-            <Play className="h-4 w-4 text-green-600" />
+            <Play className="h-8 w-8 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">5</div>
@@ -190,7 +191,7 @@ export default function Campaigns() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Avg Response Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-premium-cyan" />
+            <TrendingUp className="h-8 w-8 text-premium-cyan" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">19.7%</div>
@@ -204,7 +205,7 @@ export default function Campaigns() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Contacts</CardTitle>
-            <Users className="h-4 w-4 text-premium-orange" />
+            <Users className="h-8 w-8 text-premium-orange" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">546</div>
@@ -213,10 +214,10 @@ export default function Campaigns() {
             </p>
           </CardContent>
         </Card>
-      </div>
+              </div>
 
-      {/* Filters */}
-      <div className="flex items-center justify-between">
+              {/* Filters */}
+              <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
             <input
@@ -236,10 +237,10 @@ export default function Campaigns() {
         <Button variant="outline" size="sm">
           More Filters
         </Button>
-      </div>
+              </div>
 
-      {/* Campaign List */}
-      <div className="space-y-4">
+              {/* Campaign List */}
+              <div className="space-y-4">
         {campaigns.map((campaign) => (
           <Card key={campaign.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
@@ -347,8 +348,7 @@ export default function Campaigns() {
             </CardContent>
           </Card>
         ))}
-      </div>
-      </div>
+              </div>
             </div>
           </main>
         </div>
