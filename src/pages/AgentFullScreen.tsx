@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { EnhancedConversationalInterface } from "@/components/workspace/EnhancedConversationalInterface";
 import { ModeSwitcher } from "@/components/workspace/ModeSwitcher";
-import { Menu, X, Command, Home, Settings, LogOut, HelpCircle } from "lucide-react";
+import { Menu, X, Command, Home, Settings, LogOut, HelpCircle, MessageSquare, BarChart3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,7 @@ import {
   CommandGroup,
   CommandItem,
 } from "@/components/ui/command";
-
+import { Switch } from "@/components/ui/switch";
 export default function AgentFullScreen() {
   const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -27,10 +27,11 @@ export default function AgentFullScreen() {
   const [operationMode, setOperationMode] = useState<'inbound' | 'outbound'>('outbound');
   
   // Handle mode change
-  const handleModeChange = (mode: 'inbound' | 'outbound') => {
-    setOperationMode(mode);
+  const handleModeChange = (mode: 'inbound' | 'outbound' | 'unified') => {
+    const mapped = mode === 'unified' ? 'outbound' : mode;
+    setOperationMode(mapped);
     // This will trigger SAM to switch specialist teams
-    console.log(`Switching to ${mode} mode`);
+    console.log(`Switching to ${mapped} mode`);
   };
 
   // Keyboard shortcut for command palette
@@ -73,14 +74,32 @@ export default function AgentFullScreen() {
       <header className="h-auto md:h-14 border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between px-4 py-2 md:py-0">
           <div className="flex items-center gap-4">
-            {/* Logo */}
-            <img 
-              src="/lovable-uploads/f38e3099-bf46-483c-9a94-d1b4f8b34cb6.png" 
-              alt="SAM AI" 
-              className="h-6 cursor-pointer"
+            <button
+              className="text-sm font-semibold text-white/90 hover:text-white"
               onClick={() => navigate('/')}
-            />
-          
+              aria-label="Go to Work"
+            >
+              SAM AI
+            </button>
+
+            <div className="flex items-center gap-2 p-1.5 rounded-xl border bg-gray-800 border-gray-700">
+              <div className="flex items-center gap-1">
+                <BarChart3 className="h-4 w-4 text-premium-purple" />
+                <span className="text-xs text-gray-300">Work</span>
+              </div>
+              <Switch
+                checked={true}
+                onCheckedChange={(checked) => {
+                  if (!checked) navigate('/');
+                }}
+                className="data-[state=checked]:bg-premium-purple"
+              />
+              <div className="flex items-center gap-1">
+                <MessageSquare className="h-4 w-4 text-premium-purple" />
+                <span className="text-xs text-white">Agent</span>
+              </div>
+            </div>
+
             {/* Command Palette Trigger */}
             <Button
               variant="outline"
@@ -96,7 +115,7 @@ export default function AgentFullScreen() {
             </Button>
           </div>
           
-          {/* Mode Switcher - Always visible */}
+          {/* Mode Switcher - Inbound/Outbound */}
           <div className="mt-2 md:mt-0 md:flex-1 md:flex md:justify-center">
             <ModeSwitcher 
               currentMode={operationMode}

@@ -8,7 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function Agent() {
   const navigate = useNavigate();
-  const [operationMode, setOperationMode] = useState<'inbound' | 'outbound' | 'unified'>('unified');
+  const [operationMode, setOperationMode] = useState<'inbound' | 'outbound' | 'unified'>('unified');  
   
   // Agent mode is always conversational
   const isConversational = true;
@@ -39,7 +39,7 @@ export default function Agent() {
             />
           </div>
           <div className="flex-1 overflow-auto">
-            <EnhancedConversationalInterface operationMode={operationMode} />
+            <EnhancedConversationalInterface operationMode={operationMode === 'unified' ? 'outbound' : operationMode} />
           </div>
         </div>
       </div>
