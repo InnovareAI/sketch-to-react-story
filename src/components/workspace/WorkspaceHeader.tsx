@@ -14,13 +14,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
+import { ModeSwitcher } from "@/components/workspace/ModeSwitcher";
 interface WorkspaceHeaderProps {
   isConversational: boolean;
   onToggleMode: (conversational: boolean) => void;
+  operationMode?: 'inbound' | 'outbound' | 'unified';
+  onOperationModeChange?: (mode: 'inbound' | 'outbound' | 'unified') => void;
 }
 
-export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHeaderProps) {
+export function WorkspaceHeader({ isConversational, onToggleMode, operationMode, onOperationModeChange }: WorkspaceHeaderProps) {
   const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
 
   return (
@@ -33,7 +35,7 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
       <div className="flex items-center justify-between">
         {/* Left Section - Mode Toggle */}
         <div className="flex items-center gap-3 lg:gap-6">
-          <div className={`flex items-center gap-2 lg:gap-4 p-1.5 lg:p-2 rounded-xl border ${isConversational ? 'bg-gray-800 border-gray-600' : 'bg-muted/30 border-border/50'}`}>
+          <div className={`${isConversational ? 'bg-gray-800 border-gray-600' : 'bg-muted/30 border-border/50'} flex items-center gap-2 lg:gap-4 p-1.5 lg:p-2 rounded-xl border`}>
             <div className="flex items-center gap-1 lg:gap-2">
                <BarChart3 className={`h-3 w-3 lg:h-4 lg:w-4 ${!isConversational ? 'text-premium-purple' : 'text-gray-400'}`} />
                <span className={`text-xs lg:text-sm font-medium hidden sm:inline ${!isConversational ? (isConversational ? 'text-white' : 'text-foreground') : 'text-gray-400'}`}>
@@ -52,6 +54,12 @@ export function WorkspaceHeader({ isConversational, onToggleMode }: WorkspaceHea
               </span>
             </div>
           </div>
+
+          {isConversational && operationMode && onOperationModeChange && (
+            <div className="hidden md:block">
+              <ModeSwitcher currentMode={operationMode} onModeChange={onOperationModeChange} />
+            </div>
+          )}
         </div>
         
         {/* Right Section - Actions & User */}
