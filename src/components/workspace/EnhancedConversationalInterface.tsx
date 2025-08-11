@@ -32,6 +32,10 @@ interface QuickAction {
   complexity: 'simple' | 'moderate' | 'complex';
 }
 
+interface EnhancedConversationalInterfaceProps {
+  operationMode?: 'inbound' | 'outbound';
+}
+
 // Enhanced conversation starters with categories
 const conversationStarters = {
   "🚀 Quick Start": [
@@ -143,7 +147,7 @@ const quickActions: QuickAction[] = Object.values(conversationStarters).flat().m
   complexity: 'moderate' as const
 }));
 
-export function EnhancedConversationalInterface() {
+export function EnhancedConversationalInterface({ operationMode = 'outbound' }: EnhancedConversationalInterfaceProps) {
   const { 
     sessions, 
     currentSessionId, 
@@ -219,7 +223,12 @@ export function EnhancedConversationalInterface() {
 
         await agentFactory.initialize(config);
         setIsAgentInitialized(true);
-        setSamStatus("Multi-agent system ready");
+        
+        // Set initial operation mode
+        const orchestrator = agentFactory.getOrchestrator();
+        orchestrator.setOperationMode(operationMode);
+        
+        setSamStatus(`Multi-agent system ready - ${operationMode} mode`);
         console.log('Agent system initialized successfully');
       } catch (error) {
         console.error('Failed to initialize agent system:', error);
@@ -229,6 +238,26 @@ export function EnhancedConversationalInterface() {
 
     initializeAgents();
   }, [agentFactory]);
+  
+  // Update operation mode when prop changes
+  useEffect(() => {
+    if (isAgentInitialized) {
+      const orchestrator = agentFactory.getOrchestrator();
+      orchestrator.setOperationMode(operationMode);
+      setSamStatus(`Switched to ${operationMode} mode`);
+      
+      // Update the greeting message based on mode
+      const greetingMessage: Message = {
+        id: "mode-change-" + Date.now(),
+        content: operationMode === 'inbound' 
+          ? "I've switched to **Inbound Mode** 📥. I'm now focused on managing your inbox, filtering spam, and automating responses to routine inquiries. My specialist team includes Inbox Triage, Spam Filter, and Auto-Response agents. How can I help organize your email communications?"
+          : "I've switched to **Outbound Mode** 🚀. I'm ready to help with lead generation, campaign creation, and sales outreach. My specialist team includes Lead Research, Campaign Management, and Content Creation agents. What would you like to work on?",
+        sender: "sam",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, greetingMessage]);
+    }
+  }, [operationMode, isAgentInitialized, agentFactory]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

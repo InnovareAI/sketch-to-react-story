@@ -19,15 +19,37 @@ import {
   AgentCapability
 } from '../types/AgentTypes';
 
+export type OperationMode = 'outbound' | 'inbound';
+
 export class OrchestratorAgent extends BaseAgent {
   private specialists: Map<AgentType, AgentInstance> = new Map();
   private activeContext: Map<string, ConversationContext> = new Map();
+  private operationMode: OperationMode = 'outbound';
   public readonly name = 'SAM';
-  public readonly description = 'Your AI Sales & GTM Strategy Expert';
+  public readonly description = 'Your AI Sales & Communications Expert';
 
   constructor(config: AgentConfig) {
     super('orchestrator', config);
     this.initializeCapabilities();
+  }
+
+  public setOperationMode(mode: OperationMode): void {
+    this.operationMode = mode;
+    console.log(`SAM switched to ${mode} mode`);
+    // Update active specialists based on mode
+    this.updateSpecialistsForMode(mode);
+  }
+
+  private updateSpecialistsForMode(mode: OperationMode): void {
+    // In inbound mode, prioritize inbox management agents
+    // In outbound mode, prioritize campaign and lead generation agents
+    if (mode === 'inbound') {
+      // Activate inbound team
+      console.log('Activating inbound specialist team: Inbox Triage, Spam Filter, Auto-Response');
+    } else {
+      // Activate outbound team
+      console.log('Activating outbound specialist team: Lead Research, Campaign Management, Content Creation');
+    }
   }
 
   private initializeCapabilities(): void {

@@ -12,6 +12,9 @@ import { MEDDICQualificationAgent } from './specialists/MEDDICQualificationAgent
 import { OnboardingAgent } from './specialists/OnboardingAgent';
 import { KnowledgeBaseAgent } from './specialists/KnowledgeBaseAgent';
 import { WorkflowAutomationAgent } from './specialists/WorkflowAutomationAgent';
+import { InboxTriageAgent } from './specialists/InboxTriageAgent';
+import { SpamFilterAgent } from './specialists/SpamFilterAgent';
+import { AutoResponseAgent } from './specialists/AutoResponseAgent';
 
 export class AgentFactory {
   private static instance: AgentFactory;
@@ -36,15 +39,21 @@ export class AgentFactory {
       this.orchestrator = new OrchestratorAgent(config);
       await this.orchestrator.initialize();
 
-      // Initialize specialist agents
+      // Initialize all specialist agents (both inbound and outbound)
       const specialists = [
+        // Outbound specialists
         { type: 'lead-research' as AgentType, class: LeadResearchAgent },
         { type: 'campaign-management' as AgentType, class: CampaignManagementAgent },
         { type: 'gtm-strategy' as AgentType, class: GTMStrategyAgent },
         { type: 'meddic-qualification' as AgentType, class: MEDDICQualificationAgent },
+        { type: 'workflow-automation' as AgentType, class: WorkflowAutomationAgent },
+        // Inbound specialists
+        { type: 'inbox-triage' as AgentType, class: InboxTriageAgent },
+        { type: 'spam-filter' as AgentType, class: SpamFilterAgent },
+        { type: 'auto-response' as AgentType, class: AutoResponseAgent },
+        // Shared specialists
         { type: 'onboarding' as AgentType, class: OnboardingAgent },
-        { type: 'knowledge-base' as AgentType, class: KnowledgeBaseAgent },
-        { type: 'workflow-automation' as AgentType, class: WorkflowAutomationAgent }
+        { type: 'knowledge-base' as AgentType, class: KnowledgeBaseAgent }
       ];
 
       for (const { type, class: AgentClass } of specialists) {
