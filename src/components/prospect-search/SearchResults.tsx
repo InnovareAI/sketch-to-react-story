@@ -42,6 +42,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { CampaignCompatibilityChecker } from './CampaignCompatibilityChecker';
+import { LeadProfile } from '@/services/campaign-rules-engine';
+import { useBulkLeadValidation } from '@/hooks/useCampaignValidation';
 
 interface ProspectResult {
   id: string;
@@ -80,6 +83,8 @@ export function SearchResults({
   const [selectedEmail, setSelectedEmail] = useState<string>("all");
   const [selectedTags, setSelectedTags] = useState<string>("all");
   const [selectAll, setSelectAll] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [showCompatibilityChecker, setShowCompatibilityChecker] = useState(false);
 
   // Mock data - in real app this would come from props/API
   const [results, setResults] = useState<ProspectResult[]>([
@@ -152,6 +157,40 @@ export function SearchResults({
   });
 
   const selectedCount = results.filter(r => r.selected).length;
+  const selectedResults = results.filter(r => r.selected);
+
+  // Convert ProspectResult to LeadProfile for validation
+  const convertToLeadProfile = (result: ProspectResult): LeadProfile => ({
+    id: result.id,
+    name: result.name,
+    title: result.title,
+    company: result.company,
+    location: result.location,
+    email: result.email,
+    phone: result.phone,
+    linkedin_url: result.linkedin_url,
+    connection_degree: '2nd', // Default - in real app this would come from data
+    premium_account: false, // Default - in real app this would come from data
+    open_to_work: false,
+    profile_visibility: 'public',
+    profile_completeness: 75,
+    mutual_connections: Math.floor(Math.random() * 20), // Mock data
+    search_source: result.source === 'post_engagement' ? 'basic_search' : result.source as any,
+    industry: 'Technology', // Mock - in real app this would come from data
+    seniority_level: result.title?.toLowerCase().includes('manager') ? 'manager' : 
+                    result.title?.toLowerCase().includes('director') ? 'director' :
+                    result.title?.toLowerCase().includes('vp') ? 'executive' : 'associate'
+  });
+
+  const selectedLeads = selectedResults.map(convertToLeadProfile);
+
+  // Use validation hook for bulk assignment
+  const { 
+    canAssign, 
+    validLeadsCount, 
+    validateAndAssignBulk, 
+    blockedReasons 
+  } = useBulkLeadValidation(selectedLeads, null);
 
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
@@ -169,7 +208,19 @@ export function SearchResults({
       toast.error("No prospects selected");
       return;
     }
-    toast.success(`Assigned ${selectedCount} prospects to campaign`);
+    
+    // Show compatibility checker for smart assignment
+    setShowCompatibilityChecker(true);
+  };
+
+  const handleCampaignAssignment = (campaignId: string, validLeadsCount: number) => {
+    // In real app, this would make API call to assign leads
+    toast.success(`Successfully assigned ${validLeadsCount} leads to campaign`);
+    
+    // Reset selections
+    setResults(results.map(r => ({ ...r, selected: false })));
+    setSelectAll(false);
+    setShowCompatibilityChecker(false);
   };
 
   const handleBulkExportCSV = () => {
@@ -417,9 +468,13 @@ export function SearchResults({
             onClick={handleBulkAssignToCampaign}
             disabled={selectedCount === 0}
             size="sm"
+            variant={selectedCount > 0 ? "default" : "outline"}
           >
             <Target className="h-4 w-4 mr-2" />
-            Assign all ({totalResults}) to campaign
+            {selectedCount > 0 
+              ? `Smart assign ${selectedCount} selected` 
+              : `Assign all (${totalResults}) to campaign`
+            }
           </Button>
           <Button 
             variant="outline" 
@@ -604,6 +659,17 @@ export function SearchResults({
           </div>
         </CardContent>
       </Card>
+
+      {/* Campaign Compatibility Checker */}
+      {showCompatibilityChecker && selectedLeads.length > 0 && (
+        <CampaignCompatibilityChecker
+          leads={selectedLeads}
+          selectedCampaignId={selectedCampaignId}
+          onCampaignSelect={setSelectedCampaignId}
+          onAssignToCampaign={handleCampaignAssignment}
+          className="mt-6"
+        />
+      )}
     </div>
   );
 }
