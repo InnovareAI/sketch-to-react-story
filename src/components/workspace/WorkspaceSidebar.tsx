@@ -76,7 +76,7 @@ export function WorkspaceSidebar({
     <NavLink
       to={item.url}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors block w-full",
+        "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors block w-full",
         isActive
           ? isConversational
             ? "bg-gray-700 text-white"
@@ -89,7 +89,7 @@ export function WorkspaceSidebar({
         e.stopPropagation();
       }}
     >
-      <item.icon className="h-4 w-4 flex-shrink-0" />
+      <item.icon className="h-5 w-5 shrink-0 opacity-90" />
       <span className="truncate">{item.title}</span>
     </NavLink>
   );
