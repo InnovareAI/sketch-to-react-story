@@ -54,7 +54,7 @@ export function BrightDataIntegration() {
     setError(null);
     
     try {
-      const result = await brightDataProxyService.testProxyConnection(proxyCountry);
+      const result = await secureBrightDataService.testProxyConnection(proxyCountry);
       setProxyStatus(result);
       
       if (!result.success) {
@@ -92,7 +92,7 @@ export function BrightDataIntegration() {
     setJobs(prev => [newJob, ...prev]);
 
     try {
-      const profile = await brightDataProxyService.scrapeLinkedInProfile(profileUrl, {
+      const profile = await secureBrightDataService.scrapeLinkedInProfile(profileUrl, {
         country: proxyCountry,
         state: proxyState || undefined
       });
@@ -154,7 +154,7 @@ export function BrightDataIntegration() {
     setJobs(prev => [newJob, ...prev]);
 
     try {
-      const profiles = await brightDataProxyService.searchLinkedInProfiles(searchParams);
+      const profiles = await secureBrightDataService.searchLinkedInProfiles(searchParams);
       
       setScrapedProfiles(prev => [...profiles, ...prev]);
       

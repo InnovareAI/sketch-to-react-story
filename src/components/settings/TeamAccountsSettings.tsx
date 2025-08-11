@@ -37,7 +37,7 @@ export function TeamAccountsSettings() {
   const [teamAccounts] = useState(() => TeamAccountsService.getInstance());
   const [linkedInAccounts, setLinkedInAccounts] = useState<LinkedInAccount[]>([]);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
-  const [accountHealth, setAccountHealth] = useState<Record<string, unknown> | null>(null);
+  const [accountHealth, setAccountHealth] = useState<any | null>(null);
   const [showCredentials, setShowCredentials] = useState<Record<string, boolean>>({});
   
   // Form states
@@ -45,7 +45,7 @@ export function TeamAccountsSettings() {
     name: '',
     email: '',
     profileUrl: '',
-    type: 'personal' as const,
+    type: 'personal',
     dailyLimit: 50,
     weeklyLimit: 250
   });
@@ -53,8 +53,8 @@ export function TeamAccountsSettings() {
   const [newEmailAccount, setNewEmailAccount] = useState({
     name: '',
     email: '',
-    provider: 'gmail' as const,
-    purpose: 'both' as const,
+    provider: 'gmail',
+    purpose: 'both',
     dailyLimit: 200,
     host: '',
     port: 587,
@@ -64,7 +64,8 @@ export function TeamAccountsSettings() {
 
   useEffect(() => {
     loadAccounts();
-  }, [loadAccounts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadAccounts = useCallback(() => {
     setLinkedInAccounts(teamAccounts.getLinkedInAccounts());

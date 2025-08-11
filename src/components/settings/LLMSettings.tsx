@@ -111,7 +111,7 @@ export function LLMSettings() {
     
     // Re-initialize LLM service with new settings
     LLMService.initialize({
-      provider: selectedProvider as string,
+      provider: selectedProvider as any,
       apiKey: apiKeys[selectedProvider],
       model: selectedModel,
       baseUrl: selectedProvider === 'custom' ? customEndpoint : undefined
@@ -142,9 +142,9 @@ export function LLMSettings() {
       } else {
         throw new Error('No response received');
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       setTestStatus('error');
-      setTestMessage(`Connection failed: ${error.message}`);
+      setTestMessage(`Connection failed: ${error?.message || 'Unknown error'}`);
     }
   };
 

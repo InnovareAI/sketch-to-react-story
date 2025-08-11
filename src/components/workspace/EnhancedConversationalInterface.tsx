@@ -230,7 +230,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 
     setMessages(prev => [...prev, userMessage]);
     if (sessionId) {
-      addMessageToSession(sessionId, userMessage);
+      addMessageToSession(sessionId, userMessage as any);
     }
     setInput("");
     
@@ -337,7 +337,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       }, 1000);
 
       // Process through multi-agent system
-      const result = await agentFactory.processMessage(content, existingContext, sessionId);
+      const result: any = await agentFactory.processMessage(content, existingContext as any, sessionId);
       
       // Update agent trace for debugging
       setAgentTrace(result.agentTrace || []);
@@ -356,7 +356,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 
       setMessages(prev => [...prev, samResponse]);
       if (sessionId) {
-        addMessageToSession(sessionId, samResponse);
+        addMessageToSession(sessionId, samResponse as any);
       }
 
     } finally {

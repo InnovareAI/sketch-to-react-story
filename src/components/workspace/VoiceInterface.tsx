@@ -18,9 +18,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 interface VoiceInterfaceProps {
   onVoiceMessage: (text: string) => void;
   className?: string;
+  disabled?: boolean;
 }
 
-export function VoiceInterface({ onVoiceMessage, className = "" }: VoiceInterfaceProps) {
+export function VoiceInterface({ onVoiceMessage, className = "", disabled = false }: VoiceInterfaceProps) {
   const [apiKey, setApiKey] = useState('enabled'); // Flag to indicate ElevenLabs is available
   const [voiceId, setVoiceId] = useState('9BWtsMINqrJLrRacOk9x'); // Aria voice
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -63,7 +64,7 @@ export function VoiceInterface({ onVoiceMessage, className = "" }: VoiceInterfac
               ? "bg-red-900/50 border-red-600 text-red-400 hover:bg-red-900/70 animate-glow" 
               : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
           }`}
-          disabled={isPlaying}
+          disabled={isPlaying || disabled}
         >
           {isListening ? (
             <MicOff className="h-5 w-5 animate-bounce-subtle" />
