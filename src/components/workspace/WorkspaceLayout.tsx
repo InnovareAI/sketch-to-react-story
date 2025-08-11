@@ -173,7 +173,7 @@ export default function WorkspaceLayout() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen w-full">
         {/* Sidebar */}
         <WorkspaceSidebar isConversational={isConversational} />
