@@ -99,6 +99,12 @@ export function LinkedInAccountConnection() {
       const storedProfile = sessionStorage.getItem('linkedin_profile');
       const storedToken = sessionStorage.getItem('linkedin_token');
       
+      console.log('Loading accounts - sessionStorage data:', {
+        hasProfile: !!storedProfile,
+        hasToken: !!storedToken,
+        profile: storedProfile ? JSON.parse(storedProfile) : null
+      });
+      
       if (storedProfile && storedToken) {
         const profile = JSON.parse(storedProfile);
         const mockAccount: LinkedInAccountData = {

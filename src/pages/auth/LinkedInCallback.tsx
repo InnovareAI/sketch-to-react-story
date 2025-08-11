@@ -17,6 +17,8 @@ export default function LinkedInCallback() {
 
   const handleCallback = async () => {
     try {
+      console.log('LinkedIn callback URL params:', Object.fromEntries(searchParams.entries()));
+      
       const success = searchParams.get('success');
       const data = searchParams.get('data');
       const state = searchParams.get('state');
