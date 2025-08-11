@@ -8,7 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function Agent() {
   const navigate = useNavigate();
-  const [operationMode, setOperationMode] = useState<'inbound' | 'outbound'>('outbound');
+  const [operationMode, setOperationMode] = useState<'inbound' | 'outbound' | 'unified'>('unified');
   
   // Agent mode is always conversational
   const isConversational = true;
@@ -17,7 +17,7 @@ export default function Agent() {
     navigate('/');
   };
   
-  const handleModeChange = (mode: 'inbound' | 'outbound') => {
+  const handleModeChange = (mode: 'inbound' | 'outbound' | 'unified') => {
     setOperationMode(mode);
   };
 

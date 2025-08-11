@@ -20,19 +20,26 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ModeSwitcherProps {
-  currentMode: 'inbound' | 'outbound';
-  onModeChange: (mode: 'inbound' | 'outbound') => void;
+  currentMode: 'inbound' | 'outbound' | 'unified';
+  onModeChange: (mode: 'inbound' | 'outbound' | 'unified') => void;
   className?: string;
 }
 
 export function ModeSwitcher({ currentMode, onModeChange, className }: ModeSwitcherProps) {
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const handleModeChange = (newMode: 'inbound' | 'outbound') => {
-    if (newMode === currentMode) return;
-    
+  const handleModeChange = (checked: boolean) => {
     setIsTransitioning(true);
     setTimeout(() => {
+      // Three-way toggle: outbound -> unified -> inbound -> outbound
+      let newMode: 'inbound' | 'outbound' | 'unified';
+      if (currentMode === 'outbound') {
+        newMode = 'unified';
+      } else if (currentMode === 'unified') {
+        newMode = 'inbound';
+      } else {
+        newMode = 'outbound';
+      }
       onModeChange(newMode);
       setIsTransitioning(false);
     }, 300);
@@ -69,38 +76,47 @@ export function ModeSwitcher({ currentMode, onModeChange, className }: ModeSwitc
 
   return (
     <div className={cn("relative", className)}>
-      {/* Mode Toggle - Same style as Work/Agent switcher */}
+      {/* Mode Selector - Three modes */}
       <div className="flex items-center gap-3 lg:gap-6">
-        <div className="flex items-center gap-2 lg:gap-4 p-1.5 lg:p-2 rounded-xl border bg-gray-800 border-gray-600">
-          <div className="flex items-center gap-1 lg:gap-2">
-            <Send className={cn(
-              "h-3 w-3 lg:h-4 lg:w-4",
-              currentMode === 'outbound' ? "text-premium-purple" : "text-gray-400"
-            )} />
-            <span className={cn(
-              "text-xs lg:text-sm font-medium hidden sm:inline",
-              currentMode === 'outbound' ? "text-white" : "text-gray-400"
-            )}>
+        <div className="flex items-center gap-2 p-1.5 lg:p-2 rounded-xl border bg-gray-800 border-gray-600">
+          <button
+            onClick={() => onModeChange('outbound')}
+            className={cn(
+              "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
+              currentMode === 'outbound' ? "bg-purple-600/20 text-white" : "text-gray-400 hover:text-gray-300"
+            )}
+          >
+            <Send className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span className="text-xs lg:text-sm font-medium hidden sm:inline">
               Outbound
             </span>
-          </div>
-          <Switch 
-            checked={currentMode === 'inbound'}
-            onCheckedChange={(checked) => handleModeChange(checked ? 'inbound' : 'outbound')}
-            className="data-[state=checked]:bg-premium-purple"
-          />
-          <div className="flex items-center gap-1 lg:gap-2">
-            <Inbox className={cn(
-              "h-3 w-3 lg:h-4 lg:w-4",
-              currentMode === 'inbound' ? "text-premium-purple" : "text-gray-400"
-            )} />
-            <span className={cn(
-              "text-xs lg:text-sm font-medium hidden sm:inline",
-              currentMode === 'inbound' ? "text-white" : "text-gray-400"
-            )}>
+          </button>
+          
+          <button
+            onClick={() => onModeChange('unified')}
+            className={cn(
+              "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
+              currentMode === 'unified' ? "bg-purple-600/20 text-white" : "text-gray-400 hover:text-gray-300"
+            )}
+          >
+            <Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span className="text-xs lg:text-sm font-medium hidden sm:inline">
+              Unified
+            </span>
+          </button>
+          
+          <button
+            onClick={() => onModeChange('inbound')}
+            className={cn(
+              "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
+              currentMode === 'inbound' ? "bg-purple-600/20 text-white" : "text-gray-400 hover:text-gray-300"
+            )}
+          >
+            <Inbox className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span className="text-xs lg:text-sm font-medium hidden sm:inline">
               Inbound
             </span>
-          </div>
+          </button>
         </div>
       </div>
 

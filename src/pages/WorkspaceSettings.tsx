@@ -35,9 +35,11 @@ import {
   ChevronDown,
   CalendarDays,
   Trash,
-  Upload
+  Upload,
+  Brain
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LLMSettings } from "@/components/settings/LLMSettings";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
@@ -236,15 +238,21 @@ export default function WorkspaceSettings() {
               
               <div className="space-y-6">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="linkedin">LinkedIn Account</TabsTrigger>
-            <TabsTrigger value="email">Email Account</TabsTrigger>
+            <TabsTrigger value="llm">AI Models</TabsTrigger>
+            <TabsTrigger value="linkedin">LinkedIn</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="whatsapp">WhatsApp Account</TabsTrigger>
+            <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
+
+          {/* LLM Settings Tab */}
+          <TabsContent value="llm" className="space-y-6">
+            <LLMSettings />
+          </TabsContent>
 
           <TabsContent value="general" className="space-y-6">
             <Card>

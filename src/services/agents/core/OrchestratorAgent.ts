@@ -21,7 +21,7 @@ import {
 import { LLMService, LLMMessage } from '../../llm/LLMService';
 import { MemoryService } from '../../memory/MemoryService';
 
-export type OperationMode = 'outbound' | 'inbound';
+export type OperationMode = 'outbound' | 'inbound' | 'unified';
 
 export class OrchestratorAgent extends BaseAgent {
   private specialists: Map<AgentType, AgentInstance> = new Map();
@@ -47,14 +47,17 @@ export class OrchestratorAgent extends BaseAgent {
   }
 
   private updateSpecialistsForMode(mode: OperationMode): void {
-    // In inbound mode, prioritize inbox management agents
-    // In outbound mode, prioritize campaign and lead generation agents
-    if (mode === 'inbound') {
-      // Activate inbound team
-      console.log('Activating inbound specialist team: Inbox Triage, Spam Filter, Auto-Response');
-    } else {
-      // Activate outbound team
-      console.log('Activating outbound specialist team: Lead Research, Campaign Management, Content Creation');
+    // Update specialist priorities based on mode
+    switch (mode) {
+      case 'inbound':
+        console.log('Activating inbound specialist team: Inbox Triage, Spam Filter, Auto-Response');
+        break;
+      case 'outbound':
+        console.log('Activating outbound specialist team: Lead Research, Campaign Management, Content Creation');
+        break;
+      case 'unified':
+        console.log('Activating unified mode: All specialists available for both inbound and outbound tasks');
+        break;
     }
   }
 
