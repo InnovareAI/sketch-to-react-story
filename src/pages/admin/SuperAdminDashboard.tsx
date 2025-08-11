@@ -224,9 +224,15 @@ export default function SuperAdminDashboard() {
           totalUsers: usersData.length
         }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading dashboard data:', error);
-      toast.error('Failed to load dashboard data');
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      toast.error(`Failed to load dashboard data: ${error.message || 'Unknown error'}`);
     }
   };
 

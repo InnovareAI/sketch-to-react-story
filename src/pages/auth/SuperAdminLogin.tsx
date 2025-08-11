@@ -45,6 +45,12 @@ export default function SuperAdminLogin() {
       return;
     }
 
+    // Check for dev auth state and clear if needed
+    const devAuthUser = localStorage.getItem('dev_auth_user');
+    if (devAuthUser) {
+      console.log('Development auth state detected:', devAuthUser);
+    }
+
     // Load saved credentials
     const savedEmail = localStorage.getItem('superadmin_email');
     const savedPassword = localStorage.getItem('superadmin_password');
@@ -388,14 +394,31 @@ export default function SuperAdminLogin() {
             </Button>
           </form>
 
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center space-y-2">
             <button
               type="button"
               onClick={handlePasswordReset}
               disabled={resetLoading || loading}
-              className="text-sm text-blue-600 hover:text-blue-500 disabled:text-gray-400"
+              className="text-sm text-blue-600 hover:text-blue-500 disabled:text-gray-400 block mx-auto"
             >
               {resetLoading ? 'Sending...' : 'Forgot your password?'}
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('dev_auth_user');
+                localStorage.removeItem('dev_auth_profile');
+                localStorage.removeItem('superadmin_email');
+                localStorage.removeItem('superadmin_password');
+                setEmail('');
+                setPassword('');
+                setSavePassword(false);
+                toast.success('Development state cleared');
+              }}
+              className="text-xs text-red-600 hover:text-red-500 block mx-auto"
+            >
+              Clear Development State
             </button>
           </div>
 
