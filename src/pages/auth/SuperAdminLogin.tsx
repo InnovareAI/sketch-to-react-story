@@ -84,13 +84,35 @@ export default function SuperAdminLogin() {
 
       if (data.user) {
         // Check if user has super admin role
-        const { data: profile, error: profileError } = await supabase
+        let { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role, workspace_id, full_name')
           .eq('id', data.user.id)
           .single();
 
-        if (profileError || !profile) {
+        // If profile doesn't exist, create it for admin@innovareai.com
+        if (profileError && data.user.email === 'admin@innovareai.com') {
+          console.log('Creating super admin profile for:', data.user.email);
+          
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              workspace_id: 'a0000000-0000-0000-0000-000000000000',
+              email: data.user.email,
+              full_name: 'InnovareAI Administrator',
+              role: 'super_admin'
+            })
+            .select('role, workspace_id, full_name')
+            .single();
+          
+          if (createError) {
+            console.error('Failed to create super admin profile:', createError);
+            throw new Error('Failed to create admin profile. Contact system administrator.');
+          }
+          
+          profile = newProfile;
+        } else if (profileError || !profile) {
           throw new Error('User profile not found. Contact system administrator.');
         }
 
