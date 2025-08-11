@@ -21,6 +21,7 @@ import Roles from "./pages/Roles";
 import WorkspaceSettings from "./pages/WorkspaceSettings";
 import Agent from "./pages/Agent";
 import LinkedInIntegration from "./pages/LinkedInIntegration";
+import CampaignSetup from "./pages/CampaignSetup";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App: React.FC = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/campaign-setup" element={<CampaignSetup />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/search" element={<Search />} />
             <Route path="/inbox" element={<GlobalInbox />} />
