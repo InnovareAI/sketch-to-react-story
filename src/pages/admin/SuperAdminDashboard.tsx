@@ -131,8 +131,8 @@ export default function SuperAdminDashboard() {
         .select(`
           id,
           name,
-          plan as subscription_tier,
-          status as subscription_status,
+          plan,
+          status,
           created_at
         `)
         .order('created_at', { ascending: false });
@@ -143,6 +143,8 @@ export default function SuperAdminDashboard() {
         // Transform to match workspace interface
         const workspacesData = tenantsData.map(tenant => ({
           ...tenant,
+          subscription_tier: tenant.plan,
+          subscription_status: tenant.status,
           slug: tenant.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
         }));
         
@@ -173,24 +175,29 @@ export default function SuperAdminDashboard() {
           name,
           role,
           tenant_id,
-          created_at,
-          tenants!inner(name)
+          created_at
         `)
         .order('created_at', { ascending: false });
       
       console.log('Users query result:', { usersData, usersError });
 
       if (usersData) {
-        setUsers(usersData.map(user => ({
-          ...user,
-          full_name: user.name,
-          workspace_id: user.tenant_id,
-          workspace: { 
-            name: user.tenants.name, 
-            slug: user.tenants.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
-          },
-          last_sign_in_at: '' // Would need auth.users join for this
-        })));
+        // Find tenant names for users
+        const usersWithWorkspaces = usersData.map(user => {
+          const userTenant = tenantsData?.find(t => t.id === user.tenant_id);
+          return {
+            ...user,
+            full_name: user.name,
+            workspace_id: user.tenant_id,
+            workspace: userTenant ? { 
+              name: userTenant.name, 
+              slug: userTenant.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+            } : { name: 'Unknown', slug: 'unknown' },
+            last_sign_in_at: '' // Would need auth.users join for this
+          };
+        });
+        
+        setUsers(usersWithWorkspaces);
         
         setStats(prev => ({
           ...prev,
