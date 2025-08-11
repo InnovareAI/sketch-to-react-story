@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   ArrowLeft,
   Search,
@@ -19,8 +20,12 @@ import {
   FileText,
   Plus,
   CheckCircle,
-  Link
+  Link,
+  AlertCircle,
+  Download,
+  X
 } from "lucide-react";
+import { toast } from "sonner";
 
 type SearchType = {
   id: string;
@@ -41,13 +46,36 @@ type SearchMethod = {
   active?: boolean;
 };
 
+type ProspectData = {
+  name: string;
+  title: string;
+  company: string;
+  location?: string;
+  email?: string;
+  linkedin_url?: string;
+  phone?: string;
+  source: 'url_search' | 'csv_upload' | 'linkedin_enriched';
+};
+
+type CsvUploadError = {
+  row: number;
+  field: string;
+  message: string;
+};
+
 export default function ProspectSearch() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedSearchType, setSelectedSearchType] = useState<SearchType | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [linkedInUrl, setLinkedInUrl] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<ProspectData[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const [csvErrors, setCsvErrors] = useState<CsvUploadError[]>([]);
+  const [isProcessingCsv, setIsProcessingCsv] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const campaignName = searchParams.get('campaign') || 'Current Campaign';
 
@@ -276,14 +304,202 @@ export default function ProspectSearch() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Mock results
-      setSearchResults([
-        { name: 'John Doe', title: 'CEO', company: 'TechCorp', location: 'San Francisco' },
-        { name: 'Jane Smith', title: 'CTO', company: 'InnovateLabs', location: 'Austin' },
-        { name: 'Mike Johnson', title: 'VP Sales', company: 'GrowthCo', location: 'New York' }
-      ]);
+      const mockResults: ProspectData[] = [
+        { name: 'John Doe', title: 'CEO', company: 'TechCorp', location: 'San Francisco', source: 'url_search' },
+        { name: 'Jane Smith', title: 'CTO', company: 'InnovateLabs', location: 'Austin', source: 'url_search' },
+        { name: 'Mike Johnson', title: 'VP Sales', company: 'GrowthCo', location: 'New York', source: 'url_search' }
+      ];
+      setSearchResults(mockResults);
     } finally {
       setIsSearching(false);
     }
+  };
+
+  // CSV Parsing Functions
+  const parseCsvFile = async (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const csv = e.target?.result as string;
+          const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
+          
+          if (lines.length < 2) {
+            reject(new Error('CSV file must have at least a header row and one data row'));
+            return;
+          }
+
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          const data = lines.slice(1).map((line, index) => {
+            const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+            const row: any = { _rowNumber: index + 2 }; // +2 because we start from line 2
+            headers.forEach((header, i) => {
+              row[header] = values[i] || '';
+            });
+            return row;
+          });
+
+          resolve(data);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read CSV file'));
+      reader.readAsText(file);
+    });
+  };
+
+  const validateCsvData = (data: any[]): { prospects: ProspectData[]; errors: CsvUploadError[] } => {
+    const prospects: ProspectData[] = [];
+    const errors: CsvUploadError[] = [];
+    
+    // Required field mappings
+    const fieldMappings = {
+      name: ['name', 'full_name', 'fullname', 'full name'],
+      title: ['title', 'position', 'job_title', 'job title', 'role'],
+      company: ['company', 'company_name', 'company name', 'organization'],
+      location: ['location', 'city', 'region', 'country'],
+      email: ['email', 'email_address', 'email address'],
+      linkedin_url: ['linkedin_url', 'linkedin', 'linkedin_profile', 'profile_url', 'linkedin url'],
+      phone: ['phone', 'phone_number', 'phone number', 'mobile']
+    };
+
+    data.forEach((row, index) => {
+      const prospect: Partial<ProspectData> = { source: 'csv_upload' };
+      
+      // Map fields using flexible field names
+      Object.entries(fieldMappings).forEach(([targetField, possibleNames]) => {
+        const foundField = possibleNames.find(name => row[name] && row[name].trim());
+        if (foundField) {
+          (prospect as any)[targetField] = row[foundField].trim();
+        }
+      });
+
+      // Validate required fields
+      if (!prospect.name) {
+        errors.push({
+          row: row._rowNumber,
+          field: 'name',
+          message: 'Name is required'
+        });
+      }
+      
+      if (!prospect.company) {
+        errors.push({
+          row: row._rowNumber,
+          field: 'company',
+          message: 'Company is required'
+        });
+      }
+
+      // Validate LinkedIn URL format if provided
+      if (prospect.linkedin_url && !prospect.linkedin_url.includes('linkedin.com')) {
+        errors.push({
+          row: row._rowNumber,
+          field: 'linkedin_url',
+          message: 'LinkedIn URL must contain "linkedin.com"'
+        });
+      }
+
+      // Validate email format if provided
+      if (prospect.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(prospect.email)) {
+        errors.push({
+          row: row._rowNumber,
+          field: 'email',
+          message: 'Invalid email format'
+        });
+      }
+
+      // If required fields are present, add to prospects
+      if (prospect.name && prospect.company) {
+        prospects.push(prospect as ProspectData);
+      }
+    });
+
+    return { prospects, errors };
+  };
+
+  const handleCsvUpload = async (file: File) => {
+    if (!file) return;
+
+    setIsProcessingCsv(true);
+    setCsvErrors([]);
+    
+    try {
+      // Parse CSV file
+      const rawData = await parseCsvFile(file);
+      
+      // Validate and clean data
+      const { prospects, errors } = validateCsvData(rawData);
+      
+      setCsvData(rawData);
+      setCsvErrors(errors);
+      
+      if (errors.length > 0) {
+        toast.error(`Found ${errors.length} validation errors in CSV file`);
+      }
+      
+      if (prospects.length > 0) {
+        // Check if we have LinkedIn URLs for enrichment
+        const prospectsWithLinkedIn = prospects.filter(p => p.linkedin_url);
+        
+        if (prospectsWithLinkedIn.length > 0) {
+          toast.info(`Found ${prospectsWithLinkedIn.length} prospects with LinkedIn URLs - enrichment available`);
+        }
+        
+        setSearchResults(prospects);
+        toast.success(`Successfully loaded ${prospects.length} prospects from CSV`);
+      } else {
+        toast.warning('No valid prospects found in CSV file');
+      }
+      
+    } catch (error) {
+      console.error('CSV processing error:', error);
+      toast.error(`Failed to process CSV: ${(error as Error).message}`);
+    } finally {
+      setIsProcessingCsv(false);
+    }
+  };
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        toast.error('Please select a CSV file');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+      
+      setCsvFile(file);
+      handleCsvUpload(file);
+    }
+  };
+
+  const downloadSampleCsv = () => {
+    const sampleData = `name,title,company,location,email,linkedin_url
+John Doe,CEO,TechCorp,San Francisco,john@techcorp.com,https://linkedin.com/in/johndoe
+Jane Smith,CTO,StartupXYZ,Austin,jane@startup.com,https://linkedin.com/in/janesmith
+Mike Johnson,VP Sales,GrowthCo,New York,mike@growth.co,https://linkedin.com/in/mikejohnson`;
+    
+    const blob = new Blob([sampleData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'prospect_sample.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    toast.success('Sample CSV downloaded');
   };
 
   if (selectedSearchType) {
@@ -326,7 +542,8 @@ export default function ProspectSearch() {
                     <CardTitle>Search Configuration</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {selectedSearchType.methods.find(m => m.active)?.id === 'url-search' && (
+                    {/* URL Search Configuration */}
+                    {(selectedMethod === 'url-search' || (!selectedMethod && selectedSearchType.methods.find(m => m.active)?.id === 'url-search')) && (
                       <div className="space-y-4">
                         <div>
                           <Label htmlFor="linkedin-url" className="text-sm font-medium">URL to LinkedIn search</Label>
@@ -373,6 +590,116 @@ export default function ProspectSearch() {
                         </Button>
                       </div>
                     )}
+
+                    {/* CSV Upload Configuration */}
+                    {selectedMethod === 'csv-upload' && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">Upload CSV File</Label>
+                          <div className="mt-2 space-y-3">
+                            <div 
+                              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
+                              onClick={handleFileSelect}
+                            >
+                              <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                              <p className="text-sm font-medium text-gray-900">
+                                {csvFile ? csvFile.name : 'Click to upload CSV file'}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                CSV files up to 5MB
+                              </p>
+                            </div>
+                            
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              onChange={handleFileChange}
+                              accept=".csv"
+                              className="hidden"
+                            />
+                          </div>
+                        </div>
+
+                        {csvFile && (
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-gray-600" />
+                              <span className="text-sm font-medium">{csvFile.name}</span>
+                              <span className="text-xs text-gray-500">
+                                ({(csvFile.size / 1024).toFixed(1)} KB)
+                              </span>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setCsvFile(null);
+                                setCsvData([]);
+                                setCsvErrors([]);
+                                setSearchResults([]);
+                                if (fileInputRef.current) {
+                                  fileInputRef.current.value = '';
+                                }
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* CSV Errors Display */}
+                        {csvErrors.length > 0 && (
+                          <Alert className="border-red-200 bg-red-50">
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            <AlertDescription>
+                              <div className="space-y-2">
+                                <p className="font-medium text-red-800">Found {csvErrors.length} validation errors:</p>
+                                <div className="max-h-32 overflow-y-auto space-y-1">
+                                  {csvErrors.slice(0, 5).map((error, index) => (
+                                    <div key={index} className="text-xs text-red-700">
+                                      Row {error.row}: {error.message} ({error.field})
+                                    </div>
+                                  ))}
+                                  {csvErrors.length > 5 && (
+                                    <div className="text-xs text-red-600">
+                                      ... and {csvErrors.length - 5} more errors
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        <div className="bg-orange-50 p-4 rounded-lg">
+                          <h5 className="font-medium text-sm mb-2">CSV Format Requirements</h5>
+                          <div className="text-sm text-gray-700 space-y-1">
+                            <p><strong>Required fields:</strong> name, company</p>
+                            <p><strong>Optional fields:</strong> title, location, email, linkedin_url, phone</p>
+                            <p className="text-xs text-gray-600 mt-2">
+                              Field names are flexible (e.g., "full_name" or "name", "position" or "title")
+                            </p>
+                          </div>
+                          
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={downloadSampleCsv}
+                            className="mt-3"
+                          >
+                            <Download className="h-3 w-3 mr-2" />
+                            Download Sample CSV
+                          </Button>
+                        </div>
+
+                        {isProcessingCsv && (
+                          <div className="flex items-center justify-center p-4">
+                            <div className="w-6 h-6 mr-2 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-sm text-gray-600">Processing CSV file...</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -383,20 +710,30 @@ export default function ProspectSearch() {
                     <CardDescription>Choose how you want to add prospects</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {selectedSearchType.methods.map((method) => (
-                      <div key={method.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${method.color}`}>
-                          <method.icon className="h-4 w-4" />
+                    {selectedSearchType.methods.map((method) => {
+                      const isSelected = selectedMethod === method.id || (!selectedMethod && method.active);
+                      
+                      return (
+                        <div 
+                          key={method.id} 
+                          className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all ${
+                            isSelected ? 'border-blue-200 bg-blue-50' : ''
+                          }`}
+                          onClick={() => setSelectedMethod(method.id)}
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${method.color}`}>
+                            <method.icon className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm">{method.name}</h4>
+                            <p className="text-xs text-gray-600">{method.description}</p>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          )}
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{method.name}</h4>
-                          <p className="text-xs text-gray-600">{method.description}</p>
-                        </div>
-                        {method.active && (
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </CardContent>
                 </Card>
               </div>
@@ -417,19 +754,73 @@ export default function ProspectSearch() {
                     {searchResults.length > 0 ? (
                       <div className="space-y-3">
                         {searchResults.map((result, index) => (
-                          <div key={index} className="p-3 border rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="font-medium text-gray-900">{result.name}</h4>
-                                <p className="text-sm text-gray-600">{result.title} at {result.company}</p>
-                                <p className="text-xs text-gray-500">{result.location}</p>
+                          <div key={index} className="p-4 border rounded-lg hover:shadow-sm transition-shadow">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-medium text-gray-900">{result.name}</h4>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {result.source === 'csv_upload' ? 'CSV' : 
+                                     result.source === 'url_search' ? 'URL' : 'Enriched'}
+                                  </Badge>
+                                </div>
+                                
+                                {result.title && (
+                                  <p className="text-sm text-gray-600 mb-1">
+                                    {result.title} {result.company && `at ${result.company}`}
+                                  </p>
+                                )}
+                                
+                                {result.location && (
+                                  <p className="text-xs text-gray-500 mb-2">{result.location}</p>
+                                )}
+                                
+                                <div className="flex items-center gap-4 text-xs text-gray-500">
+                                  {result.email && (
+                                    <span className="flex items-center gap-1">
+                                      <span>📧</span> {result.email}
+                                    </span>
+                                  )}
+                                  {result.linkedin_url && (
+                                    <span className="flex items-center gap-1">
+                                      <span>💼</span> LinkedIn
+                                    </span>
+                                  )}
+                                  {result.phone && (
+                                    <span className="flex items-center gap-1">
+                                      <span>📱</span> Phone
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <Badge variant="outline">New</Badge>
+                              <Badge 
+                                variant="outline" 
+                                className={result.source === 'csv_upload' ? 'border-orange-200 text-orange-700' : 'border-blue-200 text-blue-700'}
+                              >
+                                New
+                              </Badge>
                             </div>
                           </div>
                         ))}
                         
-                        <div className="pt-4 border-t">
+                        <div className="pt-4 border-t space-y-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">
+                              Ready to add {searchResults.length} prospects
+                            </span>
+                            <div className="flex items-center gap-2">
+                              {searchResults.filter(r => r.linkedin_url).length > 0 && (
+                                <span className="text-xs text-blue-600">
+                                  {searchResults.filter(r => r.linkedin_url).length} with LinkedIn
+                                </span>
+                              )}
+                              {searchResults.filter(r => r.email).length > 0 && (
+                                <span className="text-xs text-green-600">
+                                  {searchResults.filter(r => r.email).length} with email
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           <Button className="w-full" onClick={() => navigate('/campaign-setup')}>
                             <Plus className="h-4 w-4 mr-2" />
                             Add {searchResults.length} Prospects to Campaign
