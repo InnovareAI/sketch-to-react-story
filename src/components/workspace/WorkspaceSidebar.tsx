@@ -100,26 +100,48 @@ export function WorkspaceSidebar({
       <div className="h-full flex flex-col">
         {/* Workspace Header */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0",
-              isConversational ? "bg-gray-800 text-gray-300" : "bg-blue-600 text-white"
-            )}>
-              <Building2 className="h-4 w-4" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-3 w-full">
+              <div className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0",
+                isConversational ? "bg-gray-800 text-gray-300" : "bg-blue-600 text-white"
+              )}>
+                <Building2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1 text-center">
+                <h2 className={cn(
+                  "font-semibold text-sm truncate",
+                  isConversational ? "text-white" : "text-gray-900"
+                )}>
+                  {workspaceName}
+                </h2>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <h2 className={cn(
-                "font-semibold text-sm truncate",
-                isConversational ? "text-white" : "text-gray-900"
-              )}>
-                {workspaceName}
-              </h2>
-              <p className={cn(
-                "text-xs truncate",
-                isConversational ? "text-gray-400" : "text-gray-500"
-              )}>
-                LinkedIn Automation
-              </p>
+            
+            {/* Mode Switch Button */}
+            <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg w-full">
+              <NavLink
+                to="/"
+                className={({ isActive }) => cn(
+                  "flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-center transition-all",
+                  !isConversational 
+                    ? "bg-white text-gray-900 shadow-sm" 
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                Work
+              </NavLink>
+              <NavLink
+                to="/agent/team"
+                className={({ isActive }) => cn(
+                  "flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-center transition-all",
+                  isConversational 
+                    ? "bg-white text-gray-900 shadow-sm" 
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                Agent
+              </NavLink>
             </div>
           </div>
         </div>

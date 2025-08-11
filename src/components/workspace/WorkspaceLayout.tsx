@@ -297,61 +297,77 @@ export default function WorkspaceLayout() {
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-premium-orange rounded-full border-2 border-white" />
             </Button>
             
-            {/* Enhanced user profile section */}
+            {/* User profile section */}
             <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <div className={cn(
-                  "text-sm font-semibold",
-                  isConversational ? "text-white" : "text-gray-900"
-                )}>
-                  {user.full_name}
-                </div>
-                <div className={cn(
-                  "text-xs",
-                  isConversational ? "text-gray-400" : "text-gray-500"
-                )}>
-                  {user.email}
-                </div>
-              </div>
-              
-              {/* Enhanced role badge */}
-              <div className="flex items-center gap-3">
-                {getRoleBadge(user.role)}
-                
-                <div className="flex gap-2">
-                  {/* Debug info in development */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        localStorage.removeItem('user_auth_user');
-                        localStorage.removeItem('user_auth_profile');
-                        window.location.reload();
-                      }}
-                      size="sm"
-                      className="text-xs px-2"
-                      title="Clear cached auth data"
-                    >
-                      Clear Auth
-                    </Button>
-                  )}
-                  
+              <div className="flex gap-2">
+                {/* Debug info in development */}
+                {process.env.NODE_ENV === 'development' && (
                   <Button 
-                    variant="ghost" 
-                    onClick={handleSignOut} 
+                    variant="outline" 
+                    onClick={() => {
+                      localStorage.removeItem('user_auth_user');
+                      localStorage.removeItem('user_auth_profile');
+                      window.location.reload();
+                    }}
                     size="sm"
-                    className={cn(
-                      "px-3 py-2 rounded-xl transition-all",
-                      isConversational
-                        ? "text-gray-300 hover:text-white hover:bg-red-900/20 hover:border-red-500/50"
-                        : "text-gray-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
-                    )}
+                    className="text-xs px-2"
+                    title="Clear cached auth data"
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
+                    Clear Auth
                   </Button>
-                </div>
+                )}
+                
+                <Button 
+                  variant="ghost" 
+                  onClick={handleSignOut} 
+                  size="sm"
+                  className={cn(
+                    "px-3 py-2 rounded-xl transition-all",
+                    isConversational
+                      ? "text-gray-300 hover:text-white hover:bg-red-900/20 hover:border-red-500/50"
+                      : "text-gray-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
+                  )}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Workspace Overview Banner */}
+        <div className={cn(
+          "px-6 py-3 border-b",
+          isConversational 
+            ? "bg-gray-800/50 border-gray-700/50" 
+            : "bg-blue-50 border-blue-200"
+        )}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "text-sm font-medium",
+                isConversational ? "text-white" : "text-blue-900"
+              )}>
+                Welcome back, {user.full_name}
+              </div>
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-xs px-2 py-1",
+                  isConversational 
+                    ? "border-gray-600 text-gray-300 bg-gray-800/50" 
+                    : "border-blue-300 text-blue-700 bg-blue-100/50"
+                )}
+              >
+                {user.role.replace('_', ' ').charAt(0).toUpperCase() + user.role.replace('_', ' ').slice(1)}
+              </Badge>
+            </div>
+            <div className={cn(
+              "text-xs",
+              isConversational ? "text-gray-400" : "text-blue-600"
+            )}>
+              {user.workspace_name} • {user.workspace_plan.charAt(0).toUpperCase() + user.workspace_plan.slice(1)} Plan
             </div>
           </div>
         </div>
