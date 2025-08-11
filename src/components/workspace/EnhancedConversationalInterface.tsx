@@ -36,7 +36,7 @@ interface EnhancedConversationalInterfaceProps {
   operationMode?: 'inbound' | 'outbound';
 }
 
-// Limited conversation starters - only 4 key options
+// Conversation starters - 6 essential options
 const conversationStarters = {
   "Quick Actions": [
     {
@@ -58,10 +58,22 @@ const conversationStarters = {
       color: "from-orange-500 to-red-600"
     },
     {
+      title: "Write messages",
+      prompt: "Write personalized outreach messages for my prospects",
+      icon: MessageSquare,
+      color: "from-purple-500 to-pink-600"
+    },
+    {
       title: "Analyze performance",
       prompt: "Show me the performance of my campaigns and what to improve",
       icon: BarChart3,
       color: "from-indigo-500 to-purple-600"
+    },
+    {
+      title: "Connect LinkedIn",
+      prompt: "Help me connect and set up my LinkedIn account for automated outreach",
+      icon: Linkedin,
+      color: "from-blue-600 to-blue-700"
     }
   ]
 };
