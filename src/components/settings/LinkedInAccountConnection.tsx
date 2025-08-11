@@ -56,6 +56,8 @@ export function LinkedInAccountConnection() {
   const [syncingAccount, setSyncingAccount] = useState<string | null>(null);
   const [connectionStep, setConnectionStep] = useState<'proxy' | 'auth'>('proxy');
   const [selectedProxy, setSelectedProxy] = useState<string>('US');
+  const [updatingProxy, setUpdatingProxy] = useState<string | null>(null);
+  const [showProxyUpdate, setShowProxyUpdate] = useState<string | null>(null);
 
   useEffect(() => {
     loadConnectedAccounts();
@@ -418,6 +420,36 @@ export function LinkedInAccountConnection() {
     }
   };
 
+  const updateProxyLocation = async (accountId: string, newProxyCode: string) => {
+    setUpdatingProxy(accountId);
+    try {
+      // Find the account
+      const account = accounts.find(acc => acc.id === accountId);
+      if (!account) {
+        throw new Error('Account not found');
+      }
+
+      // Update the proxy location
+      const updatedAccounts = accounts.map(acc => 
+        acc.id === accountId 
+          ? { ...acc, metadata: { ...acc.metadata, proxy_location: newProxyCode, proxy_updated: new Date().toISOString() } }
+          : acc
+      );
+      
+      setAccounts(updatedAccounts);
+      localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+      setShowProxyUpdate(null);
+      
+      const newLocation = proxyLocations.find(l => l.code === newProxyCode);
+      toast.success(`Proxy location updated to ${newLocation?.flag} ${newLocation?.name}`);
+    } catch (error) {
+      console.error('Error updating proxy location:', error);
+      toast.error('Failed to update proxy location: ' + (error as Error).message);
+    } finally {
+      setUpdatingProxy(null);
+    }
+  };
+
   const getStatusBadge = (status: LinkedInAccountData['status']) => {
     switch (status) {
       case 'active':
@@ -760,6 +792,19 @@ export function LinkedInAccountConnection() {
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => setShowProxyUpdate(showProxyUpdate === account.id ? null : account.id)}
+                      disabled={updatingProxy === account.id}
+                    >
+                      {updatingProxy === account.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Globe className="h-4 w-4" />
+                      )}
+                      <span className="ml-1">Proxy</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => disconnectAccount(account.id)}
                     >
                       <X className="h-4 w-4 mr-1" />
@@ -767,6 +812,45 @@ export function LinkedInAccountConnection() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Proxy Update Section */}
+                {showProxyUpdate === account.id && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Update Proxy Location</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Change your proxy location for this account. Useful when traveling or accessing from different regions.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {proxyLocations.map((location) => (
+                          <Button
+                            key={location.code}
+                            size="sm"
+                            variant={account.metadata?.proxy_location === location.code ? "default" : "outline"}
+                            onClick={() => updateProxyLocation(account.id, location.code)}
+                            disabled={updatingProxy === account.id || account.metadata?.proxy_location === location.code}
+                            className="justify-start"
+                          >
+                            <span className="text-lg mr-2">{location.flag}</span>
+                            {location.name}
+                            {account.metadata?.proxy_location === location.code && (
+                              <Check className="h-3 w-3 ml-auto" />
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowProxyUpdate(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Account Stats */}
                 <div className="mt-4 pt-4 border-t grid grid-cols-4 gap-4">
