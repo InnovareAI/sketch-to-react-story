@@ -52,7 +52,7 @@ exports.handler = async (event, context) => {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: `https://sameaisalesassistant.netlify.app/.netlify/functions/linkedin-callback`,
+        redirect_uri: `https://sketch-to-react-story.netlify.app/.netlify/functions/linkedin-callback`,
         client_id: process.env.VITE_LINKEDIN_CLIENT_ID,
         client_secret: process.env.VITE_LINKEDIN_CLIENT_SECRET
       }).toString()
