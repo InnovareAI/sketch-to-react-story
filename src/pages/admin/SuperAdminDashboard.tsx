@@ -70,7 +70,7 @@ export default function SuperAdminDashboard() {
   });
   const [inviteUserData, setInviteUserData] = useState({
     email: '',
-    role: 'member'
+    role: 'user'
   });
   const [deleteWorkspaceOpen, setDeleteWorkspaceOpen] = useState(false);
   const [deleteWorkspaceLoading, setDeleteWorkspaceLoading] = useState(false);
@@ -308,7 +308,7 @@ export default function SuperAdminDashboard() {
 
       toast.success(`Invitation sent to ${inviteUserData.email}`);
       setInviteUserOpen(false);
-      setInviteUserData({ email: '', role: 'member' });
+      setInviteUserData({ email: '', role: 'user' });
       setSelectedWorkspace(null);
       await loadDashboardData(); // Refresh data
     } catch (error: any) {
@@ -382,10 +382,16 @@ export default function SuperAdminDashboard() {
         return <Badge className="bg-red-100 text-red-800">Super Admin</Badge>;
       case 'admin':
         return <Badge className="bg-purple-100 text-purple-800">Admin</Badge>;
+      case 'workspace_manager':
+        return <Badge className="bg-blue-100 text-blue-800">Workspace Manager</Badge>;
+      case 'user':
+        return <Badge className="bg-green-100 text-green-800">User</Badge>;
+      case 'co_worker':
+        return <Badge className="bg-orange-100 text-orange-800">Co-Worker</Badge>;
       case 'member':
-        return <Badge className="bg-green-100 text-green-800">Member</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">Member</Badge>;
       default:
-        return <Badge variant="secondary">{role}</Badge>;
+        return <Badge variant="secondary">{role.replace('_', ' ')}</Badge>;
     }
   };
 
@@ -515,8 +521,36 @@ export default function SuperAdminDashboard() {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="workspace_manager">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Workspace Manager</span>
+                        <span className="text-xs text-gray-500">Full workspace management access</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="user">
+                      <div className="flex flex-col">
+                        <span className="font-medium">User</span>
+                        <span className="text-xs text-gray-500">Standard user with basic permissions</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="co_worker">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Co-Worker</span>
+                        <span className="text-xs text-gray-500">Collaborator with shared access</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="admin">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Admin (Legacy)</span>
+                        <span className="text-xs text-gray-500">Legacy admin role</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="member">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Member (Legacy)</span>
+                        <span className="text-xs text-gray-500">Legacy member role</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
