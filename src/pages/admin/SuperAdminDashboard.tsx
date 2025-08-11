@@ -125,7 +125,8 @@ export default function SuperAdminDashboard() {
   const loadDashboardData = async () => {
     try {
       // Load tenants (workspaces)
-      const { data: tenantsData } = await supabase
+      console.log('Loading tenants data...');
+      const { data: tenantsData, error: tenantsError } = await supabase
         .from('tenants')
         .select(`
           id,
@@ -135,6 +136,8 @@ export default function SuperAdminDashboard() {
           created_at
         `)
         .order('created_at', { ascending: false });
+      
+      console.log('Tenants query result:', { tenantsData, tenantsError });
 
       if (tenantsData) {
         // Transform to match workspace interface
@@ -143,6 +146,7 @@ export default function SuperAdminDashboard() {
           slug: tenant.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
         }));
         
+        console.log('Setting workspaces data:', workspacesData);
         setWorkspaces(workspacesData);
         
         // Calculate stats
@@ -160,7 +164,8 @@ export default function SuperAdminDashboard() {
       }
 
       // Load users
-      const { data: usersData } = await supabase
+      console.log('Loading users data...');
+      const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select(`
           id,
@@ -172,6 +177,8 @@ export default function SuperAdminDashboard() {
           tenants!inner(name)
         `)
         .order('created_at', { ascending: false });
+      
+      console.log('Users query result:', { usersData, usersError });
 
       if (usersData) {
         setUsers(usersData.map(user => ({
