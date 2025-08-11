@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Navigation Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        .test-link { padding: 10px; background: #f0f0f0; text-decoration: none; border-radius: 5px; display: block; text-center; }
+        .test-link:hover { background: #e0e0e0; }
+        .status { margin-top: 20px; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>SAM AI Navigation Test</h1>
+    <p>Click the links below to test navigation (assumes dev server running on localhost:8081):</p>
+    
+    <div class="test-links">
+        <a href="http://localhost:8081/campaigns" class="test-link" target="_blank">
+            🎯 Campaigns<br><small>/campaigns</small>
+        </a>
+        <a href="http://localhost:8081/inbox" class="test-link" target="_blank">
+            📧 Inbox<br><small>/inbox</small>
+        </a>
+        <a href="http://localhost:8081/templates" class="test-link" target="_blank">
+            📋 Templates<br><small>/templates</small>
+        </a>
+        <a href="http://localhost:8081/global-inbox" class="test-link" target="_blank">
+            👥 Team Inbox<br><small>/global-inbox</small>
+        </a>
+        <a href="http://localhost:8081/analytics" class="test-link" target="_blank">
+            📊 Analytics (Working)<br><small>/analytics</small>
+        </a>
+        <a href="http://localhost:8081/contacts" class="test-link" target="_blank">
+            👤 Contacts (Working)<br><small>/contacts</small>
+        </a>
+    </div>
+    
+    <div class="status success">
+        <strong>Expected Result:</strong> All links should work and show the correct pages without 404 errors.
+    </div>
+    
+    <div class="status">
+        <strong>If you see 404 errors:</strong>
+        <ul>
+            <li>Clear browser cache and hard refresh (Ctrl+Shift+R)</li>
+            <li>Restart the development server</li>
+            <li>Check browser console for JavaScript errors</li>
+        </ul>
+    </div>
+</body>
+</html>

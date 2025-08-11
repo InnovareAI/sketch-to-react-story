@@ -1,7 +1,4 @@
 import React, { useState } from "react";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,7 +42,6 @@ import { LinkedInAccountConnection } from "@/components/settings/LinkedInAccount
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
-  const [isConversational, setIsConversational] = useState(false);
 
   // Handle Save Company Profile
   const handleSaveCompanyProfile = () => {
@@ -56,13 +52,9 @@ export default function WorkspaceSettings() {
   };
 
   return (
-    <SidebarProvider open={true} onOpenChange={() => {}}>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <WorkspaceSidebar isConversational={isConversational} />
-        <div className="flex-1 flex flex-col">
-          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
-          <main className="flex-1 p-8">
-            <div className="max-w-7xl mx-auto">
+    <div className="flex-1 bg-gray-50">
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto">
               <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                   <Settings className="h-8 w-8 text-primary" />
@@ -408,10 +400,8 @@ export default function WorkspaceSettings() {
                   </TabsContent>
                 </Tabs>
               </div>
-            </div>
-          </main>
         </div>
-      </div>
-    </SidebarProvider>
+      </main>
+    </div>
   );
 }

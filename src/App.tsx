@@ -28,6 +28,9 @@ import LinkedInCallback from "./pages/auth/LinkedInCallback";
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
 import UserLogin from "./pages/auth/UserLogin";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
+import Integrations from "./pages/Integrations";
+import TeamSettings from "./pages/TeamSettings";
+import Analytics from "./pages/Analytics";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -52,14 +55,23 @@ const App: React.FC = () => {
               <Route index element={<Index />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="accounts" element={<Accounts />} />
+              
+              {/* Core Navigation Routes - These should never 404 */}
               <Route path="campaigns" element={<Campaigns />} />
-              <Route path="campaign-setup" element={<CampaignSetup />} />
               <Route path="contacts" element={<Contacts />} />
-              <Route path="search" element={<Search />} />
               <Route path="inbox" element={<GlobalInbox />} />
-              <Route path="message-queue" element={<MessageQueue />} />
-              <Route path="global-inbox" element={<GlobalInbox />} />
               <Route path="templates" element={<Templates />} />
+              <Route path="analytics" element={<Analytics />} />
+              
+              {/* Team Routes */}
+              <Route path="global-inbox" element={<GlobalInbox />} />
+              <Route path="team-settings" element={<TeamSettings />} />
+              <Route path="integrations" element={<Integrations />} />
+              
+              {/* Campaign & Setup Routes */}
+              <Route path="campaign-setup" element={<CampaignSetup />} />
+              <Route path="search" element={<Search />} />
+              <Route path="message-queue" element={<MessageQueue />} />
               <Route path="requests" element={<Requests />} />
               <Route path="placeholders" element={<Placeholders />} />
               <Route path="company-profile" element={<Members />} />

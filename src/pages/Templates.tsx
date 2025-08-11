@@ -18,9 +18,6 @@ interface Template {
   createdBy?: string;
   lastUpdated?: string;
 }
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,7 +54,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Templates() {
-  const [isConversational, setIsConversational] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [newTemplate, setNewTemplate] = useState({ name: "", type: "email", subject: "", content: "" });
 
@@ -150,13 +146,9 @@ export default function Templates() {
   };
 
   return (
-    <SidebarProvider defaultOpen={true} open={true}>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <WorkspaceSidebar isConversational={isConversational} />
-        <div className="flex-1 flex flex-col">
-          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
-          <main className="flex-1 p-8">
-            <div className="max-w-7xl mx-auto space-y-6">
+    <div className="flex-1 bg-gray-50">
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -538,10 +530,8 @@ export default function Templates() {
           </CardContent>
         </Card>
       </div>
-            </div>
-          </main>
         </div>
-      </div>
-    </SidebarProvider>
+      </main>
+    </div>
   );
 }
