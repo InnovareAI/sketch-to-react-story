@@ -303,22 +303,10 @@ export default function SuperAdminDashboard() {
 
     setInviteUserLoading(true);
     try {
-      // Send invitation email through Supabase Auth
-      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-        inviteUserData.email,
-        {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            workspace_id: selectedWorkspace.id,
-            workspace_name: selectedWorkspace.name,
-            role: inviteUserData.role
-          }
-        }
-      );
-
-      if (inviteError) throw inviteError;
-
-      // Create user record in pending state
+      // For development, we'll create a user record and show instructions
+      // instead of trying to send actual invitations which require admin privileges
+      
+      // Create user record directly
       const { error: userError } = await supabase
         .from('users')
         .insert({
@@ -330,11 +318,16 @@ export default function SuperAdminDashboard() {
         });
 
       if (userError) {
-        console.warn('User record creation failed:', userError);
-        // Continue anyway as invitation was sent
+        console.error('User record creation failed:', userError);
+        throw new Error(`Failed to create user record: ${userError.message}`);
       }
 
-      toast.success(`Invitation sent to ${inviteUserData.email}`);
+      // Show success message with instructions
+      toast.success(
+        `User ${inviteUserData.email} added to workspace "${selectedWorkspace.name}" with role: ${inviteUserData.role}. ` +
+        `Note: In development mode, no email invitation is sent.`,
+        { duration: 6000 }
+      );
       setInviteUserOpen(false);
       setInviteUserData({ email: '', role: 'user' });
       setSelectedWorkspace(null);
