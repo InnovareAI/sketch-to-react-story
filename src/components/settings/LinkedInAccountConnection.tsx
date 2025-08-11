@@ -544,12 +544,12 @@ export function LinkedInAccountConnection() {
                   </Button>
                 </div>
 
-                {!import.meta.env.VITE_UNIPILE_API_KEY && (
+                {!import.meta.env.VITE_LINKEDIN_CLIENT_ID && !import.meta.env.VITE_UNIPILE_API_KEY && (
                   <Alert className="border-yellow-200 bg-yellow-50">
                     <AlertCircle className="h-4 w-4 text-yellow-600" />
                     <AlertDescription className="text-yellow-800">
-                      <strong>Configuration Required:</strong> Please add your Unipile API key to the environment variables 
-                      (VITE_UNIPILE_API_KEY) to enable LinkedIn integration.
+                      <strong>Demo Mode:</strong> No LinkedIn integration configured. 
+                      Add LinkedIn OAuth credentials (VITE_LINKEDIN_CLIENT_ID) or Unipile API key to enable real connections.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -718,12 +718,13 @@ export function LinkedInAccountConnection() {
             </div>
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-blue-100 p-2">
-                <MessageSquare className="h-4 w-4 text-blue-600" />
+                <Linkedin className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <div className="font-medium">Unipile API</div>
+                <div className="font-medium">LinkedIn OAuth</div>
                 <div className="text-sm text-muted-foreground">
-                  {import.meta.env.VITE_UNIPILE_API_KEY ? 'Configured' : 'Not Configured'}
+                  {import.meta.env.VITE_LINKEDIN_CLIENT_ID ? 'Configured' : 
+                   import.meta.env.VITE_UNIPILE_API_KEY ? 'Using Unipile' : 'Demo Mode'}
                 </div>
               </div>
             </div>
