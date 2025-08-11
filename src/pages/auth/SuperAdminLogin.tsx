@@ -109,7 +109,7 @@ export default function SuperAdminLogin() {
           console.log('Profile creation result:', { newProfile, createError });
           
           if (createError) {
-            console.error('Profile creation failed:', createError);
+            console.error('Full createError object:', JSON.stringify(createError, null, 2));
             // Try to fetch existing profile instead
             const { data: existingProfile, error: fetchError } = await supabase
               .from('profiles')
@@ -122,7 +122,7 @@ export default function SuperAdminLogin() {
             if (existingProfile) {
               profile = existingProfile;
             } else {
-              throw new Error(`Profile creation failed: ${createError.message}`);
+              throw new Error(`Profile creation failed: ${JSON.stringify(createError)}`);
             }
           } else {
             profile = newProfile;
