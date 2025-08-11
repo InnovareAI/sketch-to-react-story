@@ -107,7 +107,12 @@ export default function WorkspaceLayout() {
     const userProfile: UserProfile = {
       id: userRecord.id,
       email: userRecord.email,
-      full_name: userRecord.name || userRecord.email.split('@')[0],
+      full_name: userRecord.name ? 
+        (userRecord.name.length > 2 ? 
+          userRecord.name.charAt(0).toUpperCase() + userRecord.name.slice(1) : 
+          userRecord.name.toUpperCase()
+        ) : 
+        userRecord.email.split('@')[0].toUpperCase(),
       role: userRecord.role,
       workspace_id: userRecord.tenant_id,
       workspace_name: userRecord.tenants?.name || 'Unknown Workspace',

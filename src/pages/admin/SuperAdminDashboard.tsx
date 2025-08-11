@@ -316,7 +316,7 @@ export default function SuperAdminDashboard() {
           id: userId,
           tenant_id: selectedWorkspace.id,
           email: inviteUserData.email,
-          name: inviteUserData.email.split('@')[0],
+          name: inviteUserData.email.split('@')[0].charAt(0).toUpperCase() + inviteUserData.email.split('@')[0].slice(1),
           role: inviteUserData.role,
           status: 'invited'
         });
