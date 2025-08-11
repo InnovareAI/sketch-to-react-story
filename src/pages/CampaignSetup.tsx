@@ -1,8 +1,5 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +36,8 @@ import {
   Clock,
   MessageSquare,
   UserPlus,
-  Building2
+  Building2,
+  Calendar
 } from "lucide-react";
 
 interface Message {
@@ -56,7 +54,6 @@ export default function CampaignSetup() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isConversational, setIsConversational] = useState(false);
   const [activeTab, setActiveTab] = useState("people");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [campaignName, setCampaignName] = useState(searchParams.get('name') || "Connector Campaign");
@@ -214,13 +211,9 @@ export default function CampaignSetup() {
   };
 
   return (
-    <SidebarProvider open={true} onOpenChange={() => {}}>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <WorkspaceSidebar isConversational={isConversational} />
-        <div className="flex-1 flex flex-col">
-          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
-          <main className="flex-1 p-8">
-            <div className="max-w-7xl mx-auto">
+    <div className="flex-1 bg-gray-50">
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
@@ -339,123 +332,29 @@ export default function CampaignSetup() {
                         </div>
                       </div>
 
-                      {/* Prospect Methods */}
-                      <RadioGroup value={prospectMethod} onValueChange={setProspectMethod}>
-                        <div className="space-y-4">
-                          <div className="flex items-start space-x-3 p-4 border rounded-lg">
-                            <RadioGroupItem value="search" id="search" />
-                            <div className="flex-1">
-                              <Label htmlFor="search" className="font-medium cursor-pointer">New URL search</Label>
-                              <p className="text-sm text-gray-600 mt-1">Initiate a new search</p>
-                              {prospectMethod === "search" && (
-                                <Button className="mt-2" size="sm">
-                                  <Search className="h-4 w-4 mr-2" />
-                                  Start New Search
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-start space-x-3 p-4 border rounded-lg">
-                            <RadioGroupItem value="existing" id="existing" />
-                            <div className="flex-1">
-                              <Label htmlFor="existing" className="font-medium cursor-pointer">Existing search</Label>
-                              <p className="text-sm text-gray-600 mt-1">Add prospects from the list you have already created</p>
-                              {prospectMethod === "existing" && (
-                                <Select>
-                                  <SelectTrigger className="mt-2 w-64">
-                                    <SelectValue placeholder="Select existing search" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="search1">Tech CEOs - Silicon Valley</SelectItem>
-                                    <SelectItem value="search2">Marketing Directors - SaaS</SelectItem>
-                                    <SelectItem value="search3">Startup Founders - Series A</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-start space-x-3 p-4 border rounded-lg">
-                            <RadioGroupItem value="csv" id="csv" />
-                            <div className="flex-1">
-                              <Label htmlFor="csv" className="font-medium cursor-pointer">Upload CSV</Label>
-                              <p className="text-sm text-gray-600 mt-1">Upload leads from CSV file</p>
-                              
-                              {prospectMethod === "csv" && (
-                                <div className="mt-4 space-y-4">
-                                  {/* CSV Instructions */}
-                                  <div className="bg-blue-50 p-4 rounded-lg">
-                                    <h4 className="font-medium text-blue-900 mb-2">How to perform the CSV</h4>
-                                    <ul className="text-sm text-blue-800 space-y-1">
-                                      <li>• Every row should have a value at least for "profile_link" (this is the link to a LinkedIn contact profile)</li>
-                                      <li>• All other values are optional and will be considered temporary values, until the person gets messaged and the actual values from LinkedIn are acquired</li>
-                                      <li>• Any additional columns will be saved as dynamic placeholders.</li>
-                                    </ul>
-                                  </div>
-
-                                  {/* CSV Example */}
-                                  <div>
-                                    <h4 className="font-medium mb-2">CSV example</h4>
-                                    <p className="text-sm text-gray-600 mb-3">
-                                      An example of the format, in which an uploaded CSV should be, can be downloaded by clicking the button.
-                                    </p>
-                                    <Button variant="outline" onClick={handleDownloadExample}>
-                                      <Download className="h-4 w-4 mr-2" />
-                                      Download Example CSV
-                                    </Button>
-                                  </div>
-
-                                  {/* File Upload */}
-                                  <div className="space-y-3">
-                                    <div className="flex items-center space-x-2">
-                                      <Checkbox id="duplicates" />
-                                      <Label htmlFor="duplicates" className="text-sm">Manually select duplicates to keep</Label>
-                                    </div>
-                                    
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                                      <div className="space-y-4">
-                                        <Upload className="h-12 w-12 text-gray-400 mx-auto" />
-                                        <div>
-                                          <p className="text-gray-600">Drop a CSV file here or browse a file to upload</p>
-                                          <p className="text-xs text-gray-500 mt-1">Max 5000 leads can be imported to the campaign</p>
-                                        </div>
-                                        <input
-                                          type="file"
-                                          accept=".csv"
-                                          onChange={handleFileUpload}
-                                          className="hidden"
-                                          id="csv-upload"
-                                        />
-                                        <Label 
-                                          htmlFor="csv-upload"
-                                          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-                                        >
-                                          <Upload className="h-4 w-4 mr-2" />
-                                          Browse File
-                                        </Label>
-                                      </div>
-                                    </div>
-
-                                    {csvFile && (
-                                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                                        <div className="flex items-center gap-2">
-                                          <FileText className="h-4 w-4 text-green-600" />
-                                          <span className="text-sm font-medium text-green-900">{csvFile.name}</span>
-                                          <span className="text-xs text-green-600">({(csvFile.size / 1024).toFixed(1)}KB)</span>
-                                        </div>
-                                        <Button size="sm" onClick={handleProcessCsv}>
-                                          Send CSV for processing
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                      {/* New Search Method */}
+                      <div className="space-y-4">
+                        <div className="text-center py-8">
+                          <div className="max-w-md mx-auto">
+                            <Target className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Add Prospects to Campaign</h3>
+                            <p className="text-gray-600 text-sm mb-6">
+                              Choose from multiple search methods to find and add prospects to your campaign. Select the method that best fits your targeting strategy.
+                            </p>
+                            <Button size="lg" onClick={() => navigate('/prospect-search')} className="bg-blue-600 hover:bg-blue-700">
+                              <Search className="h-5 w-5 mr-2" />
+                              Choose Search Type
+                            </Button>
                           </div>
                         </div>
-                      </RadioGroup>
+
+                        <div className="border-t pt-6">
+                          <div className="flex items-center justify-between text-sm text-gray-500">
+                            <span>Prospects added: 0</span>
+                            <span>Campaign ready to launch once prospects are added</span>
+                          </div>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -1130,10 +1029,8 @@ export default function CampaignSetup() {
                   </Card>
                 </TabsContent>
               </Tabs>
-            </div>
-          </main>
         </div>
-      </div>
-    </SidebarProvider>
+      </main>
+    </div>
   );
 }

@@ -31,6 +31,7 @@ import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import Integrations from "./pages/Integrations";
 import TeamSettings from "./pages/TeamSettings";
 import Analytics from "./pages/Analytics";
+import ProspectSearch from "./pages/ProspectSearch";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App: React.FC = () => {
               
               {/* Campaign & Setup Routes */}
               <Route path="campaign-setup" element={<CampaignSetup />} />
+              <Route path="prospect-search" element={<ProspectSearch />} />
               <Route path="search" element={<Search />} />
               <Route path="message-queue" element={<MessageQueue />} />
               <Route path="requests" element={<Requests />} />
