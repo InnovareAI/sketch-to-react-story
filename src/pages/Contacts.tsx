@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ContactsListView } from "@/components/contacts/ContactsListView";
 import { 
   Mail, 
   Phone, 
@@ -45,7 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Contacts() {
-  const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
+  const [viewMode, setViewMode] = useState<"list" | "tile">("list");
   const [editingContact, setEditingContact] = useState<Account | null>(null);
   
   const contacts = [
@@ -190,22 +191,8 @@ export default function Contacts() {
               </Card>
             </div>
 
-            {/* Search and View Toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search contacts..."
-                    className="pl-10 w-80"
-                  />
-                </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
-              </div>
-              
+            {/* View Toggle */}
+            <div className="flex items-center justify-end mb-6">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">View:</span>
                 <div className="flex rounded-lg border border-border overflow-hidden">
@@ -229,98 +216,120 @@ export default function Contacts() {
               </div>
             </div>
 
-            {/* Contact List */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {contacts.map((contact) => (
-                <Card key={contact.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={contact.avatar} alt={contact.name} />
-                          <AvatarFallback className="bg-blue-100 text-blue-600">
-                            {contact.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-gray-900">{contact.name}</h3>
-                          <p className="text-blue-600 font-medium">{contact.role}</p>
-                          <p className="text-gray-600">{contact.company}</p>
+            {/* Contact Display */}
+            {viewMode === "list" ? (
+              <ContactsListView />
+            ) : (
+              <div>
+                {/* Search and Filter for Tile View */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search contacts..."
+                        className="pl-10 w-80"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filter
+                    </Button>
+                  </div>
+                </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {contacts.map((contact) => (
+                  <Card key={contact.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={contact.avatar} alt={contact.name} />
+                            <AvatarFallback className="bg-blue-100 text-blue-600">
+                              {contact.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-gray-900">{contact.name}</h3>
+                            <p className="text-blue-600 font-medium">{contact.role}</p>
+                            <p className="text-gray-600">{contact.company}</p>
+                          </div>
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Mail className="h-4 w-4 mr-2" />
+                              Send Email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              LinkedIn Message
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Add to Campaign
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleEditContact(contact)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Contact
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <Badge variant={contact.status === "Hot Lead" ? "default" : "secondary"}>
+                          {contact.status}
+                        </Badge>
+                        <p className="text-xs text-gray-500">Last contact: {contact.lastContact}</p>
+                      </div>
+
+                      <div className="space-y-3 mb-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Mail className="h-4 w-4" />
+                          <span className="truncate">{contact.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Phone className="h-4 w-4" />
+                          <span>{contact.phone}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <MapPin className="h-4 w-4" />
+                          <span>{contact.location}</span>
                         </div>
                       </div>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Send Email
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            LinkedIn Message
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Add to Campaign
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleEditContact(contact)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Contact
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
 
-                    <div className="space-y-2 mb-4">
-                      <Badge variant={contact.status === "Hot Lead" ? "default" : "secondary"}>
-                        {contact.status}
-                      </Badge>
-                      <p className="text-xs text-gray-500">Last contact: {contact.lastContact}</p>
-                    </div>
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-600">Response Rate</span>
+                          <span className="text-sm font-medium">{contact.responseRate}%</span>
+                        </div>
+                        <Progress value={contact.responseRate} className="h-2" />
+                      </div>
 
-                    <div className="space-y-3 mb-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Mail className="h-4 w-4" />
-                        <span className="truncate">{contact.email}</span>
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1">
+                          <Mail className="h-3 w-3 mr-1" />
+                          Email
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1">
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          LinkedIn
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Phone className="h-4 w-4" />
-                        <span>{contact.phone}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <MapPin className="h-4 w-4" />
-                        <span>{contact.location}</span>
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Response Rate</span>
-                        <span className="text-sm font-medium">{contact.responseRate}%</span>
-                      </div>
-                      <Progress value={contact.responseRate} className="h-2" />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button size="sm" className="flex-1">
-                        <Mail className="h-3 w-3 mr-1" />
-                        Email
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1">
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        LinkedIn
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
