@@ -24,6 +24,7 @@ import LinkedInIntegration from "./pages/LinkedInIntegration";
 import CampaignSetup from "./pages/CampaignSetup";
 import AgentFullScreen from "./pages/AgentFullScreen";
 import UsersPermissions from "./pages/admin/UsersPermissions";
+import LinkedInCallback from "./pages/auth/LinkedInCallback";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App: React.FC = () => {
             <Route path="/linkedin-integration" element={<LinkedInIntegration />} />
             <Route path="/users-permissions" element={<UsersPermissions />} />
             <Route path="/admin/users" element={<UsersPermissions />} />
+            <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

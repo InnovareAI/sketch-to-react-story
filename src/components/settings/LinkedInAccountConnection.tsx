@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { unipileService, LinkedInAccountData } from '@/services/unipile/UnipileService';
+import { linkedInOAuth } from '@/services/linkedin/LinkedInOAuth';
 
 interface ProxyLocation {
   code: string;
@@ -114,113 +115,160 @@ export function LinkedInAccountConnection() {
   const initiateUnipileConnection = async () => {
     setIsConnecting(true);
     try {
-      // Check if we have Unipile API key configured
-      if (!import.meta.env.VITE_UNIPILE_API_KEY) {
-        toast.error('Unipile API key not configured. Please add VITE_UNIPILE_API_KEY to your environment.');
-        setIsConnecting(false);
-        return;
-      }
-
       // Get the selected proxy location
       const proxyLocation = sessionStorage.getItem('linkedin_proxy_location') || 'US';
       
-      // Check if we have Bright Data configured
-      if (!import.meta.env.VITE_BRIGHTDATA_CUSTOMER_ID) {
-        console.warn('Bright Data not configured. Proceeding without proxy.');
-      }
-
-      console.log('Initiating LinkedIn OAuth with proxy location:', proxyLocation);
+      // Check which OAuth method to use
+      const hasLinkedInApp = import.meta.env.VITE_LINKEDIN_CLIENT_ID && import.meta.env.VITE_LINKEDIN_CLIENT_SECRET;
+      const hasUnipile = import.meta.env.VITE_UNIPILE_API_KEY && import.meta.env.VITE_UNIPILE_API_KEY !== '';
       
-      // For demonstration, create a mock connection if Unipile is not configured
-      if (!import.meta.env.VITE_UNIPILE_API_KEY || import.meta.env.VITE_UNIPILE_API_KEY === 'demo_key_not_configured') {
-        toast.warning('Running in demo mode. Creating test connection.');
+      if (hasLinkedInApp) {
+        // Use direct LinkedIn OAuth
+        console.log('Using direct LinkedIn OAuth');
+        const state = crypto.randomUUID();
+        sessionStorage.setItem('linkedin_oauth_state', state);
+        sessionStorage.setItem('linkedin_proxy_location', proxyLocation);
         
-        // Simulate a delay for authentication
-        setTimeout(() => {
-          const mockAccount: LinkedInAccountData = {
-            id: crypto.randomUUID(),
-            provider: 'LINKEDIN',
-            email: `user${Math.floor(Math.random() * 1000)}@linkedin.com`,
-            name: `Test User ${Math.floor(Math.random() * 100)}`,
-            profileUrl: 'https://linkedin.com/in/testuser',
-            status: 'active',
-            unipileAccountId: `demo-${Date.now()}`,
-            metadata: {
-              proxy_location: proxyLocation,
-              proxy_provider: 'brightdata',
-              headline: 'Senior Professional',
-              connections_count: Math.floor(Math.random() * 500) + 100,
-              location: proxyLocations.find(l => l.code === proxyLocation)?.name || 'Unknown'
-            }
-          };
-          
-          setAccounts(prev => [...prev, mockAccount]);
-          toast.success('Demo LinkedIn account connected successfully!');
-          setShowConnectionForm(false);
-          setConnectionStep('proxy');
+        const authUrl = linkedInOAuth.getAuthorizationUrl(state);
+        
+        // Open OAuth window
+        const authWindow = window.open(
+          authUrl,
+          'LinkedInAuth',
+          'width=600,height=700,left=200,top=100'
+        );
+        
+        if (!authWindow || authWindow.closed) {
+          toast.error('Popup blocked. Please allow popups for this site and try again.');
           setIsConnecting(false);
-        }, 2000);
+          return;
+        }
         
-        return;
-      }
-
-      // Initiate OAuth flow with Unipile, including proxy metadata
-      const oauthResponse = await unipileService.initiateLinkedInOAuth(undefined, {
-        proxyLocation,
-        proxyProvider: 'brightdata',
-        customerId: import.meta.env.VITE_BRIGHTDATA_CUSTOMER_ID
-      });
-      
-      if (!oauthResponse || !oauthResponse.auth_url) {
-        throw new Error('Invalid response from Unipile API');
-      }
-      
-      console.log('OAuth URL received:', oauthResponse.auth_url);
-      
-      // Open OAuth URL in popup window
-      const authWindow = window.open(
-        oauthResponse.auth_url,
-        'UnipileLinkedInAuth',
-        'width=600,height=700,left=200,top=100'
-      );
-
-      // Check if popup was blocked
-      if (!authWindow || authWindow.closed) {
-        toast.error('Popup blocked. Please allow popups for this site and try again.');
-        setIsConnecting(false);
-        return;
-      }
-
-      toast.success('LinkedIn authentication window opened. Please complete the authentication.');
-      
-      // Poll to check if popup is closed
-      const checkInterval = setInterval(() => {
-        try {
-          if (authWindow.closed) {
+        toast.success('LinkedIn authentication window opened. Please complete the authentication.');
+        
+        // Poll to check if popup is closed
+        const checkInterval = setInterval(() => {
+          try {
+            if (authWindow.closed) {
+              clearInterval(checkInterval);
+              setIsConnecting(false);
+              loadConnectedAccounts();
+              setShowConnectionForm(false);
+              setConnectionStep('proxy');
+              toast.info('Authentication window closed. Checking connection status...');
+            }
+          } catch (e) {
             clearInterval(checkInterval);
             setIsConnecting(false);
-            // Reload accounts in case connection was successful
-            loadConnectedAccounts();
-            // Reset the form
-            setShowConnectionForm(false);
-            setConnectionStep('proxy');
-            toast.info('Authentication window closed. Checking connection status...');
           }
-        } catch (e) {
-          // Window might be from different origin, just clear interval
+        }, 1000);
+        
+        // Timeout after 5 minutes
+        setTimeout(() => {
           clearInterval(checkInterval);
           setIsConnecting(false);
-        }
-      }, 1000);
+          if (!authWindow.closed) {
+            authWindow.close();
+          }
+        }, 300000);
+        
+        return;
+      }
       
-      // Timeout after 5 minutes
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        setIsConnecting(false);
-        if (!authWindow.closed) {
-          authWindow.close();
+      if (hasUnipile) {
+        // Use Unipile OAuth
+        console.log('Using Unipile OAuth');
+        
+        // Initiate OAuth flow with Unipile, including proxy metadata
+        const oauthResponse = await unipileService.initiateLinkedInOAuth(undefined, {
+          proxyLocation,
+          proxyProvider: 'brightdata',
+          customerId: import.meta.env.VITE_BRIGHTDATA_CUSTOMER_ID
+        });
+      
+        if (!oauthResponse || !oauthResponse.auth_url) {
+          throw new Error('Invalid response from Unipile API');
         }
-      }, 300000);
+        
+        console.log('OAuth URL received:', oauthResponse.auth_url);
+        
+        // Open OAuth URL in popup window
+        const authWindow = window.open(
+          oauthResponse.auth_url,
+          'UnipileLinkedInAuth',
+          'width=600,height=700,left=200,top=100'
+        );
+
+        // Check if popup was blocked
+        if (!authWindow || authWindow.closed) {
+          toast.error('Popup blocked. Please allow popups for this site and try again.');
+          setIsConnecting(false);
+          return;
+        }
+
+        toast.success('LinkedIn authentication window opened. Please complete the authentication.');
+        
+        // Poll to check if popup is closed
+        const checkInterval = setInterval(() => {
+          try {
+            if (authWindow.closed) {
+              clearInterval(checkInterval);
+              setIsConnecting(false);
+              // Reload accounts in case connection was successful
+              loadConnectedAccounts();
+              // Reset the form
+              setShowConnectionForm(false);
+              setConnectionStep('proxy');
+              toast.info('Authentication window closed. Checking connection status...');
+            }
+          } catch (e) {
+            // Window might be from different origin, just clear interval
+            clearInterval(checkInterval);
+            setIsConnecting(false);
+          }
+        }, 1000);
+        
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          setIsConnecting(false);
+          if (!authWindow.closed) {
+            authWindow.close();
+          }
+        }, 300000);
+        
+        return;
+      }
+      
+      // No OAuth configured - use demo mode
+      console.log('No OAuth configured - using demo mode');
+      toast.warning('No LinkedIn integration configured. Creating demo connection.');
+      
+      // Simulate a delay for authentication
+      setTimeout(() => {
+        const mockAccount: LinkedInAccountData = {
+          id: crypto.randomUUID(),
+          provider: 'LINKEDIN',
+          email: `user${Math.floor(Math.random() * 1000)}@linkedin.com`,
+          name: `Test User ${Math.floor(Math.random() * 100)}`,
+          profileUrl: 'https://linkedin.com/in/testuser',
+          status: 'active',
+          unipileAccountId: `demo-${Date.now()}`,
+          metadata: {
+            proxy_location: proxyLocation,
+            proxy_provider: 'brightdata',
+            headline: 'Senior Professional',
+            connections_count: Math.floor(Math.random() * 500) + 100,
+            location: proxyLocations.find(l => l.code === proxyLocation)?.name || 'Unknown'
+          }
+        };
+        
+        setAccounts(prev => [...prev, mockAccount]);
+        toast.success('Demo LinkedIn account connected successfully!');
+        setShowConnectionForm(false);
+        setConnectionStep('proxy');
+        setIsConnecting(false);
+      }, 2000);
       
     } catch (error: any) {
       console.error('Error initiating connection:', error);

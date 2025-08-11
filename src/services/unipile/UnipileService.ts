@@ -34,9 +34,12 @@ export interface UnipileOAuthResponse {
 
 class UnipileService {
   private config: UnipileConfig;
-  private baseUrl = 'https://api.unipile.com/api/v1';
+  private baseUrl: string;
   
   constructor() {
+    const dsn = import.meta.env.VITE_UNIPILE_DSN || 'api6.unipile.com:13670';
+    this.baseUrl = `https://${dsn}/api/v1`;
+    
     this.config = {
       apiKey: import.meta.env.VITE_UNIPILE_API_KEY || '',
       baseUrl: this.baseUrl,

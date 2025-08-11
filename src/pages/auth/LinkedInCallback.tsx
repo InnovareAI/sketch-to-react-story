@@ -1,20 +1,15 @@
-/**
- * LinkedIn OAuth Callback Handler
- * Processes the OAuth redirect from Unipile after LinkedIn authentication
- */
-
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { unipileService } from '@/services/unipile/UnipileService';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { linkedInOAuth } from '@/services/linkedin/LinkedInOAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function LinkedInCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
-  const [message, setMessage] = useState('Connecting your LinkedIn account...');
+  const [processing, setProcessing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     handleCallback();
@@ -22,106 +17,128 @@ export default function LinkedInCallback() {
 
   const handleCallback = async () => {
     try {
-      // Get parameters from URL
       const code = searchParams.get('code');
       const state = searchParams.get('state');
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
 
-      // Check for errors from OAuth provider
+      // Check for OAuth errors
       if (error) {
-        throw new Error(errorDescription || 'LinkedIn authentication failed');
+        throw new Error(errorDescription || error);
       }
 
-      // Get the account ID from session storage
-      const accountId = sessionStorage.getItem('unipile_account_id');
-      if (!accountId) {
-        throw new Error('Session expired. Please try connecting again.');
+      // Verify state parameter
+      const savedState = sessionStorage.getItem('linkedin_oauth_state');
+      if (state !== savedState) {
+        throw new Error('Invalid state parameter. Possible CSRF attack.');
       }
 
-      setMessage('Finalizing connection...');
+      if (!code) {
+        throw new Error('No authorization code received');
+      }
 
-      // Complete the OAuth flow
-      const account = await unipileService.completeOAuthFlow(accountId, code || undefined);
-
-      setStatus('success');
-      setMessage(`Successfully connected ${account.name}'s LinkedIn account!`);
+      // Exchange code for token
+      const tokenData = await linkedInOAuth.exchangeCodeForToken(code);
       
-      toast.success('LinkedIn account connected successfully!');
+      // Get user profile
+      const profile = await linkedInOAuth.getUserProfile(tokenData.access_token);
+      
+      // Save to Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const proxyLocation = sessionStorage.getItem('linkedin_proxy_location') || 'US';
+      
+      const { error: dbError } = await supabase
+        .from('team_accounts')
+        .upsert({
+          user_id: user.id,
+          provider: 'LINKEDIN',
+          email: profile.email,
+          name: profile.name,
+          profile_url: `https://www.linkedin.com/in/${profile.sub}`,
+          profile_picture: profile.picture,
+          status: 'active',
+          unipile_account_id: `linkedin_${profile.sub}`,
+          metadata: {
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+            expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+            proxy_location: proxyLocation,
+            locale: profile.locale,
+            email_verified: profile.email_verified
+          },
+          connected_at: new Date().toISOString(),
+          last_sync: new Date().toISOString()
+        });
+
+      if (dbError) throw dbError;
 
       // Clean up session storage
-      sessionStorage.removeItem('unipile_account_id');
+      sessionStorage.removeItem('linkedin_oauth_state');
+      sessionStorage.removeItem('linkedin_proxy_location');
 
       // Notify parent window if in popup
       if (window.opener) {
         window.opener.postMessage({
           type: 'linkedin_auth_success',
-          email: account.email,
-          name: account.name,
-          profileUrl: account.profileUrl
+          profile: profile
         }, window.location.origin);
-        
-        // Close popup after short delay
-        setTimeout(() => {
-          window.close();
-        }, 2000);
+        window.close();
       } else {
-        // Redirect to settings page after short delay
-        setTimeout(() => {
-          navigate('/workspace-settings?tab=linkedin');
-        }, 2000);
+        // Redirect to settings
+        toast.success('LinkedIn account connected successfully!');
+        navigate('/settings/workspace');
       }
     } catch (error: any) {
-      console.error('OAuth callback error:', error);
-      setStatus('error');
-      setMessage(error.message || 'Failed to connect LinkedIn account');
+      console.error('LinkedIn OAuth callback error:', error);
+      setError(error.message);
+      setProcessing(false);
       
-      toast.error(error.message || 'Connection failed');
-
-      // Redirect to settings page after delay
-      setTimeout(() => {
-        if (window.opener) {
-          window.close();
-        } else {
-          navigate('/workspace-settings?tab=linkedin');
-        }
-      }, 3000);
+      // Notify parent window of error if in popup
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'linkedin_auth_error',
+          error: error.message
+        }, window.location.origin);
+        setTimeout(() => window.close(), 3000);
+      } else {
+        toast.error(error.message);
+        setTimeout(() => navigate('/settings/workspace'), 3000);
+      }
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-4">
-            {status === 'processing' && (
-              <>
-                <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
-                <h2 className="text-xl font-semibold">Processing...</h2>
-                <p className="text-gray-600">{message}</p>
-              </>
-            )}
+  if (processing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+          <h2 className="text-lg font-semibold">Connecting your LinkedIn account...</h2>
+          <p className="text-sm text-muted-foreground">Please wait while we complete the authentication.</p>
+        </div>
+      </div>
+    );
+  }
 
-            {status === 'success' && (
-              <>
-                <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
-                <h2 className="text-xl font-semibold text-green-600">Success!</h2>
-                <p className="text-gray-600">{message}</p>
-                <p className="text-sm text-gray-500">Redirecting...</p>
-              </>
-            )}
-
-            {status === 'error' && (
-              <>
-                <XCircle className="h-12 w-12 text-red-600 mx-auto" />
-                <h2 className="text-xl font-semibold text-red-600">Connection Failed</h2>
-                <p className="text-gray-600">{message}</p>
-                <p className="text-sm text-gray-500">Redirecting back...</p>
-              </>
-            )}
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="rounded-full bg-red-100 p-3 w-fit mx-auto">
+            <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+          <h2 className="text-lg font-semibold">Connection Failed</h2>
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <p className="text-xs text-muted-foreground">Redirecting back to settings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
