@@ -2,9 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { AnalyticsChart } from "@/components/dashboard/AnalyticsChart";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -28,7 +25,6 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
-  const [isConversational, setIsConversational] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const navigate = useNavigate();
   const { analytics, chartData, campaignMetrics, refreshData, isLoading } = useAnalytics();
@@ -46,14 +42,6 @@ export default function Dashboard() {
     refreshData();
   };
 
-  const handleToggleMode = (conversational: boolean) => {
-    if (conversational) {
-      navigate('/agent');
-    } else {
-      setIsConversational(false);
-    }
-  };
-
   // Prepare chart data for different visualizations
   const campaignStatusData = [
     { name: 'Active', value: analytics.activeCampaigns },
@@ -67,12 +55,8 @@ export default function Dashboard() {
   }));
 
   return (
-    <SidebarProvider open={true} onOpenChange={() => {}}>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-slate-100">
-        <WorkspaceSidebar isConversational={isConversational} />
-        <div className="flex-1 flex flex-col">
-          <WorkspaceHeader isConversational={isConversational} onToggleMode={handleToggleMode} />
-          <main className="flex-1 p-4 lg:p-8">
+    <div className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100">
+      <main className="flex-1 p-4 lg:p-8">
             <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -279,8 +263,6 @@ export default function Dashboard() {
               </Card>
             </div>
           </main>
-        </div>
-      </div>
       
       {/* LinkedIn Account Modal - Disabled for testing
       <LinkedInAccountModal
@@ -289,6 +271,6 @@ export default function Dashboard() {
         workspaces={workspaces}
         onComplete={handleLinkedInAccountAdded}
       /> */}
-    </SidebarProvider>
+    </div>
   );
 }
