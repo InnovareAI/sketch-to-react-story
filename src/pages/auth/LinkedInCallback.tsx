@@ -30,14 +30,19 @@ export default function LinkedInCallback() {
         throw new Error(errorDescription || error);
       }
 
+      let tokenData;
+      let profile;
+      
       // Check if we have success data from Netlify function
       if (success === 'true' && data) {
         // Decode the data from Netlify function
         const decodedData = JSON.parse(atob(data));
-        const { access_token, refresh_token, expires_in, profile } = decodedData;
-        
-        // Use this data instead of making API calls
-        var tokenData = { access_token, refresh_token, expires_in };
+        tokenData = { 
+          access_token: decodedData.access_token, 
+          refresh_token: decodedData.refresh_token, 
+          expires_in: decodedData.expires_in 
+        };
+        profile = decodedData.profile;
       } else {
         // Fallback to client-side exchange (for local development)
         const code = searchParams.get('code');
@@ -53,10 +58,10 @@ export default function LinkedInCallback() {
         }
 
         // Exchange code for token
-        var tokenData = await linkedInOAuth.exchangeCodeForToken(code);
+        tokenData = await linkedInOAuth.exchangeCodeForToken(code);
         
         // Get user profile
-        var profile = await linkedInOAuth.getUserProfile(tokenData.access_token);
+        profile = await linkedInOAuth.getUserProfile(tokenData.access_token);
       }
       
       // Try to save to Supabase if user is authenticated
