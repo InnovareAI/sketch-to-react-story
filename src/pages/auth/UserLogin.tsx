@@ -56,8 +56,8 @@ export default function UserLogin() {
         .single();
       
       if (userRecord && userRecord.role !== 'owner') {
-        // Regular user, redirect to workspace dashboard
-        navigate('/workspace/dashboard');
+        // Regular user, redirect to main dashboard
+        navigate('/dashboard');
         return;
       }
     }
@@ -131,7 +131,7 @@ export default function UserLogin() {
         localStorage.setItem('user_auth_profile', JSON.stringify(profile));
 
         toast.success(`Welcome, ${profile.full_name}! (Dev Mode)`);
-        navigate('/workspace/dashboard');
+        navigate('/dashboard');
         return;
       }
 
@@ -197,7 +197,7 @@ export default function UserLogin() {
         }
 
         toast.success(`Welcome back, ${profile.full_name}!`);
-        navigate('/workspace/dashboard');
+        navigate('/dashboard');
       }
     } catch (error: any) {
       console.error('Login error details:', error);

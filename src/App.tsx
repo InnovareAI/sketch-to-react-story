@@ -28,7 +28,7 @@ import LinkedInCallback from "./pages/auth/LinkedInCallback";
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
 import UserLogin from "./pages/auth/UserLogin";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
-import WorkspaceDashboard from "./pages/workspace/WorkspaceDashboard";
+import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
 
@@ -40,35 +40,47 @@ const App: React.FC = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/agent" element={<AgentFullScreen />} />
-            <Route path="/agent-old" element={<Agent />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/accounts" element={<Accounts />} />
-            <Route path="/campaigns" element={<Campaigns />} />
-            <Route path="/campaign-setup" element={<CampaignSetup />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/inbox" element={<GlobalInbox />} />
-            <Route path="/message-queue" element={<MessageQueue />} />
-            <Route path="/global-inbox" element={<GlobalInbox />} />
-            <Route path="/templates" element={<Templates />} />
-            <Route path="/requests" element={<Requests />} />
-            <Route path="/placeholders" element={<Placeholders />} />
-            <Route path="/company-profile" element={<Members />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/roles" element={<Roles />} />
-            <Route path="/workspace-settings" element={<WorkspaceSettings />} />
-            <Route path="/linkedin" element={<LinkedInIntegration />} />
-            <Route path="/linkedin-integration" element={<LinkedInIntegration />} />
-            <Route path="/users-permissions" element={<UsersPermissions />} />
-            <Route path="/admin/users" element={<UsersPermissions />} />
+            {/* Public/Auth Routes */}
             <Route path="/login" element={<UserLogin />} />
             <Route path="/auth/login" element={<UserLogin />} />
-            <Route path="/workspace/dashboard" element={<WorkspaceDashboard />} />
             <Route path="/admin/login" element={<SuperAdminLogin />} />
             <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
             <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
+            
+            {/* Workspace Routes - All authenticated pages use WorkspaceLayout */}
+            <Route path="/" element={<WorkspaceLayout />}>
+              <Route index element={<Index />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="accounts" element={<Accounts />} />
+              <Route path="campaigns" element={<Campaigns />} />
+              <Route path="campaign-setup" element={<CampaignSetup />} />
+              <Route path="contacts" element={<Contacts />} />
+              <Route path="search" element={<Search />} />
+              <Route path="inbox" element={<GlobalInbox />} />
+              <Route path="message-queue" element={<MessageQueue />} />
+              <Route path="global-inbox" element={<GlobalInbox />} />
+              <Route path="templates" element={<Templates />} />
+              <Route path="requests" element={<Requests />} />
+              <Route path="placeholders" element={<Placeholders />} />
+              <Route path="company-profile" element={<Members />} />
+              <Route path="members" element={<Members />} />
+              <Route path="roles" element={<Roles />} />
+              <Route path="workspace-settings" element={<WorkspaceSettings />} />
+              <Route path="linkedin" element={<LinkedInIntegration />} />
+              <Route path="linkedin-integration" element={<LinkedInIntegration />} />
+              <Route path="users-permissions" element={<UsersPermissions />} />
+              <Route path="admin/users" element={<UsersPermissions />} />
+              
+              {/* Agent/Chatbot Routes */}
+              <Route path="agent" element={<AgentFullScreen />} />
+              <Route path="agent-old" element={<Agent />} />
+            </Route>
+            
+            {/* Legacy redirect - /workspace/dashboard redirects to main dashboard */}
+            <Route path="/workspace/dashboard" element={<WorkspaceLayout />}>
+              <Route index element={<Dashboard />} />
+            </Route>
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
