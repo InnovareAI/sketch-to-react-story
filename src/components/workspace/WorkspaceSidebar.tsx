@@ -1,22 +1,16 @@
-import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   BarChart3,
   MessageSquare,
   Users,
-  Search,
   Mail,
   Settings,
-  Home,
   FileText,
   Target,
-  Shield,
   Bot,
   Inbox,
   LayoutDashboard,
   Building2,
-  ChevronDown,
-  ChevronRight,
   GraduationCap,
   Star,
   Gift,
@@ -75,146 +69,145 @@ export function WorkspaceSidebar({
 }) {
   const location = useLocation();
   const currentPath = location.pathname;
-  
   const isTeamMember = true;
-  const [documentsOpen, setDocumentsOpen] = useState(true);
-  
-  // Simple navigation item component
+
+  // Simple navigation item component with no complex interactions
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
     <NavLink
       to={item.url}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors block w-full",
         isActive
           ? isConversational
             ? "bg-gray-700 text-white"
-            : "bg-primary/10 text-primary"
+            : "bg-blue-50 text-blue-600 border-l-2 border-blue-600"
           : isConversational
           ? "text-gray-300 hover:bg-gray-800 hover:text-white"
           : "text-gray-700 hover:bg-gray-100"
       )}
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
     >
-      <item.icon className="h-4 w-4" />
-      <span>{item.title}</span>
+      <item.icon className="h-4 w-4 flex-shrink-0" />
+      <span className="truncate">{item.title}</span>
     </NavLink>
   );
 
   return (
-    <div className={cn(
-      "w-64 border-r sticky top-0 h-screen flex flex-col",
+    <aside className={cn(
+      "w-64 border-r sticky top-0 h-screen flex-shrink-0 overflow-hidden",
       isConversational ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
     )}>
-      <div className="p-4 h-full overflow-y-auto">
+      <div className="h-full flex flex-col">
         {/* Workspace Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className={cn(
-            "flex items-center justify-center w-8 h-8 rounded-lg",
-            isConversational ? "bg-gray-800 text-gray-300" : "bg-primary text-white"
-          )}>
-            <Building2 className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className={cn(
-              "font-semibold text-sm",
-              isConversational ? "text-white" : "text-gray-900"
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0",
+              isConversational ? "bg-gray-800 text-gray-300" : "bg-blue-600 text-white"
             )}>
-              {workspaceName}
-            </h2>
-            <p className={cn(
-              "text-xs",
-              isConversational ? "text-gray-400" : "text-gray-500"
-            )}>
-              LinkedIn Automation
-            </p>
+              <Building2 className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className={cn(
+                "font-semibold text-sm truncate",
+                isConversational ? "text-white" : "text-gray-900"
+              )}>
+                {workspaceName}
+              </h2>
+              <p className={cn(
+                "text-xs truncate",
+                isConversational ? "text-gray-400" : "text-gray-500"
+              )}>
+                LinkedIn Automation
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Main Navigation */}
-        {!isConversational && (
-          <div className="space-y-1 mb-6">
-            {mainNavItems.map((item) => (
-              <NavItem
-                key={item.title}
-                item={item}
-                isActive={currentPath === item.url}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Agent Mode Navigation */}
-        {isConversational && (
-          <div className="space-y-1 mb-6">
-            {agentNavItems.map((item) => (
-              <NavItem
-                key={item.title}
-                item={item}
-                isActive={currentPath === item.url}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Team Section */}
-        {!isConversational && isTeamMember && (
-          <div className="mb-6">
-            <h3 className={cn(
-              "text-xs font-semibold px-3 py-2 mb-2",
-              isConversational ? "text-gray-400" : "text-gray-500"
-            )}>
-              TEAM
-            </h3>
-            <div className="space-y-1">
-              {teamNavItems.map((item) => (
-                <NavItem
-                  key={item.title}
-                  item={item}
-                  isActive={currentPath === item.url}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Agent Documents */}
-        {isConversational && (
-          <div className="mb-6">
-            <button
-              onClick={() => setDocumentsOpen(!documentsOpen)}
-              className={cn(
-                "flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                "text-gray-300 hover:bg-gray-800 hover:text-white"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Folder className="h-4 w-4" />
-                <span>Documents</span>
-              </div>
-              {documentsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </button>
-            {documentsOpen && (
-              <div className="mt-2 space-y-1">
-                {agentDocumentItems.map((item) => (
+        {/* Navigation Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4">
+            {/* Main Navigation */}
+            {!isConversational && (
+              <nav className="space-y-1 mb-6">
+                {mainNavItems.map((item) => (
                   <NavItem
                     key={item.title}
                     item={item}
                     isActive={currentPath === item.url}
                   />
                 ))}
+              </nav>
+            )}
+
+            {/* Agent Mode Navigation */}
+            {isConversational && (
+              <nav className="space-y-1 mb-6">
+                {agentNavItems.map((item) => (
+                  <NavItem
+                    key={item.title}
+                    item={item}
+                    isActive={currentPath === item.url}
+                  />
+                ))}
+              </nav>
+            )}
+
+            {/* Team Section */}
+            {!isConversational && isTeamMember && (
+              <div className="mb-6">
+                <h3 className={cn(
+                  "text-xs font-semibold px-3 py-2 mb-2 uppercase tracking-wide",
+                  isConversational ? "text-gray-400" : "text-gray-500"
+                )}>
+                  Team
+                </h3>
+                <nav className="space-y-1">
+                  {teamNavItems.map((item) => (
+                    <NavItem
+                      key={item.title}
+                      item={item}
+                      isActive={currentPath === item.url}
+                    />
+                  ))}
+                </nav>
+              </div>
+            )}
+
+            {/* Agent Documents - Always Expanded */}
+            {isConversational && (
+              <div className="mb-6">
+                <h3 className={cn(
+                  "text-xs font-semibold px-3 py-2 mb-2 uppercase tracking-wide",
+                  "text-gray-400"
+                )}>
+                  Documents
+                </h3>
+                <nav className="space-y-1">
+                  {agentDocumentItems.map((item) => (
+                    <NavItem
+                      key={item.title}
+                      item={item}
+                      isActive={currentPath === item.url}
+                    />
+                  ))}
+                </nav>
               </div>
             )}
           </div>
-        )}
+        </div>
 
         {/* Settings Section */}
-        <div className="mt-auto">
+        <div className="border-t border-gray-200 p-4">
           <h3 className={cn(
-            "text-xs font-semibold px-3 py-2 mb-2",
+            "text-xs font-semibold px-3 py-2 mb-2 uppercase tracking-wide",
             isConversational ? "text-gray-400" : "text-gray-500"
           )}>
-            SETTINGS
+            Settings
           </h3>
-          <div className="space-y-1">
+          <nav className="space-y-1">
             {settingsItems.map((item) => (
               <NavItem
                 key={item.title}
@@ -222,9 +215,9 @@ export function WorkspaceSidebar({
                 isActive={currentPath === item.url}
               />
             ))}
-          </div>
+          </nav>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }
