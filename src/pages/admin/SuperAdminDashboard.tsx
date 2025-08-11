@@ -383,7 +383,7 @@ export default function SuperAdminDashboard() {
       case 'admin':
         return <Badge className="bg-purple-100 text-purple-800">Admin</Badge>;
       case 'workspace_manager':
-        return <Badge className="bg-blue-100 text-blue-800">Workspace Manager</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800">Workspace Admin</Badge>;
       case 'user':
         return <Badge className="bg-green-100 text-green-800">User</Badge>;
       case 'co_worker':
@@ -524,19 +524,19 @@ export default function SuperAdminDashboard() {
                     <SelectItem value="workspace_manager">
                       <div className="flex flex-col">
                         <span className="font-medium">Workspace Manager</span>
-                        <span className="text-xs text-gray-500">Full workspace management access</span>
+                        <span className="text-xs text-gray-500">Admin - can see and manage all workspace accounts</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="user">
                       <div className="flex flex-col">
                         <span className="font-medium">User</span>
-                        <span className="text-xs text-gray-500">Standard user with basic permissions</span>
+                        <span className="text-xs text-gray-500">Can manage and see only their own accounts</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="co_worker">
                       <div className="flex flex-col">
                         <span className="font-medium">Co-Worker</span>
-                        <span className="text-xs text-gray-500">Collaborator with shared access</span>
+                        <span className="text-xs text-gray-500">Can see co-workers' accounts based on invitation rights</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="admin">
