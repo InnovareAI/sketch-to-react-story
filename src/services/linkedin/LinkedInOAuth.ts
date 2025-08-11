@@ -20,8 +20,7 @@ export class LinkedInOAuth {
     this.scope = [
       'openid',
       'profile', 
-      'email',
-      'w_member_social'
+      'email'
     ];
   }
 
