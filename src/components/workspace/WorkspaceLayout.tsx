@@ -50,6 +50,8 @@ export default function WorkspaceLayout() {
       console.log('Using development auth bypass for workspace layout');
       const authUser = JSON.parse(userAuthUser);
       const profile = JSON.parse(userAuthProfile);
+      console.log('Dev auth user:', authUser);
+      console.log('Dev auth profile:', profile);
       
       const userProfile: UserProfile = {
         id: authUser.id,
@@ -316,20 +318,39 @@ export default function WorkspaceLayout() {
               <div className="flex items-center gap-3">
                 {getRoleBadge(user.role)}
                 
-                <Button 
-                  variant="ghost" 
-                  onClick={handleSignOut} 
-                  size="sm"
-                  className={cn(
-                    "px-3 py-2 rounded-xl transition-all",
-                    isConversational
-                      ? "text-gray-300 hover:text-white hover:bg-red-900/20 hover:border-red-500/50"
-                      : "text-gray-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
+                <div className="flex gap-2">
+                  {/* Debug info in development */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        localStorage.removeItem('user_auth_user');
+                        localStorage.removeItem('user_auth_profile');
+                        window.location.reload();
+                      }}
+                      size="sm"
+                      className="text-xs px-2"
+                      title="Clear cached auth data"
+                    >
+                      Clear Auth
+                    </Button>
                   )}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleSignOut} 
+                    size="sm"
+                    className={cn(
+                      "px-3 py-2 rounded-xl transition-all",
+                      isConversational
+                        ? "text-gray-300 hover:text-white hover:bg-red-900/20 hover:border-red-500/50"
+                        : "text-gray-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
+                    )}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
