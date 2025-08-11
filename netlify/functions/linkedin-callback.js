@@ -7,7 +7,12 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ message: 'Function is working!' })
     };
   }
-  console.log('LinkedIn callback received:', event.queryStringParameters);
+  console.log('LinkedIn callback received:', {
+    method: event.httpMethod,
+    headers: event.headers,
+    query: event.queryStringParameters,
+    body: event.body
+  });
   const { code, state, error, error_description } = event.queryStringParameters || {};
   
   // Check for errors from LinkedIn
@@ -31,6 +36,13 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Log environment variables (without exposing secrets)
+    console.log('Environment check:', {
+      hasClientId: !!process.env.VITE_LINKEDIN_CLIENT_ID,
+      hasClientSecret: !!process.env.VITE_LINKEDIN_CLIENT_SECRET,
+      clientId: process.env.VITE_LINKEDIN_CLIENT_ID
+    });
+    
     // Exchange code for token
     const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
       method: 'POST',
