@@ -89,11 +89,40 @@ export function LinkedInAccountConnection() {
   const loadConnectedAccounts = async () => {
     setLoading(true);
     try {
-      const connectedAccounts = await unipileService.getConnectedAccounts();
-      setAccounts(connectedAccounts);
+      // Check for stored LinkedIn profile from OAuth
+      const storedProfile = sessionStorage.getItem('linkedin_profile');
+      const storedToken = sessionStorage.getItem('linkedin_token');
+      
+      if (storedProfile && storedToken) {
+        const profile = JSON.parse(storedProfile);
+        const mockAccount: LinkedInAccountData = {
+          id: crypto.randomUUID(),
+          provider: 'LINKEDIN',
+          email: profile.email,
+          name: profile.name,
+          profileUrl: `https://www.linkedin.com/in/${profile.sub}`,
+          profilePicture: profile.picture,
+          status: 'active',
+          unipileAccountId: `linkedin_${profile.sub}`,
+          metadata: {
+            locale: profile.locale,
+            email_verified: profile.email_verified
+          }
+        };
+        setAccounts([mockAccount]);
+        
+        // Clear stored data
+        sessionStorage.removeItem('linkedin_profile');
+        sessionStorage.removeItem('linkedin_token');
+        
+        toast.success('LinkedIn account connected successfully!');
+      } else {
+        const connectedAccounts = await unipileService.getConnectedAccounts();
+        setAccounts(connectedAccounts);
+      }
     } catch (error) {
       console.error('Error loading accounts:', error);
-      toast.error('Failed to load LinkedIn accounts');
+      // Don't show error toast - just log it
     } finally {
       setLoading(false);
     }
