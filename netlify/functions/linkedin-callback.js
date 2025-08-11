@@ -1,5 +1,12 @@
 // Netlify Function to handle LinkedIn OAuth callback securely
 exports.handler = async (event, context) => {
+  // Simple test response
+  if (event.queryStringParameters?.test) {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Function is working!' })
+    };
+  }
   console.log('LinkedIn callback received:', event.queryStringParameters);
   const { code, state, error, error_description } = event.queryStringParameters || {};
   
