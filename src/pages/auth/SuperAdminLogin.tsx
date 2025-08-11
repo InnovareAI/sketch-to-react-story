@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Lock, 
   Eye, 
@@ -27,10 +28,11 @@ export default function SuperAdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [savePassword, setSavePassword] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Check if accessing from allowed domain
+  // Check if accessing from allowed domain and load saved credentials
   useEffect(() => {
     const hostname = window.location.hostname;
     const isAllowedDomain = hostname === 'innovareai.com' || 
@@ -41,6 +43,18 @@ export default function SuperAdminLogin() {
     if (!isAllowedDomain) {
       setError('Access denied. This page is only accessible from innovareai.com domain.');
       return;
+    }
+
+    // Load saved credentials
+    const savedEmail = localStorage.getItem('superadmin_email');
+    const savedPassword = localStorage.getItem('superadmin_password');
+    
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setSavePassword(true);
+    }
+    if (savedPassword) {
+      setPassword(savedPassword);
     }
 
     // Check if already logged in
@@ -114,6 +128,16 @@ export default function SuperAdminLogin() {
           workspace_id: userRecord.tenant_id,
           full_name: userProfile ? `${userProfile.first_name} ${userProfile.last_name}`.trim() : userRecord.name || 'Administrator'
         };
+
+        // Save credentials if requested
+        if (savePassword) {
+          localStorage.setItem('superadmin_email', email);
+          localStorage.setItem('superadmin_password', password);
+        } else {
+          // Clear saved credentials if unchecked
+          localStorage.removeItem('superadmin_email');
+          localStorage.removeItem('superadmin_password');
+        }
 
         toast.success(`Welcome back, ${profile.full_name || 'Admin'}!`);
         navigate('/admin/dashboard');
@@ -253,6 +277,18 @@ export default function SuperAdminLogin() {
                   )}
                 </Button>
               </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="save-password"
+                checked={savePassword}
+                onCheckedChange={(checked) => setSavePassword(checked as boolean)}
+                disabled={loading}
+              />
+              <Label htmlFor="save-password" className="text-sm text-gray-600">
+                Save password for this device
+              </Label>
             </div>
 
             <Button
