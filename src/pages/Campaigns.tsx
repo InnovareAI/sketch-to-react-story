@@ -1,9 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,94 +28,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Campaigns() {
-  const [isConversational, setIsConversational] = useState(false);
   const navigate = useNavigate();
 
-  if (isConversational) {
-    return (
-      <SidebarProvider open={true} onOpenChange={() => {}}>
-        <div className="min-h-screen flex w-full">
-          <WorkspaceSidebar isConversational={isConversational} />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <WorkspaceHeader 
-              isConversational={isConversational}
-              onToggleMode={setIsConversational}
-            />
-            <div className="flex-1 overflow-auto">
-              <ConversationalInterface />
-            </div>
-          </div>
-        </div>
-      </SidebarProvider>
-    );
-  }
 
-  const campaigns = [
-    {
-      id: 1,
-      name: "Q1 Enterprise Outreach",
-      description: "Targeting enterprise accounts for Q1 growth",
-      status: "Active",
-      type: "Multi-channel",
-      contacts: 156,
-      sent: 134,
-      opened: 89,
-      replied: 23,
-      responseRate: 17.2,
-      channels: ["email", "linkedin"],
-      startDate: "2024-01-15",
-      endDate: "2024-03-31",
-      progress: 78
-    },
-    {
-      id: 2,
-      name: "LinkedIn Lead Generation",
-      description: "Connect with decision makers on LinkedIn",
-      status: "Active",
-      type: "LinkedIn Only",
-      contacts: 89,
-      sent: 89,
-      opened: 67,
-      replied: 18,
-      responseRate: 20.2,
-      channels: ["linkedin"],
-      startDate: "2024-02-01",
-      endDate: "2024-04-15",
-      progress: 65
-    },
-    {
-      id: 3,
-      name: "Product Demo Follow-up",
-      description: "Follow up with demo attendees",
-      status: "Paused",
-      type: "Email Only",
-      contacts: 67,
-      sent: 45,
-      opened: 32,
-      replied: 12,
-      responseRate: 26.7,
-      channels: ["email"],
-      startDate: "2024-01-20",
-      endDate: "2024-02-28",
-      progress: 45
-    },
-    {
-      id: 4,
-      name: "Holiday Campaign 2024",
-      description: "End of year outreach campaign",
-      status: "Completed",
-      type: "Multi-channel",
-      contacts: 234,
-      sent: 234,
-      opened: 187,
-      replied: 34,
-      responseRate: 14.5,
-      channels: ["email", "linkedin"],
-      startDate: "2023-12-01",
-      endDate: "2023-12-31",
-      progress: 100
-    }
-  ];
+  const campaigns = [];
+  
+  // Empty state component
+  const EmptyState = () => (
+    <div className="text-center py-12">
+      <Target className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+      <h3 className="text-lg font-medium text-gray-900 mb-2">No campaigns yet</h3>
+      <p className="text-gray-600 mb-6">Get started by creating your first campaign</p>
+      <Button 
+        className="bg-primary hover:bg-primary/90"
+        onClick={() => navigate('/campaign-setup')}
+      >
+        <Target className="h-4 w-4 mr-2" />
+        Create Campaign
+      </Button>
+    </div>
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -140,12 +68,8 @@ export default function Campaigns() {
   };
 
   return (
-    <SidebarProvider open={true} onOpenChange={() => {}}>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <WorkspaceSidebar isConversational={isConversational} />
-        <div className="flex-1 flex flex-col">
-          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
-          <main className="flex-1 p-8">
+    <div className="flex-1 bg-gray-50">
+      <main className="flex-1 p-8">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -246,7 +170,10 @@ export default function Campaigns() {
 
               {/* Campaign List */}
               <div className="space-y-4">
-        {campaigns.map((campaign) => (
+                {campaigns.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  campaigns.map((campaign) => (
           <Card key={campaign.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -352,12 +279,11 @@ export default function Campaigns() {
               </div>
             </CardContent>
           </Card>
-        ))}
+        ))
+                )}
               </div>
             </div>
           </main>
-        </div>
-      </div>
-    </SidebarProvider>
+    </div>
   );
 }
