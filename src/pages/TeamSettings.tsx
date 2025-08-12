@@ -42,44 +42,8 @@ import {
 export default function TeamSettings() {
   const [selectedUser, setSelectedUser] = useState(null);
 
-  const teamMembers = [
-    {
-      id: 1,
-      name: "Jennifer Fleming",
-      email: "jennifer@acme.com",
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b829?w=400&h=400&fit=crop&crop=face",
-      role: "workspace_manager",
-      roleLabel: "Workspace Manager",
-      status: "active",
-      lastLogin: "2 hours ago",
-      joinedDate: "Jan 15, 2024",
-      permissions: ["all"]
-    },
-    {
-      id: 2,
-      name: "Michael Chen",
-      email: "michael@acme.com",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-      role: "user",
-      roleLabel: "User",
-      status: "active",
-      lastLogin: "1 day ago",
-      joinedDate: "Jan 20, 2024",
-      permissions: ["campaigns", "contacts", "templates"]
-    },
-    {
-      id: 3,
-      name: "Sarah Williams",
-      email: "sarah@acme.com",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
-      role: "co_worker",
-      roleLabel: "Co-worker",
-      status: "pending",
-      lastLogin: "Never",
-      joinedDate: "Feb 1, 2024",
-      permissions: ["contacts", "templates"]
-    }
-  ];
+  // Empty team members array - will be populated from database
+  const teamMembers: any[] = [];
 
   const roleDefinitions = [
     {

@@ -170,18 +170,18 @@ export function AutoProvisioningStatus() {
 
   return (
     <div className="space-y-6">
-      {/* Overall Status Card */}
-      <Card className="border-2 border-purple-200 bg-purple-50/50">
+      {/* Simple Status Card */}
+      <Card className="border border-gray-200 bg-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-100">
-                <Zap className="h-6 w-6 text-purple-600" />
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100">
+                <Zap className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <CardTitle>Automated Workspace Provisioning</CardTitle>
-                <CardDescription>
-                  All integrations are automatically configured for your workspace
+                <CardTitle className="font-light text-xl">Automated Setup</CardTitle>
+                <CardDescription className="text-sm text-gray-500">
+                  Your workspace is automatically configured
                 </CardDescription>
               </div>
             </div>
@@ -189,167 +189,14 @@ export function AutoProvisioningStatus() {
           </div>
         </CardHeader>
         <CardContent>
-          <Alert className="bg-purple-100/50 border-purple-200">
-            <Shield className="h-4 w-4 text-purple-600" />
-            <AlertDescription className="text-purple-900">
-              <strong>Zero Manual Setup Required!</strong> Your workspace is being automatically provisioned with all necessary integrations. 
-              This includes LinkedIn automation, email accounts, calendar sync, and IP rotation proxies.
-            </AlertDescription>
-          </Alert>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+            <p className="text-sm text-blue-900">
+              All necessary integrations and configurations are handled automatically. 
+              No manual setup required.
+            </p>
+          </div>
         </CardContent>
       </Card>
-
-      {/* Integration Status Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Unipile Status */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Globe className="h-5 w-5 text-blue-600" />
-                Unipile Integration
-              </CardTitle>
-              {getStatusIcon(status.unipile.status)}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <Linkedin className="h-4 w-4 text-blue-600" />
-                  LinkedIn
-                </span>
-                {status.unipile.linkedinEnabled ? (
-                  <Badge className="bg-green-100 text-green-700">Enabled</Badge>
-                ) : (
-                  <Badge variant="secondary">Disabled</Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-red-600" />
-                  Email
-                </span>
-                {status.unipile.emailEnabled ? (
-                  <Badge className="bg-green-100 text-green-700">Enabled</Badge>
-                ) : (
-                  <Badge variant="secondary">Disabled</Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-purple-600" />
-                  Calendar
-                </span>
-                {status.unipile.calendarEnabled ? (
-                  <Badge className="bg-green-100 text-green-700">Enabled</Badge>
-                ) : (
-                  <Badge variant="secondary">Disabled</Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 text-green-600" />
-                  WhatsApp
-                </span>
-                {status.unipile.whatsappEnabled ? (
-                  <Badge className="bg-green-100 text-green-700">Enabled</Badge>
-                ) : (
-                  <Badge variant="secondary">Coming Soon</Badge>
-                )}
-              </div>
-              {status.unipile.accountId && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">
-                    Account ID: {status.unipile.accountId}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bright Data Status */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Globe className="h-5 w-5 text-orange-600" />
-                Bright Data Proxies
-              </CardTitle>
-              {getStatusIcon(status.brightData.status)}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span>Residential IPs</span>
-                <Badge className="bg-green-100 text-green-700">Active</Badge>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span>Zone Status</span>
-                {status.brightData.zoneId ? (
-                  <Badge className="bg-green-100 text-green-700">Configured</Badge>
-                ) : (
-                  <Badge variant="secondary">Pending</Badge>
-                )}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Bandwidth Usage</span>
-                  <span className="text-muted-foreground">
-                    {status.brightData.bandwidthUsed.toFixed(2)} / {status.brightData.bandwidthLimit} GB
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
-                    style={{ 
-                      width: `${(status.brightData.bandwidthUsed / status.brightData.bandwidthLimit) * 100}%` 
-                    }}
-                  />
-                </div>
-              </div>
-              {status.brightData.zoneId && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">
-                    Zone ID: {status.brightData.zoneId}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Provisioning Timeline */}
-      {status.overall === 'provisioning' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Provisioning Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <span className="text-sm">Workspace created</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-5 w-5 animate-spin text-yellow-600" />
-                <span className="text-sm">Creating Unipile sub-account...</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
-                <span className="text-sm text-muted-foreground">Configuring Bright Data proxies</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
-                <span className="text-sm text-muted-foreground">Activating integrations</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

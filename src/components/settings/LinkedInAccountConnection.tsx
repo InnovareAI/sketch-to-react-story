@@ -1014,46 +1014,6 @@ export function LinkedInAccountConnection() {
         </Card>
       )}
 
-      {/* Integration Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Integration Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-100 p-2">
-                <Activity className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <div className="font-medium">n8n Workflows</div>
-                <div className="text-sm text-muted-foreground">Connected</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-2">
-                <Linkedin className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <div className="font-medium">LinkedIn OAuth</div>
-                <div className="text-sm text-muted-foreground">
-                  {import.meta.env.VITE_LINKEDIN_CLIENT_ID ? 'Configured' : 
-                   import.meta.env.VITE_UNIPILE_API_KEY ? 'Using Unipile' : 'Demo Mode'}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-purple-100 p-2">
-                <Shield className="h-4 w-4 text-purple-600" />
-              </div>
-              <div>
-                <div className="font-medium">OAuth Security</div>
-                <div className="text-sm text-muted-foreground">Enabled</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

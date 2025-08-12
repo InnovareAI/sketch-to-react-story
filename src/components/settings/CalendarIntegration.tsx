@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar, CheckCircle, AlertCircle, Plus, Trash2, RefreshCw, Settings, Clock, Users } from 'lucide-react';
+import { Loader2, Calendar, CheckCircle, AlertCircle, Plus, Trash2, RefreshCw, Settings, Clock, Users, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { UnipileCalendarService } from '@/services/unipile/unipile-calendar';
 import { supabase } from '@/integrations/supabase/client';
@@ -260,14 +260,37 @@ export function CalendarIntegration() {
   const getProviderIcon = (provider: string) => {
     switch (provider) {
       case 'google':
-        return '📅';
+        return (
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-50 to-red-50 border border-gray-200 flex items-center justify-center">
+            <svg className="w-6 h-6" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+          </div>
+        );
       case 'outlook':
       case 'office365':
-        return '📆';
+        return (
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 flex items-center justify-center">
+            <svg className="w-6 h-6" viewBox="0 0 24 24">
+              <path fill="#0078D4" d="M24 7.5v9l-8 3.5V24l8-3.5v-13zM16 4.5v13L8 21V7.5L0 4v13l8 3.5V24l8-3.5v-16L8 1 0 4.5z"/>
+            </svg>
+          </div>
+        );
       case 'exchange':
-        return '🗓️';
+        return (
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 flex items-center justify-center">
+            <Mail className="w-6 h-6 text-orange-600" />
+          </div>
+        );
       default:
-        return '📅';
+        return (
+          <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+            <Calendar className="w-6 h-6 text-gray-600" />
+          </div>
+        );
     }
   };
 
@@ -283,17 +306,19 @@ export function CalendarIntegration() {
 
   return (
     <>
-      <Card>
+      <Card className="border border-gray-200 bg-white">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Calendar Integration
-              </CardTitle>
-              <CardDescription className="mt-1.5">
-                Connect your calendar accounts for scheduling and availability management
-              </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100">
+                <Calendar className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <CardTitle className="font-light text-xl">Calendar Integration</CardTitle>
+                <CardDescription className="text-sm text-gray-500 mt-1">
+                  Connect Google Calendar or Microsoft Outlook for seamless scheduling
+                </CardDescription>
+              </div>
             </div>
             {accounts.length > 0 && (
               <Button onClick={() => setShowConnectionDialog(true)} size="sm">
@@ -305,36 +330,61 @@ export function CalendarIntegration() {
         </CardHeader>
         <CardContent className="space-y-4">
           {accounts.length === 0 ? (
-            <div className="text-center py-8 space-y-4">
+            <div className="text-center py-12 space-y-4">
               <div className="flex justify-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Calendar className="h-8 w-8 text-primary" />
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl flex items-center justify-center border border-purple-100">
+                  <Calendar className="h-10 w-10 text-purple-600" />
                 </div>
               </div>
               <div>
-                <h3 className="font-semibold text-lg mb-1">No calendars connected</h3>
-                <p className="text-muted-foreground text-sm">
-                  Connect your Google or Outlook calendar to sync events and manage availability
+                <h3 className="font-light text-xl text-gray-900 mb-2">No calendars connected</h3>
+                <p className="text-gray-500 text-sm max-w-md mx-auto">
+                  Connect your Google Calendar or Microsoft Outlook to automatically sync events, manage availability, and schedule meetings
                 </p>
               </div>
-              <Button onClick={() => setShowConnectionDialog(true)} className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Connect Calendar
-              </Button>
+              <div className="flex justify-center gap-3 mt-6">
+                <Button 
+                  onClick={() => {
+                    setSelectedProvider('google');
+                    setShowConnectionDialog(true);
+                  }} 
+                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Google Calendar
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setSelectedProvider('outlook');
+                    setShowConnectionDialog(true);
+                  }}
+                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                    <path fill="#0078D4" d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                  </svg>
+                  Microsoft Outlook
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
               {accounts.map((account) => (
                 <div
                   key={account.id}
-                  className="border rounded-lg p-4 space-y-3"
+                  className="border border-gray-200 rounded-xl p-5 space-y-4 bg-white hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3">
-                      <div className="text-2xl">{getProviderIcon(account.provider)}</div>
-                      <div>
-                        <div className="font-medium">{account.name}</div>
-                        <div className="text-sm text-muted-foreground">{account.email}</div>
+                      {getProviderIcon(account.provider)}
+                      <div className="flex-1">
+                        <div className="font-light text-lg text-gray-900">{account.name}</div>
+                        <div className="text-sm text-gray-500">{account.email}</div>
                         {account.syncedAt && (
                           <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -344,22 +394,17 @@ export function CalendarIntegration() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge
-                        variant={account.status === 'connected' ? 'default' : 'destructive'}
-                        className="text-xs"
-                      >
-                        {account.status === 'connected' ? (
-                          <>
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Connected
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            Error
-                          </>
-                        )}
-                      </Badge>
+                      {account.status === 'connected' ? (
+                        <Badge className="bg-green-50 text-green-700 border-green-200">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Connected
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-red-50 text-red-700 border-red-200">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Error
+                        </Badge>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -390,8 +435,8 @@ export function CalendarIntegration() {
                   </div>
 
                   {account.calendars && account.calendars.length > 0 && (
-                    <div className="border-t pt-3">
-                      <div className="text-sm font-medium mb-2">Selected Calendars:</div>
+                    <div className="border-t border-gray-100 pt-4">
+                      <div className="text-sm font-light text-gray-700 mb-3">Selected Calendars:</div>
                       <div className="space-y-2">
                         {account.calendars.map((calendar) => (
                           <label
@@ -435,18 +480,32 @@ export function CalendarIntegration() {
           )}
 
           {accounts.length > 0 && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Connected calendars will be used for:
-                <ul className="mt-2 ml-4 text-sm list-disc">
-                  <li>Checking your availability for meeting scheduling</li>
-                  <li>Automatically blocking time for scheduled campaigns</li>
-                  <li>Syncing events with your LinkedIn outreach schedule</li>
-                  <li>Managing follow-up reminders and tasks</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+              <div className="flex gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-900">
+                  <p className="font-medium mb-2">Connected calendars enable:</p>
+                  <ul className="space-y-1 text-blue-800">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>Real-time availability checking for meeting scheduling</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>Automatic time blocking for scheduled campaigns</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>Event syncing with LinkedIn outreach schedule</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>Smart follow-up reminders and task management</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
