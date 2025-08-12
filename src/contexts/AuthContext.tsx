@@ -48,7 +48,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authUser, setAuthUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Set to false to bypass authentication
 
   // Timeout to prevent infinite loading
   useEffect(() => {
@@ -278,63 +278,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Initialize auth state and listen for changes
   useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        // Get initial session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          if (mounted) setLoading(false);
-          return;
-        }
-
-        if (session?.user && mounted) {
-          setAuthUser(session.user);
-          const profile = await loadUserProfile(session.user.id);
-          if (mounted) {
-            setUser(profile);
-            setLoading(false);
-          }
-        } else {
-          if (mounted) setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        if (mounted) setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
+    // Skip authentication entirely
+    console.log('Authentication disabled: App will run without login requirements');
+    setLoading(false);
+    
+    // Still listen for auth changes in case user wants to login later
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return;
-
         console.log('Auth state changed:', event, session?.user?.id);
-
+        
         if (session?.user) {
           setAuthUser(session.user);
           const profile = await loadUserProfile(session.user.id);
-          if (mounted) {
+          if (profile) {
             setUser(profile);
-            setLoading(false);
           }
         } else {
-          if (mounted) {
-            setAuthUser(null);
-            setUser(null);
-            setLoading(false);
-          }
+          setAuthUser(null);
+          setUser(null);
         }
+        setLoading(false);
       }
     );
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -346,7 +313,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signOut,
     refreshUser,
-    isAuthenticated: !!authUser && !!user
+    isAuthenticated: true // Always return true to bypass authentication
   };
 
   return (

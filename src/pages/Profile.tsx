@@ -47,24 +47,17 @@ export default function Profile() {
 
   // Initialize form data when user loads
   useEffect(() => {
-    if (user) {
-      setFormData({
-        full_name: user.full_name || '',
-        email: user.email || ''
-      });
-    }
+    const currentUser = user || {
+      full_name: 'Guest User',
+      email: 'guest@example.com'
+    };
+    setFormData({
+      full_name: currentUser.full_name || '',
+      email: currentUser.email || ''
+    });
   }, [user]);
 
   const handleSave = async () => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "No user found. Please try logging in again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     if (!formData.full_name.trim()) {
       toast({
         title: "Error",
@@ -77,7 +70,18 @@ export default function Profile() {
     setSaving(true);
     
     try {
-      // Update profile in Supabase
+      // If no user (guest mode), just simulate saving
+      if (!user || !user.id) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        toast({
+          title: "Profile Updated",
+          description: "Your profile has been updated locally. (Guest Mode)"
+        });
+        setIsEditing(false);
+        return;
+      }
+
+      // Update profile in Supabase for authenticated users
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -121,7 +125,7 @@ export default function Profile() {
   };
 
   // Show loading state if user data is still being loaded
-  if (!user) {
+  if (authLoading) {
     return (
       <div className="flex-1 bg-gray-50">
         <main className="flex-1 p-8">
@@ -133,6 +137,18 @@ export default function Profile() {
       </div>
     );
   }
+
+  // If no user, show guest mode interface
+  const displayUser = user || {
+    id: null,
+    email: 'guest@example.com',
+    full_name: 'Guest User',
+    role: 'guest',
+    workspace_name: 'InnovareAI',
+    workspace_plan: 'guest',
+    status: 'guest',
+    avatar_url: null
+  };
 
   const handleChangePassword = () => {
     const newPassword = prompt("Enter new password:");
@@ -151,10 +167,8 @@ export default function Profile() {
   };
 
   const handleDownloadData = () => {
-    if (!user) return;
-    
     const userData = {
-      profile: user,
+      profile: displayUser,
       exportDate: new Date().toISOString(),
       dataType: "Profile Export"
     };
@@ -226,9 +240,9 @@ export default function Profile() {
                   <div className="flex justify-center mb-4">
                     <div className="relative">
                       <Avatar className="h-24 w-24">
-                        <AvatarImage src={user.avatar_url || undefined} />
+                        <AvatarImage src={displayUser.avatar_url || undefined} />
                         <AvatarFallback className="text-lg">
-                          {getInitials(user.full_name || user.email)}
+                          {getInitials(displayUser.full_name || displayUser.email)}
                         </AvatarFallback>
                       </Avatar>
                       {isEditing && (
@@ -242,31 +256,31 @@ export default function Profile() {
                       )}
                     </div>
                   </div>
-                  <CardTitle className="text-xl">{user.full_name || 'No name set'}</CardTitle>
-                  <CardDescription>{user.email}</CardDescription>
+                  <CardTitle className="text-xl">{displayUser.full_name || 'No name set'}</CardTitle>
+                  <CardDescription>{displayUser.email}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Role</span>
                     <Badge variant="secondary" className="capitalize">
                       <Shield className="h-3 w-3 mr-1" />
-                      {user.role}
+                      {displayUser.role}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Workspace</span>
                     <Badge variant="outline">
                       <Building2 className="h-3 w-3 mr-1" />
-                      {user.workspace_name}
+                      {displayUser.workspace_name}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Plan</span>
                     <Badge 
-                      variant={user.workspace_plan === 'pro' ? 'default' : 'secondary'}
+                      variant={displayUser.workspace_plan === 'pro' ? 'default' : 'secondary'}
                       className="capitalize"
                     >
-                      {user.workspace_plan}
+                      {displayUser.workspace_plan}
                     </Badge>
                   </div>
                 </CardContent>
@@ -299,7 +313,7 @@ export default function Profile() {
                         />
                       ) : (
                         <div className="p-2 bg-gray-50 rounded border">
-                          {user.full_name || 'No name set'}
+                          {displayUser.full_name || 'No name set'}
                         </div>
                       )}
                     </div>
@@ -308,7 +322,7 @@ export default function Profile() {
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-gray-400" />
                         <div className="p-2 bg-gray-50 rounded border flex-1">
-                          {user.email}
+                          {displayUser.email}
                         </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
@@ -323,8 +337,8 @@ export default function Profile() {
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => {
                           setFormData({
-                            full_name: user?.full_name || '',
-                            email: user?.email || ''
+                            full_name: displayUser?.full_name || '',
+                            email: displayUser?.email || ''
                           });
                           setIsEditing(false);
                         }}>
@@ -356,26 +370,26 @@ export default function Profile() {
                     <div>
                       <Label>Workspace Name</Label>
                       <div className="p-2 bg-gray-50 rounded border">
-                        {user.workspace_name}
+                        {displayUser.workspace_name}
                       </div>
                     </div>
                     <div>
                       <Label>Subscription Plan</Label>
                       <div className="p-2 bg-gray-50 rounded border capitalize">
-                        {user.workspace_plan}
+                        {displayUser.workspace_plan}
                       </div>
                     </div>
                     <div>
                       <Label>Your Role</Label>
                       <div className="p-2 bg-gray-50 rounded border capitalize">
-                        {user.role}
+                        {displayUser.role}
                       </div>
                     </div>
                     <div>
                       <Label>Status</Label>
                       <div className="p-2 bg-gray-50 rounded border">
                         <Badge variant="outline" className="text-green-600">
-                          {user.status}
+                          {displayUser.status}
                         </Badge>
                       </div>
                     </div>
