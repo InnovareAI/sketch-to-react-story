@@ -50,12 +50,17 @@ export default function Profile() {
 
   const handleSave = async () => {
     try {
+      console.log('Saving form data:', formData);
+      
       // Update the profile user data with form data
-      setProfileUser(prev => ({
-        ...prev,
+      const updatedUser = {
+        ...profileUser,
         full_name: formData.full_name,
         email: formData.email
-      }));
+      };
+      
+      console.log('Updated user:', updatedUser);
+      setProfileUser(updatedUser);
       
       toast({
         title: "Profile Updated",
@@ -63,6 +68,7 @@ export default function Profile() {
       });
       setIsEditing(false);
     } catch (error) {
+      console.error('Save error:', error);
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
