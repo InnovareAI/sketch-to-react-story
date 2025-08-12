@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LinkedIn Inbox Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .message { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .error { color: red; }
+    .success { color: green; }
+    button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>LinkedIn Inbox Test</h1>
+  
+  <button onclick="loadMessages()">Load Messages</button>
+  <button onclick="syncMessage()">Add Test Message</button>
+  <button onclick="clearLog()">Clear Log</button>
+  
+  <h2>Messages:</h2>
+  <div id="messages"></div>
+  
+  <h2>Log:</h2>
+  <pre id="log"></pre>
+  
+  <script>
+    const { createClient } = supabase;
+    const supabaseUrl = 'https://ktchrfgkbpaixbiwbieg.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0Y2hyZmdrYnBhaXhiaXdiaWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTQ1NjAsImV4cCI6MjA2Nzk5MDU2MH0.NH8E52ypjXoI4wMVuXkaXkrwzw7vr7dYRk48sHuqMkw';
+    
+    const client = createClient(supabaseUrl, supabaseKey);
+    
+    function log(msg, type = 'info') {
+      const logEl = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+      logEl.innerHTML += `<span class="${className}">[${time}] ${msg}</span>\n`;
+      console.log(msg);
+    }
+    
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+    
+    async function loadMessages() {
+      log('Loading messages...');
+      
+      try {
+        const { data, error } = await client
+          .from('inbox_conversations')
+          .select(`
+            *,
+            inbox_messages (*)
+          `)
+          .order('last_message_at', { ascending: false });
+          
+        if (error) {
+          log('Error: ' + JSON.stringify(error), 'error');
+          return;
+        }
+        
+        log('Found ' + (data?.length || 0) + ' conversations', 'success');
+        
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+          messagesDiv.innerHTML = '<p>No messages found</p>';
+          return;
+        }
+        
+        data.forEach(conv => {
+          const messageDiv = document.createElement('div');
+          messageDiv.className = 'message';
+          messageDiv.innerHTML = `
+            <strong>${conv.participant_name}</strong> - ${conv.participant_company || 'No company'}<br>
+            <small>Messages: ${conv.inbox_messages?.length || 0}</small><br>
+            ${conv.inbox_messages?.[0] ? '<em>' + conv.inbox_messages[0].content + '</em>' : '<em>No message content</em>'}
+          `;
+          messagesDiv.appendChild(messageDiv);
+        });
+        
+      } catch (err) {
+        log('Exception: ' + err.message, 'error');
+      }
+    }
+    
+    async function syncMessage() {
+      log('Adding test message...');
+      
+      try {
+        const testId = 'test_' + Date.now();
+        
+        // Create conversation
+        const { data: conv, error: convError } = await client
+          .from('inbox_conversations')
+          .insert({
+            workspace_id: 'a0000000-0000-0000-0000-000000000000',
+            platform: 'linkedin',
+            platform_conversation_id: testId,
+            participant_name: 'Test User ' + new Date().toLocaleTimeString(),
+            participant_company: 'Test Company',
+            status: 'active'
+          })
+          .select()
+          .single();
+          
+        if (convError) {
+          log('Conversation error: ' + JSON.stringify(convError), 'error');
+          return;
+        }
+        
+        log('Created conversation: ' + conv.id, 'success');
+        
+        // Create message
+        const { error: msgError } = await client
+          .from('inbox_messages')
+          .insert({
+            conversation_id: conv.id,
+            role: 'assistant',
+            content: 'Test message created at ' + new Date().toLocaleString()
+          });
+          
+        if (msgError) {
+          log('Message error: ' + JSON.stringify(msgError), 'error');
+        } else {
+          log('Message created successfully', 'success');
+          loadMessages();
+        }
+        
+      } catch (err) {
+        log('Exception: ' + err.message, 'error');
+      }
+    }
+    
+    // Load messages on page load
+    loadMessages();
+  </script>
+</body>
+</html>
