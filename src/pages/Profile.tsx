@@ -29,43 +29,28 @@ import {
 } from "lucide-react";
 
 export default function Profile() {
-  // User data that can be updated
-  const [profileUser, setProfileUser] = useState({
-    id: '3d0cafd6-57cd-4bcb-a105-af7784038105',
-    email: 'tl@innovareai.com',
-    full_name: 'TL InnovareAI',
-    role: 'admin',
-    workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-    workspace_name: 'InnovareAI',
-    workspace_plan: 'pro',
-    status: 'active',
-    avatar_url: ''
-  });
+  const { user, authUser, loading, refreshUser } = useAuth();
+  const [localLoading, setLocalLoading] = useState(false);
 
-  // Load profile from database on mount
-  useEffect(() => {
-    loadProfileFromDB();
-  }, []);
+  // If not authenticated or still loading, show loading state
+  if (loading || !user || !authUser) {
+    return (
+      <div className="flex-1 bg-gray-50">
+        <main className="flex-1 p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading Profile...</h1>
+              {!loading && !user && <p className="text-gray-600">Please sign in to view your profile.</p>}
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-  const loadProfileFromDB = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profileUser.id)
-        .single();
-      
-      if (data && !error) {
-        setProfileUser(prev => ({
-          ...prev,
-          full_name: data.full_name || prev.full_name,
-          email: data.email || prev.email
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    }
-  };
+  // Use authenticated user data
+  const profileUser = user;
+
 
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -77,79 +62,67 @@ export default function Profile() {
   });
 
   const [formData, setFormData] = useState({
-    full_name: profileUser.full_name || '',
-    email: profileUser.email || ''
+    full_name: profileUser.full_name || ''
   });
 
-  // Sync form data when profileUser changes or when editing starts
+  // Initialize form data when user is loaded
   useEffect(() => {
-    if (isEditing) {
+    if (profileUser) {
       setFormData({
-        full_name: profileUser.full_name || '',
-        email: profileUser.email || ''
+        full_name: profileUser.full_name || ''
       });
     }
-  }, [profileUser, isEditing]);
+  }, [profileUser]);
 
   const handleSave = async () => {
+    if (!authUser || !profileUser) {
+      toast({
+        title: "Error",
+        description: "You must be authenticated to update your profile.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      console.log('Saving form data:', formData);
+      setLocalLoading(true);
+      console.log('Saving form data for authenticated user:', authUser.id, formData);
       
-      // Save to Supabase database
+      // Save to Supabase database (this will work because we're authenticated)
       const { data, error } = await supabase
         .from('profiles')
         .update({
-          full_name: formData.full_name,
-          email: formData.email
+          full_name: formData.full_name
+          // Note: We don't update email here since it's tied to auth.users
         })
-        .eq('id', profileUser.id)
+        .eq('id', authUser.id)
         .select()
         .single();
       
       if (error) {
         console.error('Database error:', error);
-        // If database save fails, try upsert (create if doesn't exist)
-        const { data: upsertData, error: upsertError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: profileUser.id,
-            full_name: formData.full_name,
-            email: formData.email,
-            role: profileUser.role,
-            workspace_id: profileUser.workspace_id
-          })
-          .select()
-          .single();
-          
-        if (upsertError) {
-          throw upsertError;
-        }
-        console.log('Profile created/updated:', upsertData);
-      } else {
-        console.log('Profile updated:', data);
+        throw error;
       }
       
-      // Update local state
-      const updatedUser = {
-        ...profileUser,
-        full_name: formData.full_name,
-        email: formData.email
-      };
+      console.log('Profile updated successfully:', data);
       
-      setProfileUser(updatedUser);
+      // Refresh the user profile in the auth context
+      await refreshUser();
       
       toast({
         title: "Profile Updated",
-        description: "Your profile has been saved to the database successfully."
+        description: "Your profile has been saved successfully."
       });
       setIsEditing(false);
     } catch (error) {
       console.error('Save error:', error);
       toast({
         title: "Error", 
-        description: "Failed to save profile to database. Please try again.",
+        description: `Failed to save profile: ${error.message}`,
         variant: "destructive"
       });
+    } finally {
+      setLocalLoading(false);
     }
   };
 
@@ -162,46 +135,76 @@ export default function Profile() {
       .slice(0, 2);
   };
 
-  const handleChangePassword = () => {
-    const newPassword = prompt("Enter new password:");
-    if (newPassword && newPassword.length >= 6) {
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in all password fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "New password must be at least 8 characters long.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      
+      // Update password using Supabase auth
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: "Password Changed",
         description: "Your password has been updated successfully."
       });
-    } else if (newPassword) {
+      
+      // Reset form
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Password change error:', error);
       toast({
         title: "Error",
-        description: "Password must be at least 6 characters long.",
+        description: "Failed to change password. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
-  const handleDownloadData = () => {
-    // Create and download a JSON file with user data
-    const userData = {
-      profile: profileUser,
-      exportDate: new Date().toISOString(),
-      dataType: "Profile Export"
-    };
-    
-    const dataStr = JSON.stringify(userData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `profile-data-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Data Downloaded",
-      description: "Your profile data has been downloaded successfully."
-    });
-  };
 
   const handlePrivacySettingChange = (setting: keyof typeof privacySettings) => {
     setPrivacySettings(prev => ({
@@ -232,8 +235,7 @@ export default function Profile() {
                 if (isEditing) {
                   // Reset form data to current profile values when canceling
                   setFormData({
-                    full_name: profileUser.full_name || '',
-                    email: profileUser.email || ''
+                    full_name: profileUser.full_name || ''
                   });
                 }
                 setIsEditing(!isEditing);
@@ -351,16 +353,15 @@ export default function Profile() {
                         <Button variant="outline" onClick={() => {
                           // Reset form data to current profile values when canceling
                           setFormData({
-                            full_name: profileUser.full_name || '',
-                            email: profileUser.email || ''
+                            full_name: profileUser.full_name || ''
                           });
                           setIsEditing(false);
                         }}>
                           Cancel
                         </Button>
-                        <Button onClick={handleSave}>
+                        <Button onClick={handleSave} disabled={localLoading}>
                           <Save className="h-4 w-4 mr-2" />
-                          Save Changes
+                          {localLoading ? "Saving..." : "Save Changes"}
                         </Button>
                       </div>
                     </>
@@ -408,6 +409,34 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
+                  
+                  <Separator />
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => {
+                      toast({
+                        title: "Upgrade Plan",
+                        description: "Contact support to upgrade your workspace plan."
+                      });
+                    }}>
+                      Upgrade Plan
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => {
+                      toast({
+                        title: "Invite Members",
+                        description: "Member invitation functionality would open here."
+                      });
+                    }}>
+                      Invite Members
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => {
+                      toast({
+                        title: "Workspace Settings", 
+                        description: "Redirecting to workspace configuration..."
+                      });
+                    }}>
+                      Workspace Settings
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -421,12 +450,66 @@ export default function Profile() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={handleChangePassword}>
-                      Change Password
-                    </Button>
-                    <Button variant="outline" className="flex-1" onClick={handleDownloadData}>
-                      Download Data
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="flex-1">
+                          Change Password
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Change Password</DialogTitle>
+                          <DialogDescription>
+                            Update your account password. Please enter your current password and your new password twice.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="currentPassword">Current Password</Label>
+                            <Input
+                              id="currentPassword"
+                              type="password"
+                              value={passwordForm.currentPassword}
+                              onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                              placeholder="Enter your current password"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="newPassword">New Password</Label>
+                            <Input
+                              id="newPassword"
+                              type="password"
+                              value={passwordForm.newPassword}
+                              onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                              placeholder="Enter your new password"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                            <Input
+                              id="confirmPassword"
+                              type="password"
+                              value={passwordForm.confirmPassword}
+                              onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                              placeholder="Confirm your new password"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2 pt-4">
+                            <DialogTrigger asChild>
+                              <Button variant="outline" disabled={passwordLoading}>
+                                Cancel
+                              </Button>
+                            </DialogTrigger>
+                            <Button 
+                              onClick={handleChangePassword} 
+                              disabled={passwordLoading}
+                            >
+                              {passwordLoading ? "Updating..." : "Update Password"}
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="outline" className="flex-1">
