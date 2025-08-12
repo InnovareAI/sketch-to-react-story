@@ -31,6 +31,30 @@ export function useWorkspace() {
       setLoading(true);
       setError(null);
       
+      // Handle bypass user workspace
+      if (workspaceId === 'bypass-workspace-id') {
+        console.log('🚀 Using mock workspace for bypass user');
+        const mockWorkspace: WorkspaceData = {
+          id: 'bypass-workspace-id',
+          name: 'InnovareAI',
+          slug: 'innovareai',
+          subscription_tier: 'pro',
+          settings: {
+            website: 'https://innovareai.com',
+            industry: 'Technology',
+            companySize: '50-100',
+            description: 'AI-powered sales automation platform',
+            phone: '+1 (555) 123-4567',
+            email: 'contact@innovareai.com',
+            address: 'San Francisco, CA',
+            timezone: 'UTC-8'
+          }
+        };
+        setWorkspace(mockWorkspace);
+        setLoading(false);
+        return;
+      }
+      
       const { data, error: supabaseError } = await supabase
         .from('workspaces')
         .select('*')

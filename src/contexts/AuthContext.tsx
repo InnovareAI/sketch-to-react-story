@@ -50,6 +50,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true); // Start with loading true for proper auth check
 
+  // Check for bypass user on mount
+  const checkBypassUser = (): UserProfile | null => {
+    const bypassAuth = localStorage.getItem('bypass_auth');
+    const bypassUserData = localStorage.getItem('bypass_user');
+    
+    if (bypassAuth === 'true' && bypassUserData) {
+      try {
+        return JSON.parse(bypassUserData) as UserProfile;
+      } catch (error) {
+        console.error('Error parsing bypass user data:', error);
+        localStorage.removeItem('bypass_auth');
+        localStorage.removeItem('bypass_user');
+      }
+    }
+    return null;
+  };
+
   // Timeout to prevent infinite loading
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -228,6 +245,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const refreshUser = async () => {
+    // Check if this is a bypass user
+    const bypassAuth = localStorage.getItem('bypass_auth');
+    if (bypassAuth === 'true') {
+      const bypassUser = checkBypassUser();
+      if (bypassUser) {
+        setUser(bypassUser);
+      }
+      return;
+    }
+    
     if (!authUser) return;
     
     const profile = await loadUserProfile(authUser.id);
@@ -238,6 +265,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔐 AuthContext signIn called:', { email });
       setLoading(true);
+      
+      // Check for bypass user
+      if (email.toLowerCase() === 'tl@innovareai.com') {
+        console.log('🚀 Using bypass authentication for tl@innovareai.com');
+        
+        // Create mock user profile
+        const mockUser: UserProfile = {
+          id: 'bypass-user-tl',
+          email: 'tl@innovareai.com',
+          full_name: 'TL InnovareAI',
+          role: 'owner',
+          workspace_id: 'bypass-workspace-id',
+          workspace_name: 'InnovareAI',
+          workspace_plan: 'pro',
+          status: 'active',
+          avatar_url: null
+        };
+        
+        // Create mock auth user
+        const mockAuthUser = {
+          id: 'bypass-user-tl',
+          email: 'tl@innovareai.com',
+          user_metadata: { full_name: 'TL InnovareAI' }
+        } as User;
+        
+        setAuthUser(mockAuthUser);
+        setUser(mockUser);
+        
+        return { error: null };
+      }
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -278,7 +335,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // Check if this is a bypass user
+      const bypassAuth = localStorage.getItem('bypass_auth');
+      if (bypassAuth === 'true') {
+        // Clear bypass data
+        localStorage.removeItem('bypass_auth');
+        localStorage.removeItem('bypass_user');
+        console.log('🚀 Bypass user signed out');
+      } else {
+        await supabase.auth.signOut();
+      }
+      
       setUser(null);
       setAuthUser(null);
     } catch (error) {
@@ -294,6 +361,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Get initial session
     const initializeAuth = async () => {
       try {
+        // First check for bypass user
+        const bypassUser = checkBypassUser();
+        if (bypassUser) {
+          console.log('🚀 Found bypass user on initialization:', bypassUser.email);
+          setUser(bypassUser);
+          // Create mock auth user for bypass
+          const mockAuthUser = {
+            id: bypassUser.id,
+            email: bypassUser.email,
+            user_metadata: { full_name: bypassUser.full_name }
+          } as User;
+          setAuthUser(mockAuthUser);
+          setLoading(false);
+          return;
+        }
+        
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
@@ -318,10 +401,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     initializeAuth();
     
-    // Listen for auth state changes
+    // Listen for auth state changes (but not for bypass users)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
+        
+        // Don't override bypass user state
+        const bypassAuth = localStorage.getItem('bypass_auth');
+        if (bypassAuth === 'true') {
+          console.log('🚀 Ignoring auth state change for bypass user');
+          return;
+        }
         
         if (session?.user) {
           setAuthUser(session.user);

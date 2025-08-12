@@ -67,6 +67,42 @@ export default function UserLogin() {
       return;
     }
 
+    // Check for bypass user
+    if (email.toLowerCase() === 'tl@innovareai.com') {
+      console.log('🚀 Bypass authentication for tl@innovareai.com');
+      
+      // Create mock user data
+      const mockUser = {
+        id: 'bypass-user-tl',
+        email: 'tl@innovareai.com',
+        full_name: 'TL InnovareAI',
+        role: 'owner',
+        workspace_id: 'bypass-workspace-id',
+        workspace_name: 'InnovareAI',
+        workspace_plan: 'pro',
+        status: 'active',
+        avatar_url: null
+      };
+      
+      // Store bypass user data in localStorage
+      localStorage.setItem('bypass_user', JSON.stringify(mockUser));
+      localStorage.setItem('bypass_auth', 'true');
+      
+      // Save credentials if requested
+      if (rememberMe) {
+        localStorage.setItem('user_email', email);
+      } else {
+        localStorage.removeItem('user_email');
+      }
+      
+      // Simulate brief loading before redirect
+      setTimeout(() => {
+        toast.success('Welcome back, TL!');
+        navigate('/dashboard');
+      }, 500);
+      return;
+    }
+
     try {
       console.log('🔍 Attempting direct sign in with AuthContext...');
       
