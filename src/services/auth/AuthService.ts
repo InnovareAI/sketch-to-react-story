@@ -286,8 +286,9 @@ class AuthService {
 
   async resetPassword(email: string): Promise<{ error: Error | null }> {
     try {
+      const redirectUrl = import.meta.env.VITE_PRODUCTION_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: `${redirectUrl}/reset-password`
       });
       
       if (error) throw error;

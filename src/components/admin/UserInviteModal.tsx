@@ -46,7 +46,7 @@ export function UserInviteModal({ isOpen, onClose, workspaceId, workspaceName }:
   });
 
   const generateInviteLink = () => {
-    const baseUrl = window.location.origin;
+    const baseUrl = import.meta.env.VITE_PRODUCTION_URL || window.location.origin;
     const inviteToken = crypto.randomUUID();
     const link = `${baseUrl}/signup?invite=${inviteToken}&workspace=${workspaceId}&email=${encodeURIComponent(formData.email)}`;
     return { link, token: inviteToken };
