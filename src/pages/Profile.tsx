@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,28 +27,18 @@ import {
 } from "lucide-react";
 
 export default function Profile() {
-  const { user, authUser, loading, refreshUser } = useAuth();
-  const [localLoading, setLocalLoading] = useState(false);
-
-  // If not authenticated or still loading, show loading state
-  if (loading || !user || !authUser) {
-    return (
-      <div className="flex-1 bg-gray-50">
-        <main className="flex-1 p-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading Profile...</h1>
-              {!loading && !user && <p className="text-gray-600">Please sign in to view your profile.</p>}
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // Use authenticated user data
-  const profileUser = user;
-
+  // Static user data - no authentication
+  const [profileUser, setProfileUser] = useState({
+    id: '3d0cafd6-57cd-4bcb-a105-af7784038105',
+    email: 'tl@innovareai.com',
+    full_name: 'TL InnovareAI',
+    role: 'admin',
+    workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+    workspace_name: 'InnovareAI',
+    workspace_plan: 'pro',
+    status: 'active',
+    avatar_url: ''
+  });
 
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -62,67 +50,30 @@ export default function Profile() {
   });
 
   const [formData, setFormData] = useState({
-    full_name: profileUser.full_name || ''
+    full_name: profileUser.full_name || '',
+    email: profileUser.email || ''
   });
 
-  // Initialize form data when user is loaded
-  useEffect(() => {
-    if (profileUser) {
-      setFormData({
-        full_name: profileUser.full_name || ''
-      });
-    }
-  }, [profileUser]);
-
   const handleSave = async () => {
-    if (!authUser || !profileUser) {
-      toast({
-        title: "Error",
-        description: "You must be authenticated to update your profile.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
-      setLocalLoading(true);
-      console.log('Saving form data for authenticated user:', authUser.id, formData);
-      
-      // Save to Supabase database (this will work because we're authenticated)
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: formData.full_name
-          // Note: We don't update email here since it's tied to auth.users
-        })
-        .eq('id', authUser.id)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
-      
-      console.log('Profile updated successfully:', data);
-      
-      // Refresh the user profile in the auth context
-      await refreshUser();
+      // Update the profile user data
+      setProfileUser(prev => ({
+        ...prev,
+        full_name: formData.full_name,
+        email: formData.email
+      }));
       
       toast({
         title: "Profile Updated",
-        description: "Your profile has been saved successfully."
+        description: "Your profile has been updated successfully."
       });
       setIsEditing(false);
     } catch (error) {
-      console.error('Save error:', error);
       toast({
-        title: "Error", 
-        description: `Failed to save profile: ${error.message}`,
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setLocalLoading(false);
     }
   };
 
@@ -135,76 +86,45 @@ export default function Profile() {
       .slice(0, 2);
   };
 
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
-  const handleChangePassword = async () => {
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Please fill in all password fields.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "New passwords do not match.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 8) {
-      toast({
-        title: "Error",
-        description: "New password must be at least 8 characters long.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setPasswordLoading(true);
-      
-      // Update password using Supabase auth
-      const { error } = await supabase.auth.updateUser({
-        password: passwordForm.newPassword
-      });
-
-      if (error) {
-        throw error;
-      }
-
+  const handleChangePassword = () => {
+    const newPassword = prompt("Enter new password:");
+    if (newPassword && newPassword.length >= 6) {
       toast({
         title: "Password Changed",
         description: "Your password has been updated successfully."
       });
-      
-      // Reset form
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-    } catch (error) {
-      console.error('Password change error:', error);
+    } else if (newPassword) {
       toast({
         title: "Error",
-        description: "Failed to change password. Please try again.",
+        description: "Password must be at least 6 characters long.",
         variant: "destructive"
       });
-    } finally {
-      setPasswordLoading(false);
     }
   };
 
+  const handleDownloadData = () => {
+    const userData = {
+      profile: profileUser,
+      exportDate: new Date().toISOString(),
+      dataType: "Profile Export"
+    };
+    
+    const dataStr = JSON.stringify(userData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `profile-data-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Data Downloaded",
+      description: "Your profile data has been downloaded successfully."
+    });
+  };
 
   const handlePrivacySettingChange = (setting: keyof typeof privacySettings) => {
     setPrivacySettings(prev => ({
@@ -231,15 +151,7 @@ export default function Profile() {
               <p className="text-gray-600">Manage your account settings and preferences</p>
             </div>
             <Button
-              onClick={() => {
-                if (isEditing) {
-                  // Reset form data to current profile values when canceling
-                  setFormData({
-                    full_name: profileUser.full_name || ''
-                  });
-                }
-                setIsEditing(!isEditing);
-              }}
+              onClick={() => setIsEditing(!isEditing)}
               variant={isEditing ? "outline" : "default"}
             >
               <Settings className="h-4 w-4 mr-2" />
@@ -350,18 +262,12 @@ export default function Profile() {
                     <>
                       <Separator />
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => {
-                          // Reset form data to current profile values when canceling
-                          setFormData({
-                            full_name: profileUser.full_name || ''
-                          });
-                          setIsEditing(false);
-                        }}>
+                        <Button variant="outline" onClick={() => setIsEditing(false)}>
                           Cancel
                         </Button>
-                        <Button onClick={handleSave} disabled={localLoading}>
+                        <Button onClick={handleSave}>
                           <Save className="h-4 w-4 mr-2" />
-                          {localLoading ? "Saving..." : "Save Changes"}
+                          Save Changes
                         </Button>
                       </div>
                     </>
@@ -450,66 +356,12 @@ export default function Profile() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="flex-1">
-                          Change Password
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                          <DialogTitle>Change Password</DialogTitle>
-                          <DialogDescription>
-                            Update your account password. Please enter your current password and your new password twice.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="currentPassword">Current Password</Label>
-                            <Input
-                              id="currentPassword"
-                              type="password"
-                              value={passwordForm.currentPassword}
-                              onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                              placeholder="Enter your current password"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="newPassword">New Password</Label>
-                            <Input
-                              id="newPassword"
-                              type="password"
-                              value={passwordForm.newPassword}
-                              onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                              placeholder="Enter your new password"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                            <Input
-                              id="confirmPassword"
-                              type="password"
-                              value={passwordForm.confirmPassword}
-                              onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                              placeholder="Confirm your new password"
-                            />
-                          </div>
-                          <div className="flex justify-end gap-2 pt-4">
-                            <DialogTrigger asChild>
-                              <Button variant="outline" disabled={passwordLoading}>
-                                Cancel
-                              </Button>
-                            </DialogTrigger>
-                            <Button 
-                              onClick={handleChangePassword} 
-                              disabled={passwordLoading}
-                            >
-                              {passwordLoading ? "Updating..." : "Update Password"}
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button variant="outline" className="flex-1" onClick={handleChangePassword}>
+                      Change Password
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={handleDownloadData}>
+                      Download Data
+                    </Button>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="outline" className="flex-1">
