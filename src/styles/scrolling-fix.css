@@ -1,0 +1,63 @@
+/* Global scrolling fixes to ensure all content is accessible */
+
+/* Ensure the main app container allows scrolling */
+#root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Fix for pages that might have content cut off */
+.flex-1.bg-gray-50 {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Ensure main content areas are scrollable */
+main.flex-1 {
+  overflow-y: auto;
+  padding-bottom: 2rem; /* Add padding to ensure last content is visible */
+}
+
+/* Fix for modal/dialog backgrounds that might block scrolling */
+[data-radix-dialog-overlay] {
+  position: fixed;
+}
+
+/* Ensure workspace content is scrollable */
+.flex-1.overflow-auto {
+  min-height: 0;
+  height: 100%;
+}
+
+/* Add scroll padding for better UX */
+.overflow-auto {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+/* Custom scrollbar styling for better visibility */
+.overflow-auto::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure mobile devices can scroll properly */
+@media (max-width: 768px) {
+  .flex-1.overflow-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
