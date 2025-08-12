@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Account {
   id: number;
@@ -69,9 +70,57 @@ import {
 export default function Accounts() {
   const [viewMode, setViewMode] = useState<"list" | "tile">("tile");
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-  
-  // Empty accounts array - will be populated from database
-  const accounts: Account[] = [];
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadContacts();
+  }, []);
+
+  const loadContacts = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Load contacts from database
+      const { data: contacts, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform contacts to Account format
+      const accountsData: Account[] = (contacts || []).map((contact, index) => ({
+        id: index + 1,
+        name: contact.name || 'Unknown',
+        email: contact.email || '',
+        phone: contact.phone || '',
+        whatsapp: contact.phone || '',
+        companyPhone: '',
+        company: contact.company || '',
+        role: contact.role || '',
+        location: contact.location || '',
+        linkedin: contact.linkedin_url || '',
+        status: contact.status || 'active',
+        lastContact: new Date(contact.updated_at || contact.created_at).toLocaleDateString(),
+        responseRate: Math.floor(Math.random() * 30) + 70, // Random for demo
+        avatar: contact.metadata?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${contact.name}`,
+        campaigns: 0,
+        meetings: 0,
+        revenue: '$0',
+        currentCampaigns: []
+      }));
+
+      setAccounts(accountsData);
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+      setAccounts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditAccount = (account: Account) => {
     setEditingAccount({ ...account });
@@ -273,10 +322,10 @@ export default function Accounts() {
             <Building2 className="h-8 w-8 text-premium-purple" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">247</div>
+            <div className="text-2xl font-bold text-gray-900">{accounts.length}</div>
             <p className="text-xs text-green-600 mt-1">
               <TrendingUp className="h-3 w-3 inline mr-1" />
-              +15 this month
+              {accounts.length > 0 ? `${accounts.length} synced` : 'Sync to add'}
             </p>
           </CardContent>
         </Card>
@@ -311,7 +360,32 @@ export default function Accounts() {
       </div>
 
       {/* Accounts Content - Conditional Rendering */}
-      {viewMode === "list" ? (
+      {loading ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="text-muted-foreground">Loading contacts...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : accounts.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <Users className="h-12 w-12 text-muted-foreground" />
+              <p className="text-lg font-medium text-gray-900">No contacts yet</p>
+              <p className="text-muted-foreground text-center max-w-md">
+                Connect your LinkedIn account and sync to import your contacts, or add them manually.
+              </p>
+              <Button className="mt-4">
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Contact
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : viewMode === "list" ? (
         /* List View */
         <Card>
           <CardHeader>

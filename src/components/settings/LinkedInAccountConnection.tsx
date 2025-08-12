@@ -36,6 +36,7 @@ import { unipileService, LinkedInAccountData } from '@/services/unipile/UnipileS
 import { linkedInOAuth } from '@/services/linkedin/LinkedInOAuth';
 import { TeamAccountsSupabaseService } from '@/services/accounts/TeamAccountsSupabaseService';
 import { useAuth } from '@/contexts/AuthContext';
+import { linkedInDataSync } from '@/services/linkedin/LinkedInDataSync';
 
 interface ProxyLocation {
   code: string;
@@ -481,30 +482,21 @@ export function LinkedInAccountConnection() {
         throw new Error('Account not found');
       }
 
-      // For direct LinkedIn OAuth accounts, simulate sync by refreshing profile data
-      if (account.unipileAccountId.startsWith('linkedin_')) {
-        // This is a direct LinkedIn OAuth account
-        // In a real implementation, you'd refresh the access token and get updated profile data
-        
-        // Simulate sync delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Update the account's last sync time
-        const updatedAccounts = accounts.map(acc => 
-          acc.id === accountId 
-            ? { ...acc, metadata: { ...acc.metadata, last_sync: new Date().toISOString() } }
-            : acc
-        );
-        setAccounts(updatedAccounts);
-        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
-        
-        toast.success('LinkedIn profile data refreshed successfully');
-      } else {
-        // This is a Unipile account, use the original sync method
-        await unipileService.syncAccount(accountId);
-        await loadConnectedAccounts();
-        toast.success('LinkedIn data synced successfully');
-      }
+      toast.info('Syncing LinkedIn data...');
+      
+      // Use the new LinkedIn data sync service
+      await linkedInDataSync.manualSync();
+      
+      // Update the account's last sync time
+      const updatedAccounts = accounts.map(acc => 
+        acc.id === accountId 
+          ? { ...acc, metadata: { ...acc.metadata, last_sync: new Date().toISOString() } }
+          : acc
+      );
+      setAccounts(updatedAccounts);
+      localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+      
+      toast.success('LinkedIn data synced! Check your inbox and contacts for new data.');
     } catch (error) {
       console.error('Error syncing account:', error);
       toast.error('Failed to sync account: ' + (error as Error).message);

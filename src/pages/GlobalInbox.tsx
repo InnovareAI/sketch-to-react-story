@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { unipileService } from '@/services/unipile/UnipileService';
 
 interface Message {
   id: number;
@@ -97,19 +96,46 @@ export default function GlobalInbox() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Try to load real messages first
-      const realMessages = await unipileService.getAllMessagesForInbox(user.id);
+      // Load conversations with messages from database
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          conversation_messages (
+            *
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('last_message_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform conversations into inbox messages format
+      const inboxMessages: Message[] = (conversations || []).map((conv, index) => {
+        const latestMessage = conv.conversation_messages?.[conv.conversation_messages.length - 1];
+        return {
+          id: index + 1,
+          from: conv.participant_name || 'Unknown',
+          avatar: conv.participant_avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.participant_name}`,
+          company: conv.participant_company || '',
+          channel: conv.platform || 'linkedin',
+          subject: `Message from ${conv.participant_name}`,
+          preview: latestMessage?.content || 'No message content',
+          time: new Date(conv.last_message_at).toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          }),
+          read: false,
+          priority: 'normal',
+          tags: conv.platform === 'linkedin' ? ['LinkedIn'] : []
+        };
+      });
       
-      if (realMessages.length > 0) {
-        setMessages(realMessages);
-      } else {
-        // Fall back to demo messages if no real ones
-        setMessages(demoMessages);
-      }
+      setMessages(inboxMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
-      // Fall back to demo messages on error
-      setMessages(demoMessages);
+      setMessages([]);
     } finally {
       setLoading(false);
     }
