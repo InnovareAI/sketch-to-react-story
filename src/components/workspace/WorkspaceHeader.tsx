@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { NotificationCenter } from "@/components/ui/notification-center";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NewCampaignDialog } from "./NewCampaignDialog";
 import {
   DropdownMenu,
@@ -98,7 +97,6 @@ export function WorkspaceHeader({ isConversational, onToggleMode, operationMode,
           
           {/* Notifications */}
           <NotificationCenter />
-          <ThemeToggle />
           
           {/* User Menu */}
           <DropdownMenu>

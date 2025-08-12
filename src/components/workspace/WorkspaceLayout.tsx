@@ -7,7 +7,6 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { 
   LogOut,
   User,
@@ -196,9 +195,6 @@ export default function WorkspaceLayout() {
           </div>
           
           <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
-            <ThemeToggle />
-            
             {/* Enhanced notification bell */}
             <Button 
               variant="ghost" 
