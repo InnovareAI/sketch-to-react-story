@@ -46,6 +46,7 @@ import { EmailAccountConnection } from "@/components/settings/EmailAccountConnec
 import { CalendarIntegration } from "@/components/settings/CalendarIntegration";
 import { AutoProvisioningStatus } from "@/components/settings/AutoProvisioningStatus";
 import { LinkedInOAuthExplainer } from "@/components/settings/LinkedInOAuthExplainer";
+import { WorkspaceTwoFactorManagement } from "@/components/security/WorkspaceTwoFactorManagement";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
@@ -530,32 +531,7 @@ export default function WorkspaceSettings() {
 
                   {/* Security Tab */}
                   <TabsContent value="security" className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Shield className="h-5 w-5" />
-                          Security Settings
-                        </CardTitle>
-                        <CardDescription>Manage your workspace security preferences</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-0.5">
-                            <Label>Two-Factor Authentication</Label>
-                            <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                          </div>
-                          <Switch />
-                        </div>
-                        <Separator />
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-0.5">
-                            <Label>Login Notifications</Label>
-                            <p className="text-sm text-muted-foreground">Get notified of new login attempts</p>
-                          </div>
-                          <Switch defaultChecked />
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <WorkspaceTwoFactorManagement />
                   </TabsContent>
                 </Tabs>
               </div>
