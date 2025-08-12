@@ -41,14 +41,14 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100">
-      <main className="flex-1 p-4 lg:p-8">
+    <div className="flex-1 bg-white">
+      <main className="flex-1 p-4 lg:p-8 bg-gray-50">
             <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-                  <p className="text-gray-600 mt-1">Real-time insights into your outreach performance</p>
+                  <h1 className="display-text">Analytics Dashboard</h1>
+                  <p className="body-text mt-1">Real-time insights into your outreach performance</p>
                   {error && (
                     <div className="mt-2 text-red-600 text-sm">
                       <AlertTriangle className="h-4 w-4 inline mr-1" />
@@ -56,27 +56,19 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
+                <div className="flex gap-3">
+                  <button 
+                    className="flat-button flat-button-secondary"
                     onClick={refreshData}
                     disabled={isLoading}
                   >
-                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} mr-2`} />
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                     Refresh
-                  </Button>
-                  {/* Disabled for testing - integration moved to workspace settings
-                  <Button 
-                    onClick={() => setShowLinkedInModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add New Account
-                  </Button> */}
-                  <Button className="bg-primary hover:bg-primary/90">
-                    <Settings className="h-4 w-4 mr-2" />
+                  </button>
+                  <button className="flat-button flat-button-primary">
+                    <Settings className="h-4 w-4" />
                     Customize Reports
-                  </Button>
+                  </button>
                 </div>
               </div>
 

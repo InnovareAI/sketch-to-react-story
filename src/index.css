@@ -3,8 +3,8 @@
 /* Import scrolling fixes */
 @import './styles/scrolling-fix.css';
 
-/* Import flat design system */
-@import './styles/flat-design.css';
+/* Import white flat design system */
+@import './styles/white-flat-design.css';
 
 /* Import new design system */
 @import './styles/design-system.css';

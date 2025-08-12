@@ -17,7 +17,7 @@ interface AnalyticsChartProps {
   className?: string;
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4'];
 
 export function AnalyticsChart({ 
   title, 
@@ -33,7 +33,7 @@ export function AnalyticsChart({
         return (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
               <XAxis 
                 dataKey="name" 
                 stroke="hsl(var(--muted-foreground))"
@@ -73,7 +73,7 @@ export function AnalyticsChart({
         return (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
               <XAxis 
                 dataKey="name"
                 stroke="hsl(var(--muted-foreground))"
@@ -136,17 +136,20 @@ export function AnalyticsChart({
   };
 
   return (
-    <Card className={`backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 animate-fade-in ${className}`}>
-      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-lg" />
-      <CardHeader className="relative z-10">
-        <CardTitle className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-          {title}
-        </CardTitle>
-        {description && (
-          <CardDescription className="text-slate-600">{description}</CardDescription>
-        )}
+    <Card className={`flat-chart-container ${className}`}>
+      <CardHeader>
+        <div className="flat-chart-header">
+          <div>
+            <CardTitle className="flat-chart-title">
+              {title}
+            </CardTitle>
+            {description && (
+              <CardDescription className="flat-chart-subtitle mt-1">{description}</CardDescription>
+            )}
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="relative z-10 pt-0">
+      <CardContent className="pt-0">
         {renderChart()}
       </CardContent>
     </Card>

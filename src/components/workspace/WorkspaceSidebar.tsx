@@ -78,16 +78,16 @@ export function WorkspaceSidebar({
     <NavLink
       to={item.url}
       className={() => cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 w-full",
+        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
         isActive
-          ? "bg-blue-50 text-blue-600 border-l-4 border-blue-600"
-          : "text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-l-4 hover:border-blue-300"
+          ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1"
+          : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
       )}
       onClick={(e) => {
         e.stopPropagation();
       }}
     >
-      <item.icon className="h-4 w-4 flex-shrink-0" />
+      <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-blue-500" : "")} />
       <span className="truncate">{item.title}</span>
     </NavLink>
   );
@@ -103,15 +103,15 @@ export function WorkspaceSidebar({
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center gap-3 w-full">
               <div className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0",
-                isConversational ? "bg-gray-800 text-gray-300" : "bg-blue-600 text-white"
+                "flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0",
+                isConversational ? "bg-gray-800 text-gray-300" : "bg-gradient-to-br from-blue-400 to-purple-400 text-white shadow-md"
               )}>
                 <Building2 className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1 text-center">
                 <h2 className={cn(
-                  "font-semibold text-sm truncate",
-                  isConversational ? "text-white" : "text-gray-900"
+                  "text-sm truncate",
+                  isConversational ? "text-white font-semibold" : "text-gray-900 font-light"
                 )}>
                   {workspaceName}
                 </h2>
@@ -119,13 +119,13 @@ export function WorkspaceSidebar({
             </div>
             
             {/* Mode Switch Button */}
-            <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg w-full">
+            <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg w-full border border-gray-200">
               <NavLink
                 to="/"
                 className={({ isActive }) => cn(
-                  "flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-center transition-all",
+                  "flex-1 px-3 py-1.5 text-xs font-normal rounded-md text-center transition-all",
                   !isConversational 
-                    ? "bg-white text-gray-900 shadow-sm" 
+                    ? "bg-white text-blue-600 shadow-sm border border-gray-200" 
                     : "text-gray-600 hover:text-gray-900"
                 )}
               >
@@ -134,9 +134,9 @@ export function WorkspaceSidebar({
               <NavLink
                 to="/agent/team"
                 className={({ isActive }) => cn(
-                  "flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-center transition-all",
+                  "flex-1 px-3 py-1.5 text-xs font-normal rounded-md text-center transition-all",
                   isConversational 
-                    ? "bg-white text-gray-900 shadow-sm" 
+                    ? "bg-white text-gray-900 shadow-sm border border-gray-200" 
                     : "text-gray-600 hover:text-gray-900"
                 )}
               >
@@ -179,8 +179,8 @@ export function WorkspaceSidebar({
             {!isConversational && isTeamMember && (
               <div className="mb-6">
                 <h3 className={cn(
-                  "text-xs font-semibold px-3 py-2 mb-2 uppercase tracking-wide",
-                  isConversational ? "text-gray-400" : "text-gray-500"
+                  "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
+                  isConversational ? "text-gray-400 font-semibold" : "text-gray-400 font-normal"
                 )}>
                   Team
                 </h3>
@@ -200,8 +200,8 @@ export function WorkspaceSidebar({
             {isConversational && (
               <div className="mb-6">
                 <h3 className={cn(
-                  "text-xs font-semibold px-3 py-2 mb-2 uppercase tracking-wide",
-                  "text-gray-400"
+                  "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
+                  "text-gray-400 font-normal"
                 )}>
                   Documents
                 </h3>
@@ -220,10 +220,10 @@ export function WorkspaceSidebar({
         </div>
 
         {/* Settings Section */}
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-gray-100 p-4 bg-gray-50">
           <h3 className={cn(
-            "text-xs font-semibold px-3 py-2 mb-2 uppercase tracking-wide",
-            isConversational ? "text-gray-400" : "text-gray-500"
+            "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
+            isConversational ? "text-gray-400 font-semibold" : "text-gray-400 font-normal"
           )}>
             Settings
           </h3>

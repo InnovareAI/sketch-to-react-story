@@ -1,0 +1,444 @@
+/* White Flat Design System - Professional UI Style Guide */
+
+:root {
+  /* Primary Blues */
+  --blue-400: #3B82F6;
+  --blue-600: #0052CC;
+  --blue-50: #EFF6FF;
+  --blue-100: #DBEAFE;
+  
+  /* Accent Purples */
+  --purple-400: #8B5CF6;
+  --purple-600: #5200CC;
+  --purple-50: #F5F3FF;
+  --purple-100: #EDE9FE;
+  
+  /* Status Colors */
+  --success: #10B981;
+  --success-light: #D1FAE5;
+  --warning: #F59E0B;
+  --warning-light: #FEF3C7;
+  --error: #EF4444;
+  --error-light: #FEE2E2;
+  
+  /* Chart Colors */
+  --chart-1: #3B82F6;
+  --chart-2: #8B5CF6;
+  --chart-3: #10B981;
+  --chart-4: #F59E0B;
+  --chart-5: #EF4444;
+  --chart-6: #06B6D4;
+  
+  /* Backgrounds */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F9FAFB;
+  --bg-tertiary: #F3F4F6;
+  
+  /* Text Colors */
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-tertiary: #9CA3AF;
+  
+  /* Borders */
+  --border-light: #E5E7EB;
+  --border-default: #D1D5DB;
+  --border-dark: #9CA3AF;
+}
+
+/* Typography with Inter Font */
+.display-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 3rem;
+  font-weight: 100;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.heading-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 2rem;
+  font-weight: 200;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.title-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 300;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.body-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.caption-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+
+/* Flat Metric Cards */
+.flat-metric-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.flat-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: var(--blue-400);
+}
+
+.flat-metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--blue-400), var(--purple-400));
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.metric-value {
+  font-size: 2.5rem;
+  font-weight: 100;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.metric-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.metric-change.positive {
+  color: var(--success);
+  background: var(--success-light);
+}
+
+.metric-change.negative {
+  color: var(--error);
+  background: var(--error-light);
+}
+
+/* Flat Buttons */
+.flat-button {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.flat-button-primary {
+  background: var(--blue-400);
+  color: white;
+}
+
+.flat-button-primary:hover {
+  background: var(--blue-600);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.flat-button-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+}
+
+.flat-button-secondary:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-default);
+}
+
+.flat-button-tertiary {
+  background: transparent;
+  color: var(--blue-400);
+  border: 1px solid var(--blue-400);
+}
+
+.flat-button-tertiary:hover {
+  background: var(--blue-50);
+  border-color: var(--blue-600);
+}
+
+/* Chart Container */
+.flat-chart-container {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.flat-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.flat-chart-title {
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+.flat-chart-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+/* Progress Bars */
+.flat-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 100px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.flat-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue-400), var(--purple-400));
+  border-radius: 100px;
+  transition: width 0.5s ease;
+}
+
+/* Status Indicators */
+.flat-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.flat-status-operational {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.flat-status-degraded {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.flat-status-disruption {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.flat-status-maintenance {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* Form Elements */
+.flat-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 1rem;
+  background: var(--bg-primary);
+  transition: all 0.2s ease;
+}
+
+.flat-input:focus {
+  outline: none;
+  border-color: var(--blue-400);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.flat-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 1rem;
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Data Table */
+.flat-table {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.flat-table thead {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.flat-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.flat-table td {
+  padding: 1rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.flat-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+/* Dashboard Grid */
+.flat-dashboard {
+  background: var(--bg-secondary);
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.flat-dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.flat-dashboard-title {
+  font-size: 2.5rem;
+  font-weight: 100;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.flat-dashboard-subtitle {
+  font-size: 1rem;
+  color: var(--text-tertiary);
+}
+
+.flat-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.flat-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+}
+
+.flat-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.flat-grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+/* Info Cards */
+.flat-info-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.flat-info-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
+.flat-info-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  background: linear-gradient(135deg, var(--blue-400), var(--purple-400));
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 2rem;
+}
+
+.flat-info-value {
+  font-size: 3rem;
+  font-weight: 100;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.flat-info-label {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+}
+
+/* Utility Classes */
+.text-thin { font-weight: 100; }
+.text-extralight { font-weight: 200; }
+.text-light { font-weight: 300; }
+.text-normal { font-weight: 400; }
+.text-medium { font-weight: 500; }
+.text-semibold { font-weight: 600; }
+
+.bg-white { background: var(--bg-primary); }
+.bg-gray-50 { background: var(--bg-secondary); }
+.bg-gray-100 { background: var(--bg-tertiary); }
+
+.border-light { border-color: var(--border-light); }
+.border-default { border-color: var(--border-default); }
+.border-dark { border-color: var(--border-dark); }
+
+/* Shadows */
+.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.shadow { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
+.shadow-md { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08); }
+.shadow-lg { box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1); }
+.shadow-xl { box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12); }
