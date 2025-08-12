@@ -42,6 +42,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { LLMSettings } from "@/components/settings/LLMSettings";
 import { TeamAccountsSettings } from "@/components/settings/TeamAccountsSettings";
 import { LinkedInAccountConnection } from "@/components/settings/LinkedInAccountConnection";
+import { EmailAccountConnection } from "@/components/settings/EmailAccountConnection";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
@@ -452,44 +453,7 @@ export default function WorkspaceSettings() {
 
                   {/* Email Tab */}
                   <TabsContent value="email" className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Mail className="h-5 w-5 text-blue-600" />
-                          Email Account Settings
-                        </CardTitle>
-                        <CardDescription>Configure your email accounts for outreach campaigns</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="w-10 h-10 bg-red-100 rounded flex items-center justify-center">
-                                <Mail className="h-5 w-5 text-red-600" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold">Gmail / Google Workspace</h3>
-                                <p className="text-xs text-muted-foreground">Connect your Gmail account</p>
-                              </div>
-                            </div>
-                            <Button variant="outline" size="sm" className="w-full">Configure</Button>
-                          </div>
-                          
-                          <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
-                                <Mail className="h-5 w-5 text-blue-600" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold">Microsoft 365</h3>
-                                <p className="text-xs text-muted-foreground">Connect your Microsoft 365 account</p>
-                              </div>
-                            </div>
-                            <Button variant="outline" size="sm" className="w-full">Configure</Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <EmailAccountConnection />
                   </TabsContent>
 
                   {/* Calendar Tab */}
