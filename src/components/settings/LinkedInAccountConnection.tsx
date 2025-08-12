@@ -28,7 +28,8 @@ import {
   Globe,
   MapPin,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { unipileService, LinkedInAccountData } from '@/services/unipile/UnipileService';
@@ -49,6 +50,7 @@ const proxyLocations: ProxyLocation[] = [
 ];
 
 export function LinkedInAccountConnection() {
+  console.log('LinkedInAccountConnection component mounting...');
   const [accounts, setAccounts] = useState<LinkedInAccountData[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
@@ -118,7 +120,7 @@ export function LinkedInAccountConnection() {
         const proxyLocation = sessionStorage.getItem('linkedin_proxy_location') || 'US';
         
         const newAccount: LinkedInAccountData = {
-          id: crypto.randomUUID(),
+          id: crypto.randomUUID?.() || `account_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           provider: 'LINKEDIN',
           email: profile.email,
           name: profile.name,
@@ -148,8 +150,13 @@ export function LinkedInAccountConnection() {
         toast.success('LinkedIn account connected successfully!');
       } else if (!persistedAccounts) {
         // No persisted accounts and no new OAuth data, try Unipile
-        const connectedAccounts = await unipileService.getConnectedAccounts();
-        setAccounts(connectedAccounts);
+        try {
+          const connectedAccounts = await unipileService.getConnectedAccounts();
+          setAccounts(connectedAccounts);
+        } catch (supabaseError) {
+          console.warn('Could not load accounts from Supabase, continuing with empty state:', supabaseError);
+          setAccounts([]);
+        }
       }
     } catch (error) {
       console.error('Error loading accounts:', error);
@@ -185,7 +192,7 @@ export function LinkedInAccountConnection() {
       if (hasLinkedInApp) {
         // Use direct LinkedIn OAuth
         console.log('Using direct LinkedIn OAuth');
-        const state = crypto.randomUUID();
+        const state = crypto.randomUUID?.() || `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         sessionStorage.setItem('linkedin_oauth_state', state);
         sessionStorage.setItem('linkedin_proxy_location', proxyLocation);
         
@@ -313,7 +320,7 @@ export function LinkedInAccountConnection() {
       // Simulate a delay for authentication
       setTimeout(() => {
         const mockAccount: LinkedInAccountData = {
-          id: crypto.randomUUID(),
+          id: crypto.randomUUID?.() || `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           provider: 'LINKEDIN',
           email: `user${Math.floor(Math.random() * 1000)}@linkedin.com`,
           name: `Test User ${Math.floor(Math.random() * 100)}`,
@@ -655,7 +662,7 @@ export function LinkedInAccountConnection() {
                       onClick={() => {
                         // Mock successful connection for demo
                         const mockAccount: LinkedInAccountData = {
-                          id: crypto.randomUUID(),
+                          id: crypto.randomUUID?.() || `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                           provider: 'LINKEDIN',
                           email: 'demo@example.com',
                           name: 'Demo User',
