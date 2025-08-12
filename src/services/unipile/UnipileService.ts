@@ -185,7 +185,7 @@ class UnipileService {
           user_id: user.id,
           provider: account.provider,
           email: account.email,
-          name: account.name,
+          account_name: account.name,  // Changed from 'name' to 'account_name'
           profile_url: account.profileUrl,
           profile_picture: account.profilePicture,
           status: account.status,
@@ -230,7 +230,7 @@ class UnipileService {
         id: acc.id,
         provider: 'LINKEDIN',
         email: acc.email,
-        name: acc.name,
+        name: acc.account_name,  // Changed from 'name' to 'account_name'
         profileUrl: acc.profile_url,
         profilePicture: acc.profile_picture,
         status: acc.status,
@@ -329,7 +329,7 @@ class UnipileService {
         id: data.id,
         provider: 'LINKEDIN',
         email: data.email,
-        name: data.name,
+        name: data.account_name,  // Changed from 'name' to 'account_name'
         profileUrl: data.profile_url,
         profilePicture: data.profile_picture,
         status: data.status,

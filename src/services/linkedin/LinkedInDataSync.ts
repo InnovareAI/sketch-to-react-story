@@ -63,7 +63,7 @@ export class LinkedInDataSync {
       const { data: dbAccounts, error } = await supabase
         .from('team_accounts')
         .select('*')
-        .eq('platform', 'linkedin')
+        .eq('provider', 'LINKEDIN')  // Changed from 'platform' to 'provider' and value to 'LINKEDIN'
         .eq('status', 'active');
 
       if (error) throw error;
