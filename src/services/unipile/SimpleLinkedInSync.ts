@@ -140,9 +140,9 @@ async function saveMessagesToDatabase(messages: any[], userId: string) {
   
   for (const msg of messages) {
     try {
-      // Create conversation in inbox_conversations
+      // Create conversation in sam_ai_conversations
       const { data: conversation } = await supabase
-        .from('inbox_conversations')
+        .from('sam_ai_conversations')
         .upsert({
           workspace_id: profile.workspace_id,
           platform: 'linkedin',
@@ -159,9 +159,9 @@ async function saveMessagesToDatabase(messages: any[], userId: string) {
         .single();
       
       if (conversation) {
-        // Create message in inbox_messages
+        // Create message in sam_ai_conversation_messages
         await supabase
-          .from('inbox_messages')
+          .from('sam_ai_conversation_messages')
           .upsert({
             conversation_id: conversation.id,
             platform_message_id: msg.id,
@@ -232,9 +232,9 @@ async function createSampleData(userId: string) {
   
   for (const msg of sampleMessages) {
     try {
-      // Create conversation in inbox_conversations
+      // Create conversation in sam_ai_conversations
       const { data: conversation } = await supabase
-        .from('inbox_conversations')
+        .from('sam_ai_conversations')
         .upsert({
           workspace_id: profile.workspace_id,
           platform: 'linkedin',
@@ -250,9 +250,9 @@ async function createSampleData(userId: string) {
         .single();
       
       if (conversation) {
-        // Create message in inbox_messages
+        // Create message in sam_ai_conversation_messages
         await supabase
-          .from('inbox_messages')
+          .from('sam_ai_conversation_messages')
           .insert({
             conversation_id: conversation.id,
             role: 'assistant',

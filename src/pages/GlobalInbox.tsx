@@ -123,12 +123,12 @@ export default function GlobalInbox() {
         return;
       }
       
-      // Load conversations with messages from inbox tables
+      // Load conversations with messages from sam_ai tables
       const { data: conversations, error } = await supabase
-        .from('inbox_conversations')
+        .from('sam_ai_conversations')
         .select(`
           *,
-          inbox_messages (
+          sam_ai_conversation_messages (
             *
           )
         `)
@@ -152,7 +152,7 @@ export default function GlobalInbox() {
 
       // Transform conversations into inbox messages format
       const inboxMessages: Message[] = conversations.map((conv, index) => {
-        const latestMessage = conv.inbox_messages?.[conv.inbox_messages.length - 1];
+        const latestMessage = conv.sam_ai_conversation_messages?.[conv.sam_ai_conversation_messages.length - 1];
         return {
           id: index + 1,
           from: conv.participant_name || 'Unknown',
