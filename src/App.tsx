@@ -13,6 +13,7 @@ import Campaigns from "./pages/Campaigns";
 import Contacts from "./pages/Contacts";
 import Search from "./pages/Search";
 import GlobalInbox from "./pages/GlobalInbox";
+import GlobalInboxSimple from "./pages/GlobalInboxSimple";
 import MessageQueue from "./pages/MessageQueue";
 import Templates from "./pages/Templates";
 import Requests from "./pages/Requests";
@@ -72,7 +73,7 @@ const App: React.FC = () => {
                 <Route path="analytics" element={<Analytics />} />
                 
                 {/* Team Routes */}
-                <Route path="global-inbox" element={<GlobalInbox />} />
+                <Route path="global-inbox" element={<GlobalInboxSimple />} />
                 <Route path="team-settings" element={<TeamSettings />} />
                 <Route path="integrations" element={<Integrations />} />
                 
