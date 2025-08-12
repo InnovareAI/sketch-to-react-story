@@ -29,10 +29,10 @@ import {
 } from "lucide-react";
 
 export default function Profile() {
-  const { user, refreshUser } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [privacySettings, setPrivacySettings] = useState({
     emailNotifications: true,
     profileVisibility: true,
@@ -74,7 +74,7 @@ export default function Profile() {
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     
     try {
       // Update profile in Supabase
@@ -107,7 +107,7 @@ export default function Profile() {
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -120,7 +120,7 @@ export default function Profile() {
       .slice(0, 2);
   };
 
-  // Show loading or redirect if no user
+  // Show loading state if user data is still being loaded
   if (!user) {
     return (
       <div className="flex-1 bg-gray-50">
@@ -330,9 +330,9 @@ export default function Profile() {
                         }}>
                           Cancel
                         </Button>
-                        <Button onClick={handleSave} disabled={loading}>
+                        <Button onClick={handleSave} disabled={saving}>
                           <Save className="h-4 w-4 mr-2" />
-                          {loading ? 'Saving...' : 'Save Changes'}
+                          {saving ? 'Saving...' : 'Save Changes'}
                         </Button>
                       </div>
                     </>

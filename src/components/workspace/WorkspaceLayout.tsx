@@ -23,19 +23,42 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function WorkspaceLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
+  const { user: authUser, loading: authLoading, signOut } = useAuth();
 
-  // Use auth user data or fallback to defaults
+  // Show loading while authentication is being checked
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!authUser) {
+    navigate('/login');
+    return null;
+  }
+
+  // Use auth user data
   const user = {
-    full_name: authUser?.full_name || '',
-    workspace_name: authUser?.workspace_name || 'InnovareAI',
-    workspace_plan: authUser?.workspace_plan || 'pro',
-    role: authUser?.role || 'admin'
+    full_name: authUser.full_name || '',
+    workspace_name: authUser.workspace_name || 'InnovareAI',
+    workspace_plan: authUser.workspace_plan || 'pro',
+    role: authUser.role || 'admin'
   };
 
   const handleSignOut = async () => {
-    toast.success('Signed out successfully');
-    navigate('/login');
+    try {
+      await signOut();
+      toast.success('Signed out successfully');
+      navigate('/login');
+    } catch (error) {
+      toast.error('Error signing out');
+    }
   };
 
   const getRoleBadge = (role: string) => {
