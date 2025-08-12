@@ -21,18 +21,20 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function WorkspaceLayout() {
-  const { user, loading, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Mock user data
+  const user = {
+    full_name: 'TL InnovareAI',
+    workspace_name: 'InnovareAI',
+    workspace_plan: 'pro',
+    role: 'admin'
+  };
+
   const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast.success('Signed out successfully');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      toast.error('Error signing out');
-    }
+    toast.success('Signed out successfully');
+    navigate('/login');
   };
 
   const getRoleBadge = (role: string) => {
@@ -92,30 +94,6 @@ export default function WorkspaceLayout() {
 
   // Determine if we're in agent/conversational mode
   const isConversational = location.pathname.startsWith('/agent');
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading workspace...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p>Failed to load workspace</p>
-          <Button onClick={() => navigate('/login')} className="mt-4">
-            Return to Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen w-full">

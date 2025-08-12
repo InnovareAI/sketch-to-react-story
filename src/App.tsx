@@ -35,6 +35,7 @@ import TeamSettings from "./pages/TeamSettings";
 import Analytics from "./pages/Analytics";
 import ProspectSearch from "./pages/ProspectSearch";
 import SearchResults from "./pages/SearchResults";
+import Profile from "./pages/Profile";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -58,11 +59,7 @@ const App: React.FC = () => {
               {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
               <Route 
                 path="/" 
-                element={
-                  <ProtectedRoute>
-                    <WorkspaceLayout />
-                  </ProtectedRoute>
-                }
+                element={<WorkspaceLayout />}
               >
                 <Route index element={<Index />} />
                 <Route path="dashboard" element={<Dashboard />} />
@@ -92,23 +89,16 @@ const App: React.FC = () => {
                 <Route path="members" element={<Members />} />
                 <Route path="roles" element={<Roles />} />
                 <Route path="workspace-settings" element={<WorkspaceSettings />} />
+                <Route path="profile" element={<Profile />} />
                 <Route path="linkedin" element={<LinkedInIntegration />} />
                 <Route path="linkedin-integration" element={<LinkedInIntegration />} />
                 <Route 
                   path="users-permissions" 
-                  element={
-                    <ProtectedRoute requireRole={['workspace_manager', 'admin']}>
-                      <UsersPermissions />
-                    </ProtectedRoute>
-                  } 
+                  element={<UsersPermissions />} 
                 />
                 <Route 
                   path="admin/users" 
-                  element={
-                    <ProtectedRoute requireRole={['workspace_manager', 'admin']}>
-                      <UsersPermissions />
-                    </ProtectedRoute>
-                  } 
+                  element={<UsersPermissions />} 
                 />
                 
                 {/* Agent/Chatbot Routes */}
@@ -119,11 +109,7 @@ const App: React.FC = () => {
               {/* Legacy redirect - /workspace/dashboard redirects to main dashboard */}
               <Route 
                 path="/workspace/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <WorkspaceLayout />
-                  </ProtectedRoute>
-                }
+                element={<WorkspaceLayout />}
               >
                 <Route index element={<Dashboard />} />
               </Route>

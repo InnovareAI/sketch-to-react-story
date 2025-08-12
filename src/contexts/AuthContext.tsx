@@ -49,6 +49,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      console.log('Auth loading timeout - forcing loading to false');
+      setLoading(false);
+    }, 5000);
+    
+    return () => clearTimeout(timeout);
+  }, []);
+
   const createMissingProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
       console.log('Creating missing profile for user:', userId);
@@ -272,7 +282,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (error) {
           console.error('Error getting session:', error);
-          setLoading(false);
+          if (mounted) setLoading(false);
           return;
         }
 
@@ -281,14 +291,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const profile = await loadUserProfile(session.user.id);
           if (mounted) {
             setUser(profile);
+            setLoading(false);
           }
+        } else {
+          if (mounted) setLoading(false);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
@@ -304,13 +314,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (session?.user) {
           setAuthUser(session.user);
           const profile = await loadUserProfile(session.user.id);
-          setUser(profile);
+          if (mounted) {
+            setUser(profile);
+            setLoading(false);
+          }
         } else {
-          setAuthUser(null);
-          setUser(null);
+          if (mounted) {
+            setAuthUser(null);
+            setUser(null);
+            setLoading(false);
+          }
         }
-        
-        setLoading(false);
       }
     );
 
