@@ -66,8 +66,24 @@ export default function UserLogin() {
       }
 
       if (userRecord.status === 'invited') {
-        // User exists but hasn't completed signup - create auth account
+        // User exists but hasn't completed signup - check if auth user already exists
         try {
+          // First try normal login in case auth user already exists
+          const { error: loginError } = await signIn(email.toLowerCase(), password);
+          
+          if (!loginError) {
+            // Login successful, update status to active
+            await supabase
+              .from('users')
+              .update({ status: 'active' })
+              .eq('id', userRecord.id);
+
+            toast.success('Welcome back to SAM AI!');
+            navigate('/dashboard');
+            return;
+          }
+
+          // If login failed, try creating new auth account
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email: email.toLowerCase(),
             password: password,
@@ -79,8 +95,27 @@ export default function UserLogin() {
           });
 
           if (signUpError) {
+            // If signup also fails, it might be because user already exists
+            // Try login one more time with better error handling
             console.error('Signup error:', signUpError);
-            setError('Failed to create account. Please try again or contact support.');
+            
+            if (signUpError.message?.includes('already registered')) {
+              // User exists in auth, try login again
+              const { error: retryLoginError } = await signIn(email.toLowerCase(), password);
+              if (!retryLoginError) {
+                await supabase
+                  .from('users')
+                  .update({ status: 'active' })
+                  .eq('id', userRecord.id);
+
+                toast.success('Welcome back to SAM AI!');
+                navigate('/dashboard');
+                return;
+              }
+              setError('Invalid password. Please check your password and try again.');
+            } else {
+              setError('Failed to create account. Please try again or contact support.');
+            }
             return;
           }
 
@@ -95,7 +130,7 @@ export default function UserLogin() {
           return;
         } catch (signupError) {
           console.error('Account creation error:', signupError);
-          setError('Failed to create account. Please try again.');
+          setError('Authentication failed. Please check your password and try again.');
           return;
         }
       }
