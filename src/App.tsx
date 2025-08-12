@@ -14,6 +14,7 @@ import Contacts from "./pages/Contacts";
 import Search from "./pages/Search";
 import GlobalInbox from "./pages/GlobalInbox";
 import GlobalInboxSimple from "./pages/GlobalInboxSimple";
+import TestInbox from "./pages/TestInbox";
 import MessageQueue from "./pages/MessageQueue";
 import Templates from "./pages/Templates";
 import Requests from "./pages/Requests";
@@ -55,6 +56,7 @@ const App: React.FC = () => {
               <Route path="/admin/login" element={<SuperAdminLogin />} />
               <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
               <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
+              <Route path="/test-inbox" element={<TestInbox />} />
               
               {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
               <Route 
