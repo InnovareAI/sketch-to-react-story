@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { unipileDirectSync } from '@/services/unipile/UnipileDirectSync';
+import { syncLinkedInMessages } from '@/services/unipile/SimpleLinkedInSync';
 import { toast } from 'sonner';
 
 interface Message {
@@ -96,14 +96,18 @@ export default function GlobalInbox() {
   const loadMessages = async () => {
     try {
       setLoading(true);
+      console.log('📂 Loading messages from database...');
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        console.log('No authenticated user');
+        console.log('❌ No authenticated user');
         setMessages([]);
         setLoading(false);
         return;
       }
+      
+      console.log('✅ User:', user.email);
 
       // Load conversations with messages from database
       const { data: conversations, error } = await supabase
@@ -118,13 +122,15 @@ export default function GlobalInbox() {
         .order('last_message_at', { ascending: false });
 
       if (error) {
-        console.error('Database error:', error);
+        console.error('❌ Database error:', error);
         throw error;
       }
 
+      console.log(`📊 Found ${conversations?.length || 0} conversations`);
+
       // If no conversations, show helpful message
       if (!conversations || conversations.length === 0) {
-        console.log('No conversations found');
+        console.log('📭 No conversations in database');
         setMessages([]);
         setLoading(false);
         return;
@@ -164,18 +170,22 @@ export default function GlobalInbox() {
   const handleSyncMessages = async () => {
     try {
       setLoading(true);
-      toast.info('Pinging Unipile API to sync LinkedIn messages...');
+      console.log('🚀 Starting sync from button click');
+      toast.info('Syncing LinkedIn messages...');
       
-      // Use direct Unipile sync to fetch all messages
-      await unipileDirectSync.syncAllMessages();
+      // Use simple sync that works
+      await syncLinkedInMessages();
+      
+      // Wait a moment for database to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Reload messages after sync
+      console.log('📥 Reloading messages from database');
       await loadMessages();
       
-      toast.success('LinkedIn inbox synced successfully!');
     } catch (error) {
-      console.error('Error syncing messages:', error);
-      toast.error('Failed to sync messages. Please check your Unipile API configuration.');
+      console.error('❌ Sync error:', error);
+      toast.error('Sync failed - check console for details');
     } finally {
       setLoading(false);
     }
