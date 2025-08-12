@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
+import { linkedInDataSync } from '@/services/linkedin/LinkedInDataSync';
+import { toast } from 'sonner';
 
 interface Message {
   id: number;
@@ -93,8 +95,57 @@ export default function GlobalInbox() {
 
   const loadMessages = async () => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      
+      if (!user) {
+        console.log('No authenticated user, showing demo messages');
+        // Show demo messages when not authenticated
+        const demoMessages: Message[] = [
+          {
+            id: 1,
+            from: 'Sarah Johnson',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+            company: 'TechCorp Inc.',
+            channel: 'linkedin',
+            subject: 'Re: Partnership Opportunity',
+            preview: 'Thank you for reaching out! I\'d love to discuss the partnership opportunity further. Are you available for a call next week?',
+            time: '10:30 AM',
+            read: false,
+            priority: 'high',
+            tags: ['LinkedIn', 'Partnership']
+          },
+          {
+            id: 2,
+            from: 'Michael Chen',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael',
+            company: 'Innovation Labs',
+            channel: 'linkedin',
+            subject: 'Following up on our conversation',
+            preview: 'It was great connecting at the conference. As discussed, I\'m attaching our product deck for your review.',
+            time: '9:15 AM',
+            read: true,
+            priority: 'medium',
+            tags: ['LinkedIn', 'Follow-up']
+          },
+          {
+            id: 3,
+            from: 'Emma Wilson',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
+            company: 'Growth Partners',
+            channel: 'linkedin',
+            subject: 'Introduction from John Smith',
+            preview: 'John mentioned you might be interested in our new automation platform. Would love to show you a quick demo.',
+            time: 'Yesterday',
+            read: false,
+            priority: 'normal',
+            tags: ['LinkedIn', 'Introduction']
+          }
+        ];
+        setMessages(demoMessages);
+        setLoading(false);
+        return;
+      }
 
       // Load conversations with messages from database
       const { data: conversations, error } = await supabase
@@ -108,10 +159,21 @@ export default function GlobalInbox() {
         .eq('user_id', user.id)
         .order('last_message_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      // If no conversations, show helpful message
+      if (!conversations || conversations.length === 0) {
+        console.log('No conversations found');
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
 
       // Transform conversations into inbox messages format
-      const inboxMessages: Message[] = (conversations || []).map((conv, index) => {
+      const inboxMessages: Message[] = conversations.map((conv, index) => {
         const latestMessage = conv.conversation_messages?.[conv.conversation_messages.length - 1];
         return {
           id: index + 1,
@@ -135,7 +197,43 @@ export default function GlobalInbox() {
       setMessages(inboxMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
-      setMessages([]);
+      // Show demo messages on error
+      const fallbackMessages: Message[] = [
+        {
+          id: 1,
+          from: 'Demo User',
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Demo',
+          company: 'Demo Company',
+          channel: 'linkedin',
+          subject: 'Demo Message',
+          preview: 'This is a demo message. Connect your LinkedIn account and sync to see real messages.',
+          time: 'Now',
+          read: false,
+          priority: 'normal',
+          tags: ['Demo']
+        }
+      ];
+      setMessages(fallbackMessages);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSyncMessages = async () => {
+    try {
+      setLoading(true);
+      toast.info('Syncing messages from LinkedIn...');
+      
+      // Use the LinkedIn data sync service
+      await linkedInDataSync.manualSync();
+      
+      // Reload messages after sync
+      await loadMessages();
+      
+      toast.success('Messages synced successfully!');
+    } catch (error) {
+      console.error('Error syncing messages:', error);
+      toast.error('Failed to sync messages. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -320,7 +418,7 @@ export default function GlobalInbox() {
         <div className="flex gap-2">
           <Button 
             variant="outline"
-            onClick={loadMessages}
+            onClick={handleSyncMessages}
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -375,7 +473,7 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">3,848</div>
+                <div className="text-2xl font-bold text-gray-900">{messages.length}</div>
                 <div className="text-sm text-gray-600">Total Messages</div>
               </div>
               <Inbox className="h-8 w-8 text-premium-purple" />
@@ -391,7 +489,7 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">156</div>
+                <div className="text-2xl font-bold text-gray-900">{messages.filter(m => !m.read).length}</div>
                 <div className="text-sm text-gray-600">Unread</div>
               </div>
               <AlertCircle className="h-8 w-8 text-premium-orange" />
@@ -456,7 +554,16 @@ export default function GlobalInbox() {
 
               <TabsContent value={activeTab} className="mt-0">
                 <div className="space-y-0">
-                  {messages.map((message) => (
+                  {messages.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No messages yet</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Click "Sync Messages" to import from LinkedIn
+                      </p>
+                    </div>
+                  ) : (
+                    messages.map((message) => (
                     <div
                       key={message.id}
                       className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
@@ -489,19 +596,22 @@ export default function GlobalInbox() {
                             {message.preview}
                           </div>
                           <div className="flex items-center gap-1 mt-2">
-                            <Badge className={getPriorityColor(message.priority)}>
-                              {message.priority}
-                            </Badge>
-                            {message.labels.map((label, index) => (
+                            {message.priority && (
+                              <Badge className={getPriorityColor(message.priority)}>
+                                {message.priority}
+                              </Badge>
+                            )}
+                            {message.tags?.map((tag, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
-                                {label}
+                                {tag}
                               </Badge>
                             ))}
                           </div>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  ))
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
@@ -574,15 +684,15 @@ export default function GlobalInbox() {
                   </div>
                   <div className="prose max-w-none">
                     <p className="text-gray-900 leading-relaxed">
-                      {selectedMessage.fullMessage}
+                      {selectedMessage.preview}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {selectedMessage.labels.map((label: string, index: number) => (
+                  {selectedMessage.tags?.map((tag: string, index: number) => (
                     <Badge key={index} variant="outline">
-                      {label}
+                      {tag}
                     </Badge>
                   ))}
                 </div>
