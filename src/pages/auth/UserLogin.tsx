@@ -196,9 +196,8 @@ export default function UserLogin() {
       }
 
       // Try the normal password reset flow
-      const redirectUrl = import.meta.env.VITE_PRODUCTION_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${redirectUrl}/login`
+        redirectTo: 'https://sameaisalesassistant.netlify.app/login'
       });
 
       if (error) throw error;

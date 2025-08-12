@@ -14,7 +14,7 @@ export class LinkedInOAuth {
     this.clientId = import.meta.env.VITE_LINKEDIN_CLIENT_ID || '';
     this.clientSecret = import.meta.env.VITE_LINKEDIN_CLIENT_SECRET || '';
     // Use Netlify function for OAuth handling to avoid CORS issues
-    this.redirectUri = `${window.location.origin}/.netlify/functions/linkedin-callback`;
+    this.redirectUri = 'https://sameaisalesassistant.netlify.app/.netlify/functions/linkedin-callback';
     this.scope = [
       'openid',
       'profile', 

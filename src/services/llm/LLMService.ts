@@ -109,7 +109,7 @@ export class LLMService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.config.apiKey}`,
-          'HTTP-Referer': window.location.origin,
+          'HTTP-Referer': 'https://sameaisalesassistant.netlify.app',
           'X-Title': 'SAM AI Sales Assistant'
         },
         body: JSON.stringify({
@@ -173,7 +173,7 @@ export class LLMService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.config.apiKey}`,
-          'HTTP-Referer': window.location.origin,
+          'HTTP-Referer': 'https://sameaisalesassistant.netlify.app',
           'X-Title': 'SAM AI Sales Assistant'
         },
         body: JSON.stringify({

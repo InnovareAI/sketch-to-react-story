@@ -286,9 +286,8 @@ class AuthService {
 
   async resetPassword(email: string): Promise<{ error: Error | null }> {
     try {
-      const redirectUrl = import.meta.env.VITE_PRODUCTION_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${redirectUrl}/reset-password`
+        redirectTo: 'https://sameaisalesassistant.netlify.app/reset-password'
       });
       
       if (error) throw error;

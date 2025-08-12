@@ -37,7 +37,6 @@ export default function SuperAdminLogin() {
     const hostname = window.location.hostname;
     const isAllowedDomain = hostname === 'innovareai.com' || 
                            hostname === 'www.innovareai.com' || 
-                           hostname === 'localhost' ||
                            hostname.includes('netlify.app'); // For staging
 
     if (!isAllowedDomain) {
@@ -239,9 +238,8 @@ export default function SuperAdminLogin() {
 
     setResetLoading(true);
     try {
-      const redirectUrl = import.meta.env.VITE_PRODUCTION_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${redirectUrl}/admin/login`
+        redirectTo: 'https://sameaisalesassistant.netlify.app/admin/login'
       });
 
       if (error) throw error;
@@ -266,7 +264,6 @@ export default function SuperAdminLogin() {
   const hostname = window.location.hostname;
   const isAllowedDomain = hostname === 'innovareai.com' || 
                          hostname === 'www.innovareai.com' || 
-                         hostname === 'localhost' ||
                          hostname.includes('netlify.app');
 
   if (!isAllowedDomain) {

@@ -72,7 +72,7 @@ class UnipileService {
         },
         body: JSON.stringify({
           provider: 'LINKEDIN',
-          redirect_uri: redirectUri || `${window.location.origin}/auth/linkedin/callback`,
+          redirect_uri: redirectUri || 'https://sameaisalesassistant.netlify.app/auth/linkedin/callback',
           scopes: [
             'r_liteprofile',
             'r_emailaddress', 

@@ -151,7 +151,7 @@ export default function LinkedInCallback() {
           type: 'linkedin_auth_success',
           profile: profile,
           tokenData: tokenData
-        }, window.location.origin);
+        }, 'https://sameaisalesassistant.netlify.app');
         window.close();
       } else {
         // Redirect to settings
@@ -168,7 +168,7 @@ export default function LinkedInCallback() {
         window.opener.postMessage({
           type: 'linkedin_auth_error',
           error: error.message
-        }, window.location.origin);
+        }, 'https://sameaisalesassistant.netlify.app');
         setTimeout(() => window.close(), 3000);
       } else {
         toast.error(error.message);

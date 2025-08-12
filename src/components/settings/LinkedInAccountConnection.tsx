@@ -68,7 +68,7 @@ export function LinkedInAccountConnection() {
   }, []);
 
   const handleOAuthMessage = (event: MessageEvent) => {
-    if (event.origin !== window.location.origin) return;
+    if (event.origin !== 'https://sameaisalesassistant.netlify.app') return;
     
     if (event.data.type === 'linkedin_auth_success') {
       console.log('Received OAuth success message:', event.data);
