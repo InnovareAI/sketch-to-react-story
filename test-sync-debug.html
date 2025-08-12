@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test LinkedIn Sync</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h1>LinkedIn Sync Test</h1>
+  <button id="syncBtn">Test Sync</button>
+  <pre id="output"></pre>
+  
+  <script>
+    const { createClient } = supabase;
+    const supabaseUrl = 'https://ktchrfgkbpaixbiwbieg.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0Y2hyZmdrYnBhaXhiaXdiaWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTQ1NjAsImV4cCI6MjA2Nzk5MDU2MH0.NH8E52ypjXoI4wMVuXkaXkrwzw7vr7dYRk48sHuqMkw';
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    const output = document.getElementById('output');
+    
+    function log(msg) {
+      console.log(msg);
+      output.textContent += msg + '\n';
+    }
+    
+    document.getElementById('syncBtn').addEventListener('click', async () => {
+      log('🔄 Starting sync test...');
+      
+      try {
+        // 1. Check for workspaces
+        log('📊 Checking workspaces...');
+        const { data: workspaces, error: wsError } = await supabaseClient
+          .from('workspaces')
+          .select('id, name')
+          .limit(1);
+          
+        if (wsError) {
+          log('❌ Workspace error: ' + JSON.stringify(wsError));
+          return;
+        }
+        
+        if (!workspaces || workspaces.length === 0) {
+          log('❌ No workspaces found');
+          return;
+        }
+        
+        const workspace = workspaces[0];
+        log('✅ Found workspace: ' + workspace.name + ' (' + workspace.id + ')');
+        
+        // 2. Check inbox_conversations table exists
+        log('📊 Checking inbox_conversations table...');
+        const { count, error: countError } = await supabaseClient
+          .from('inbox_conversations')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', workspace.id);
+          
+        if (countError) {
+          log('❌ Table error: ' + JSON.stringify(countError));
+          return;
+        }
+        
+        log('✅ Table exists, current count: ' + (count || 0));
+        
+        // 3. Try to insert a test conversation
+        log('📝 Creating test conversation...');
+        const testConv = {
+          workspace_id: workspace.id,
+          platform: 'linkedin',
+          platform_conversation_id: 'test_' + Date.now(),
+          participant_name: 'Test User',
+          participant_company: 'Test Company',
+          participant_avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Test',
+          status: 'active'
+        };
+        
+        const { data: conversation, error: convError } = await supabaseClient
+          .from('inbox_conversations')
+          .insert(testConv)
+          .select()
+          .single();
+          
+        if (convError) {
+          log('❌ Insert error: ' + JSON.stringify(convError));
+          log('This might be an RLS issue');
+          return;
+        }
+        
+        log('✅ Created conversation: ' + conversation.id);
+        
+        // 4. Create a test message
+        log('📝 Creating test message...');
+        const { error: msgError } = await supabaseClient
+          .from('inbox_messages')
+          .insert({
+            conversation_id: conversation.id,
+            role: 'assistant',
+            content: 'Test message content'
+          });
+          
+        if (msgError) {
+          log('❌ Message error: ' + JSON.stringify(msgError));
+        } else {
+          log('✅ Message created successfully');
+        }
+        
+        log('🎉 Test completed successfully!');
+        
+      } catch (error) {
+        log('❌ Error: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>

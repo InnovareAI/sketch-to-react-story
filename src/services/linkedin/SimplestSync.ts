@@ -62,13 +62,13 @@ export async function syncLinkedInInbox() {
     
     for (const msg of sampleMessages) {
       try {
-        // Create conversation
+        // Create or update conversation
         const { data: conversation, error: convError } = await supabase
           .from('inbox_conversations')
-          .insert({
+          .upsert({
             workspace_id: workspace.id,
             platform: 'linkedin',
-            platform_conversation_id: `linkedin_${Date.now()}_${Math.random()}`,
+            platform_conversation_id: `linkedin_${msg.from.toLowerCase().replace(' ', '_')}`,
             participant_name: msg.from,
             participant_company: msg.company,
             participant_avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.from}`,
@@ -84,11 +84,12 @@ export async function syncLinkedInInbox() {
           continue;
         }
         
-        // Create message
+        // Create or update message
         const { error: msgError } = await supabase
           .from('inbox_messages')
-          .insert({
+          .upsert({
             conversation_id: conversation.id,
+            platform_message_id: `msg_${msg.from.toLowerCase().replace(' ', '_')}_1`,
             role: 'assistant',
             content: msg.message,
             metadata: {
