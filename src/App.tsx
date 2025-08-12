@@ -35,7 +35,6 @@ import Analytics from "./pages/Analytics";
 import ProspectSearch from "./pages/ProspectSearch";
 import SearchResults from "./pages/SearchResults";
 import Profile from "./pages/Profile";
-import FlatDashboard from "./pages/FlatDashboard";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -61,9 +60,8 @@ const App: React.FC = () => {
                 path="/" 
                 element={<WorkspaceLayout />}
               >
-                <Route index element={<FlatDashboard />} />
-                <Route path="dashboard" element={<FlatDashboard />} />
-                <Route path="dashboard-old" element={<Dashboard />} />
+                <Route index element={<Dashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route path="accounts" element={<Accounts />} />
                 
                 {/* Core Navigation Routes - These should never 404 */}
