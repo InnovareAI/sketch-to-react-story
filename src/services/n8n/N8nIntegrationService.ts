@@ -51,11 +51,11 @@ class N8nIntegrationService {
   private userId: string | null = null;
 
   // Predefined SAM AI workflow templates
-  // Main SAM workflow ID: aR0ADfWS0ynkR6Gm
+  // Main SAM workflow ID: fV8rgC2kbzSmeHBN
   private readonly workflowTemplates = {
     // Main SAM workflow
     samMain: {
-      id: 'aR0ADfWS0ynkR6Gm',
+      id: 'fV8rgC2kbzSmeHBN',
       name: 'SAM AI Main Workflow',
       webhookPath: 'sam-ai-main',
       description: 'Main SAM AI orchestration workflow'
@@ -112,7 +112,7 @@ class N8nIntegrationService {
 
   private constructor() {
     // Get n8n URL from environment or use default
-    this.baseUrl = import.meta.env.VITE_N8N_URL || 'https://workflows.innovareai.com';
+    this.baseUrl = import.meta.env.VITE_N8N_URL || 'https://innovareai.app.n8n.cloud';
     this.initializeFromAuth();
   }
 
@@ -313,7 +313,7 @@ class N8nIntegrationService {
       mode,
       data: {
         ...data,
-        workflow_id: 'aR0ADfWS0ynkR6Gm',
+        workflow_id: 'fV8rgC2kbzSmeHBN',
         workflow_name: 'SAM',
         triggered_at: new Date().toISOString(),
         source: 'sam-ai-platform'
@@ -321,7 +321,7 @@ class N8nIntegrationService {
     };
 
     const execution: N8nWorkflowExecution = {
-      workflowId: 'aR0ADfWS0ynkR6Gm',
+      workflowId: 'fV8rgC2kbzSmeHBN',
       status: 'pending',
       data: payload,
       startedAt: new Date()

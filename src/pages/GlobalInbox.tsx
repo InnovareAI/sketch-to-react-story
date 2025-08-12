@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from '@/integrations/supabase/client';
+import { unipileService } from '@/services/unipile/UnipileService';
 
 interface Message {
   id: number;
@@ -38,7 +40,8 @@ import {
   TrendingUp,
   Users,
   Calendar,
-  Video
+  Video,
+  RefreshCw
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,9 +54,50 @@ import {
 export default function GlobalInbox() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    loadMessages();
+    
+    // Set up real-time updates
+    const channel = supabase
+      .channel('global-inbox')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'conversation_messages' }, 
+        () => loadMessages()
+      )
+      .subscribe();
 
-  const messages = [
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadMessages = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Try to load real messages first
+      const realMessages = await unipileService.getAllMessagesForInbox(user.id);
+      
+      if (realMessages.length > 0) {
+        setMessages(realMessages);
+      } else {
+        // Fall back to demo messages if no real ones
+        setMessages(demoMessages);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      // Fall back to demo messages on error
+      setMessages(demoMessages);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const demoMessages = [
     {
       id: 1,
       from: "Jennifer Fleming",
@@ -147,6 +191,14 @@ export default function GlobalInbox() {
           <p className="text-gray-600 mt-1">Manage all your conversations across channels</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={loadMessages}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Sync Messages
+          </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
             Filter

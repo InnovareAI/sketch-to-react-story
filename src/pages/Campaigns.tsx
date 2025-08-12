@@ -208,20 +208,36 @@ export default function Campaigns() {
                   <EmptyState />
                 ) : (
                   campaigns.map((campaign) => {
-                    // Provide default values for missing properties
+                    // Use real campaign data with performance metrics
+                    const performanceMetrics = campaign.performance_metrics || {
+                      sent: 0,
+                      delivered: 0,
+                      opened: 0,
+                      clicked: 0,
+                      replied: 0,
+                      converted: 0
+                    };
+
+                    const responseRate = performanceMetrics.sent > 0 
+                      ? ((performanceMetrics.replied / performanceMetrics.sent) * 100)
+                      : 0;
+
+                    const progress = campaign.status === 'active' 
+                      ? Math.min(100, Math.max(10, (performanceMetrics.sent / 100) * 100))
+                      : campaign.status === 'completed' ? 100 : 0;
+
                     const campaignWithDefaults = {
                       ...campaign,
-                      type: campaign.status === 'active' ? 'Outreach' : 'Draft',
-                      description: `Campaign created on ${new Date(campaign.created_at).toLocaleDateString()}`,
-                      channels: ['email', 'linkedin'],
-                      startDate: new Date(campaign.created_at).toLocaleDateString(),
-                      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(), // 30 days from now
-                      progress: Math.floor(Math.random() * 100), // Random progress for demo
-                      contacts: Math.floor(Math.random() * 200) + 50,
-                      sent: Math.floor(Math.random() * 150) + 20,
-                      opened: Math.floor(Math.random() * 80) + 10,
-                      replied: Math.floor(Math.random() * 20) + 2,
-                      responseRate: Math.floor(Math.random() * 30) + 5
+                      description: campaign.objective || `${campaign.type} campaign created on ${new Date(campaign.created_at).toLocaleDateString()}`,
+                      channels: campaign.type === 'multi_channel' ? ['email', 'linkedin'] : [campaign.type],
+                      startDate: campaign.start_date ? new Date(campaign.start_date).toLocaleDateString() : new Date(campaign.created_at).toLocaleDateString(),
+                      endDate: campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : 'Ongoing',
+                      progress: Math.round(progress),
+                      contacts: performanceMetrics.sent || 0, // Use sent as contact count for now
+                      sent: performanceMetrics.sent || 0,
+                      opened: performanceMetrics.opened || 0,
+                      replied: performanceMetrics.replied || 0,
+                      responseRate: Math.round(responseRate * 10) / 10
                     };
                     
                     return (

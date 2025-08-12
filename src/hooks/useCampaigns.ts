@@ -3,10 +3,23 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface Campaign {
   id: string;
-  tenant_id: string;
-  user_id: string;
+  workspace_id: string;
+  created_by: string | null;
   name: string;
+  type: string;
   status: string;
+  objective: string | null;
+  target_audience: any;
+  linkedin_sequence_config: any;
+  n8n_workflow_id: string | null;
+  apify_actor_config: any;
+  personalization_settings: any;
+  scheduling_config: any;
+  performance_metrics: any;
+  budget: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  settings: any;
   created_at: string;
   updated_at: string;
 }
@@ -16,15 +29,35 @@ export function useCampaigns() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const getCurrentWorkspaceId = (): string | null => {
+    try {
+      const userAuthProfile = localStorage.getItem('user_auth_profile');
+      if (userAuthProfile) {
+        const profile = JSON.parse(userAuthProfile);
+        return profile.workspace_id;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error getting workspace ID:', err);
+      return null;
+    }
+  };
+
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      const workspaceId = getCurrentWorkspaceId();
+      if (!workspaceId) {
+        throw new Error('No workspace found. Please ensure you are logged in.');
+      }
+
       // Get current user's workspace campaigns
       const { data, error: campaignError } = await supabase
         .from('campaigns')
         .select('*')
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false });
 
       if (campaignError) {
@@ -40,26 +73,44 @@ export function useCampaigns() {
     }
   };
 
-  const createCampaign = async (name: string, status: string = 'active') => {
+  const createCampaign = async (name: string, status: string = 'draft') => {
     try {
+      const workspaceId = getCurrentWorkspaceId();
+      if (!workspaceId) {
+        throw new Error('No workspace found. Please ensure you are logged in.');
+      }
+
       // Get current user ID from localStorage (development mode)
       const userAuthUser = localStorage.getItem('user_auth_user');
-      const userAuthProfile = localStorage.getItem('user_auth_profile');
       
-      if (!userAuthUser || !userAuthProfile) {
+      if (!userAuthUser) {
         throw new Error('User not authenticated');
       }
 
       const user = JSON.parse(userAuthUser);
-      const profile = JSON.parse(userAuthProfile);
 
       const { data, error } = await supabase
         .from('campaigns')
         .insert({
           name,
           status,
-          user_id: user.id,
-          tenant_id: profile.workspace_id
+          type: 'email', // Default type
+          workspace_id: workspaceId,
+          created_by: user.id,
+          target_audience: {},
+          linkedin_sequence_config: {},
+          apify_actor_config: {},
+          personalization_settings: {},
+          scheduling_config: {},
+          performance_metrics: {
+            sent: 0,
+            delivered: 0,
+            opened: 0,
+            clicked: 0,
+            replied: 0,
+            converted: 0
+          },
+          settings: {}
         })
         .select()
         .single();

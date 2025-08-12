@@ -14,535 +14,474 @@ export type Database = {
   }
   public: {
     Tables: {
+      workspaces: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          settings: Json
+          subscription_tier: string
+          subscription_status: string
+          trial_ends_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          settings?: Json
+          subscription_tier?: string
+          subscription_status?: string
+          trial_ends_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          settings?: Json
+          subscription_tier?: string
+          subscription_status?: string
+          trial_ends_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          id: string
+          workspace_id: string | null
+          email: string
+          full_name: string | null
+          role: string
+          avatar_url: string | null
+          settings: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          workspace_id?: string | null
+          email: string
+          full_name?: string | null
+          role?: string
+          avatar_url?: string | null
+          settings?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string | null
+          email?: string
+          full_name?: string | null
+          role?: string
+          avatar_url?: string | null
+          settings?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       accounts: {
         Row: {
-          channel: string
-          created_at: string | null
-          credentials: Json | null
-          email: string | null
           id: string
-          last_sync_at: string | null
-          linkedin_id: string | null
-          settings: Json | null
-          status: string
-          tenant_id: string
-          updated_at: string | null
-          user_id: string
-          username: string
-        }
-        Insert: {
-          channel: string
-          created_at?: string | null
-          credentials?: Json | null
-          email?: string | null
-          id?: string
-          last_sync_at?: string | null
-          linkedin_id?: string | null
-          settings?: Json | null
-          status?: string
-          tenant_id: string
-          updated_at?: string | null
-          user_id: string
-          username: string
-        }
-        Update: {
-          channel?: string
-          created_at?: string | null
-          credentials?: Json | null
-          email?: string | null
-          id?: string
-          last_sync_at?: string | null
-          linkedin_id?: string | null
-          settings?: Json | null
-          status?: string
-          tenant_id?: string
-          updated_at?: string | null
-          user_id?: string
-          username?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "accounts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "accounts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      logs: {
-        Row: {
-          created_at: string | null
-          details: Json | null
-          entity_id: string | null
-          entity_type: string
-          event: string
-          id: string
-          ip_address: unknown | null
-          tenant_id: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          details?: Json | null
-          entity_id?: string | null
-          entity_type: string
-          event: string
-          id?: string
-          ip_address?: unknown | null
-          tenant_id: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          details?: Json | null
-          entity_id?: string | null
-          entity_type?: string
-          event?: string
-          id?: string
-          ip_address?: unknown | null
-          tenant_id?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organizations: {
-        Row: {
-          created_at: string | null
-          id: string
+          workspace_id: string
           name: string
-          settings: Json | null
-          slug: string
-          subscription_expires_at: string | null
-          subscription_tier: string | null
-          updated_at: string | null
+          domain: string | null
+          industry: string | null
+          company_size: string | null
+          annual_revenue: string | null
+          linkedin_company_id: string | null
+          scraped_data: Json
+          enrichment_data: Json
+          ideal_customer_profile: Json
+          settings: Json
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
           id?: string
+          workspace_id: string
           name: string
-          settings?: Json | null
-          slug: string
-          subscription_expires_at?: string | null
-          subscription_tier?: string | null
-          updated_at?: string | null
+          domain?: string | null
+          industry?: string | null
+          company_size?: string | null
+          annual_revenue?: string | null
+          linkedin_company_id?: string | null
+          scraped_data?: Json
+          enrichment_data?: Json
+          ideal_customer_profile?: Json
+          settings?: Json
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
           id?: string
+          workspace_id?: string
           name?: string
-          settings?: Json | null
-          slug?: string
-          subscription_expires_at?: string | null
-          subscription_tier?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      platform_accounts: {
-        Row: {
-          account_identifier: string
-          country_code: string | null
-          created_at: string | null
-          credentials: Json | null
-          health_check: Json | null
-          id: string
-          last_active_at: string | null
-          organization_id: string | null
-          platform: string
-          proxy_config: Json | null
-          status: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          account_identifier: string
-          country_code?: string | null
-          created_at?: string | null
-          credentials?: Json | null
-          health_check?: Json | null
-          id?: string
-          last_active_at?: string | null
-          organization_id?: string | null
-          platform: string
-          proxy_config?: Json | null
-          status?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          account_identifier?: string
-          country_code?: string | null
-          created_at?: string | null
-          credentials?: Json | null
-          health_check?: Json | null
-          id?: string
-          last_active_at?: string | null
-          organization_id?: string | null
-          platform?: string
-          proxy_config?: Json | null
-          status?: string | null
-          updated_at?: string | null
-          user_id?: string | null
+          domain?: string | null
+          industry?: string | null
+          company_size?: string | null
+          annual_revenue?: string | null
+          linkedin_company_id?: string | null
+          scraped_data?: Json
+          enrichment_data?: Json
+          ideal_customer_profile?: Json
+          settings?: Json
+          created_at?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "platform_accounts_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_accounts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
+          }
         ]
       }
-      submissions: {
+      contacts: {
         Row: {
-          ai_output: Json | null
-          ai_processing_status: string | null
-          approval_date: string | null
-          claude_qa: Json | null
-          client_feedback: string | null
-          client_reviewer_email: string | null
-          client_reviewer_name: string | null
-          clinical_trials_data: Json | null
-          combination_partners: string[] | null
-          competitive_density: number | null
-          compliance_score: number | null
-          created_at: string | null
-          development_stage: string | null
-          fda_comprehensive_data: Json | null
-          fda_data: Json | null
-          generic_name: string
-          geographic_markets: string[] | null
           id: string
-          indication: string
-          internal_notes: string | null
-          key_biomarkers: string[] | null
-          keyword_difficulty: number | null
-          language: string | null
-          last_updated: string | null
-          line_of_therapy: string | null
-          mlr_approved: boolean | null
-          mlr_reviewer_email: string | null
-          mlr_reviewer_name: string | null
-          nct_number: string | null
-          patient_population: string[] | null
-          perplexity_content: Json | null
-          primary_endpoints: string[] | null
-          primary_market: string | null
-          priority_level: string | null
-          processing_completed_at: string | null
-          processing_started_at: string | null
-          product_name: string | null
-          qa_score: number | null
-          revision_count: number | null
-          route_of_administration: string | null
-          search_volume: number | null
-          secondary_markets: string[] | null
-          seo_reviewer_email: string
-          seo_reviewer_name: string
-          sponsor: string | null
-          submitter_email: string
-          submitter_name: string
-          tags: string[] | null
-          target_age_groups: string[] | null
-          tenant_id: string | null
-          therapeutic_area: string
-          updated_at: string | null
-          user_id: string | null
-          workflow_stage: string | null
-          workspace_id: string | null
-        }
-        Insert: {
-          ai_output?: Json | null
-          ai_processing_status?: string | null
-          approval_date?: string | null
-          claude_qa?: Json | null
-          client_feedback?: string | null
-          client_reviewer_email?: string | null
-          client_reviewer_name?: string | null
-          clinical_trials_data?: Json | null
-          combination_partners?: string[] | null
-          competitive_density?: number | null
-          compliance_score?: number | null
-          created_at?: string | null
-          development_stage?: string | null
-          fda_comprehensive_data?: Json | null
-          fda_data?: Json | null
-          generic_name: string
-          geographic_markets?: string[] | null
-          id?: string
-          indication: string
-          internal_notes?: string | null
-          key_biomarkers?: string[] | null
-          keyword_difficulty?: number | null
-          language?: string | null
-          last_updated?: string | null
-          line_of_therapy?: string | null
-          mlr_approved?: boolean | null
-          mlr_reviewer_email?: string | null
-          mlr_reviewer_name?: string | null
-          nct_number?: string | null
-          patient_population?: string[] | null
-          perplexity_content?: Json | null
-          primary_endpoints?: string[] | null
-          primary_market?: string | null
-          priority_level?: string | null
-          processing_completed_at?: string | null
-          processing_started_at?: string | null
-          product_name?: string | null
-          qa_score?: number | null
-          revision_count?: number | null
-          route_of_administration?: string | null
-          search_volume?: number | null
-          secondary_markets?: string[] | null
-          seo_reviewer_email: string
-          seo_reviewer_name: string
-          sponsor?: string | null
-          submitter_email: string
-          submitter_name: string
-          tags?: string[] | null
-          target_age_groups?: string[] | null
-          tenant_id?: string | null
-          therapeutic_area: string
-          updated_at?: string | null
-          user_id?: string | null
-          workflow_stage?: string | null
-          workspace_id?: string | null
-        }
-        Update: {
-          ai_output?: Json | null
-          ai_processing_status?: string | null
-          approval_date?: string | null
-          claude_qa?: Json | null
-          client_feedback?: string | null
-          client_reviewer_email?: string | null
-          client_reviewer_name?: string | null
-          clinical_trials_data?: Json | null
-          combination_partners?: string[] | null
-          competitive_density?: number | null
-          compliance_score?: number | null
-          created_at?: string | null
-          development_stage?: string | null
-          fda_comprehensive_data?: Json | null
-          fda_data?: Json | null
-          generic_name?: string
-          geographic_markets?: string[] | null
-          id?: string
-          indication?: string
-          internal_notes?: string | null
-          key_biomarkers?: string[] | null
-          keyword_difficulty?: number | null
-          language?: string | null
-          last_updated?: string | null
-          line_of_therapy?: string | null
-          mlr_approved?: boolean | null
-          mlr_reviewer_email?: string | null
-          mlr_reviewer_name?: string | null
-          nct_number?: string | null
-          patient_population?: string[] | null
-          perplexity_content?: Json | null
-          primary_endpoints?: string[] | null
-          primary_market?: string | null
-          priority_level?: string | null
-          processing_completed_at?: string | null
-          processing_started_at?: string | null
-          product_name?: string | null
-          qa_score?: number | null
-          revision_count?: number | null
-          route_of_administration?: string | null
-          search_volume?: number | null
-          secondary_markets?: string[] | null
-          seo_reviewer_email?: string
-          seo_reviewer_name?: string
-          sponsor?: string | null
-          submitter_email?: string
-          submitter_name?: string
-          tags?: string[] | null
-          target_age_groups?: string[] | null
-          tenant_id?: string | null
-          therapeutic_area?: string
-          updated_at?: string | null
-          user_id?: string | null
-          workflow_stage?: string | null
-          workspace_id?: string | null
-        }
-        Relationships: []
-      }
-      tenants: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-          plan: string
-          settings: Json | null
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-          plan?: string
-          settings?: Json | null
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          plan?: string
-          settings?: Json | null
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      user_profiles: {
-        Row: {
-          accounts_connected: number | null
-          api_calls_this_month: number | null
-          avatar_url: string | null
-          created_at: string | null
-          email: string | null
+          workspace_id: string
+          account_id: string | null
+          email: string
           first_name: string | null
-          id: string
           last_name: string | null
-          onboarding_completed: boolean | null
-          preferences: Json | null
-          role: string | null
-          subscription_current_period_end: string | null
-          subscription_plan_id: string | null
-          subscription_status: string | null
-          updated_at: string | null
-          workflows_count: number | null
+          title: string | null
+          department: string | null
+          phone: string | null
+          linkedin_url: string | null
+          engagement_score: number
+          tags: string[]
+          metadata: Json
+          scraped_data: Json
+          qualification_data: Json
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          accounts_connected?: number | null
-          api_calls_this_month?: number | null
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          first_name?: string | null
-          id: string
-          last_name?: string | null
-          onboarding_completed?: boolean | null
-          preferences?: Json | null
-          role?: string | null
-          subscription_current_period_end?: string | null
-          subscription_plan_id?: string | null
-          subscription_status?: string | null
-          updated_at?: string | null
-          workflows_count?: number | null
-        }
-        Update: {
-          accounts_connected?: number | null
-          api_calls_this_month?: number | null
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          first_name?: string | null
           id?: string
+          workspace_id: string
+          account_id?: string | null
+          email: string
+          first_name?: string | null
           last_name?: string | null
-          onboarding_completed?: boolean | null
-          preferences?: Json | null
-          role?: string | null
-          subscription_current_period_end?: string | null
-          subscription_plan_id?: string | null
-          subscription_status?: string | null
-          updated_at?: string | null
-          workflows_count?: number | null
-        }
-        Relationships: []
-      }
-      users: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          email: string
-          id: string
-          name: string | null
-          organization_id: string | null
-          role: string
-          settings: Json | null
-          status: string
-          tenant_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email: string
-          id: string
-          name?: string | null
-          organization_id?: string | null
-          role?: string
-          settings?: Json | null
-          status?: string
-          tenant_id: string
-          updated_at?: string | null
+          title?: string | null
+          department?: string | null
+          phone?: string | null
+          linkedin_url?: string | null
+          engagement_score?: number
+          tags?: string[]
+          metadata?: Json
+          scraped_data?: Json
+          qualification_data?: Json
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          avatar_url?: string | null
-          created_at?: string | null
+          id?: string
+          workspace_id?: string
+          account_id?: string | null
           email?: string
-          id?: string
-          name?: string | null
-          organization_id?: string | null
-          role?: string
-          settings?: Json | null
-          status?: string
-          tenant_id?: string
-          updated_at?: string | null
+          first_name?: string | null
+          last_name?: string | null
+          title?: string | null
+          department?: string | null
+          phone?: string | null
+          linkedin_url?: string | null
+          engagement_score?: number
+          tags?: string[]
+          metadata?: Json
+          scraped_data?: Json
+          qualification_data?: Json
+          created_at?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "users_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "users_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "contacts_account_id_fkey"
+            columns: ["account_id"]
             isOneToOne: false
-            referencedRelation: "tenants"
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      campaigns: {
+        Row: {
+          id: string
+          workspace_id: string
+          name: string
+          type: string
+          status: string
+          objective: string | null
+          target_audience: Json
+          linkedin_sequence_config: Json
+          n8n_workflow_id: string | null
+          apify_actor_config: Json
+          personalization_settings: Json
+          scheduling_config: Json
+          performance_metrics: Json
+          budget: number | null
+          start_date: string | null
+          end_date: string | null
+          settings: Json
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          name: string
+          type?: string
+          status?: string
+          objective?: string | null
+          target_audience?: Json
+          linkedin_sequence_config?: Json
+          n8n_workflow_id?: string | null
+          apify_actor_config?: Json
+          personalization_settings?: Json
+          scheduling_config?: Json
+          performance_metrics?: Json
+          budget?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          settings?: Json
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          name?: string
+          type?: string
+          status?: string
+          objective?: string | null
+          target_audience?: Json
+          linkedin_sequence_config?: Json
+          n8n_workflow_id?: string | null
+          apify_actor_config?: Json
+          personalization_settings?: Json
+          scheduling_config?: Json
+          performance_metrics?: Json
+          budget?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          settings?: Json
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      messages: {
+        Row: {
+          id: string
+          workspace_id: string
+          campaign_id: string | null
+          contact_id: string | null
+          subject: string | null
+          content: string | null
+          status: string
+          sent_at: string | null
+          opened_at: string | null
+          clicked_at: string | null
+          replied_at: string | null
+          metadata: Json
+          personalization_data: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          campaign_id?: string | null
+          contact_id?: string | null
+          subject?: string | null
+          content?: string | null
+          status?: string
+          sent_at?: string | null
+          opened_at?: string | null
+          clicked_at?: string | null
+          replied_at?: string | null
+          metadata?: Json
+          personalization_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          campaign_id?: string | null
+          contact_id?: string | null
+          subject?: string | null
+          content?: string | null
+          status?: string
+          sent_at?: string | null
+          opened_at?: string | null
+          clicked_at?: string | null
+          replied_at?: string | null
+          metadata?: Json
+          personalization_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      analytics_events: {
+        Row: {
+          id: string
+          workspace_id: string
+          event_type: string
+          entity_type: string | null
+          entity_id: string | null
+          properties: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          event_type: string
+          entity_type?: string | null
+          entity_id?: string | null
+          properties?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          event_type?: string
+          entity_type?: string | null
+          entity_id?: string | null
+          properties?: Json
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      conversations: {
+        Row: {
+          id: string
+          workspace_id: string
+          assistant_id: string | null
+          contact_id: string | null
+          campaign_id: string | null
+          status: string
+          context: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          assistant_id?: string | null
+          contact_id?: string | null
+          campaign_id?: string | null
+          status?: string
+          context?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          assistant_id?: string | null
+          contact_id?: string | null
+          campaign_id?: string | null
+          status?: string
+          context?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          }
         ]
       }
     }
@@ -550,35 +489,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_tenant_with_owner: {
-        Args: {
-          tenant_name: string
-          owner_email: string
-          owner_name: string
-          owner_id: string
-        }
-        Returns: string
-      }
-      current_user_organization_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      current_user_tenant_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_campaign_stats: {
-        Args: { campaign_uuid: string }
-        Returns: Json
-      }
-      get_user_organization_id: {
-        Args: { user_id: string }
-        Returns: string
-      }
-      get_user_tenant_id: {
-        Args: { user_id: string }
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

@@ -1,23 +1,5 @@
 import { useState } from "react";
-
-interface Template {
-  id: number;
-  name: string;
-  type: string;
-  channel: string;
-  subject: string;
-  content: string;
-  category: string;
-  tags: string[];
-  performance?: {
-    sent: number;
-    opened: number;
-    replied: number;
-    responseRate: number;
-  };
-  createdBy?: string;
-  lastUpdated?: string;
-}
+import { useRealTemplates, TemplateWithPerformance } from "@/hooks/useRealTemplates";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,81 +36,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Templates() {
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateWithPerformance | null>(null);
   const [newTemplate, setNewTemplate] = useState({ name: "", type: "email", subject: "", content: "" });
-
-  const templates = [
-    {
-      id: 1,
-      name: "Sam Lead Funnel",
-      type: "email",
-      channel: "Email",
-      subject: "Quick question about {{companyName}}'s growth strategy",
-      content: "Hi {{firstName}},\n\nI've been following {{companyName}}'s journey and I'm impressed with your recent expansion into {{industry}}.\n\nMany companies at your stage struggle with scaling their lead generation while maintaining quality. I've helped similar companies like {{competitorExample}} increase qualified leads by 40% using our proven funnel approach.\n\nWould you be open to a brief 15-minute conversation about how we could help {{companyName}} achieve similar results?\n\nBest regards,\nSam",
-      category: "Lead Generation",
-      tags: ["Sam", "Lead Funnel", "Growth"],
-      performance: { sent: 189, opened: 127, replied: 45, responseRate: 23.8 },
-      lastUsed: "1 hour ago",
-      created: "2024-01-20",
-      status: "Active"
-    },
-    {
-      id: 2,
-      name: "Enterprise Introduction",
-      type: "email",
-      channel: "Email",
-      subject: "Streamline Your Enterprise Operations",
-      content: "Hi {{firstName}},\n\nI noticed {{companyName}} has been scaling rapidly. Many companies your size struggle with operational inefficiencies that can cost millions annually.\n\nOur platform has helped similar enterprises like {{competitorExample}} reduce operational costs by 35% while improving productivity.\n\nWould you be interested in a 15-minute call to see how we could help {{companyName}} achieve similar results?\n\nBest regards,\n{{senderName}}",
-      category: "Cold Outreach",
-      tags: ["Enterprise", "Introduction", "Cold"],
-      performance: { sent: 245, opened: 89, replied: 23, responseRate: 9.4 },
-      lastUsed: "2 days ago",
-      created: "2024-01-15",
-      status: "Active"
-    },
-    {
-      id: 3,
-      name: "LinkedIn Connection Request",
-      type: "linkedin",
-      channel: "LinkedIn",
-      subject: "Connection Request",
-      content: "Hi {{firstName}},\n\nI see we're both in the {{industry}} space. I'd love to connect and share insights about {{specificTopic}}.\n\nLooking forward to connecting!",
-      category: "LinkedIn Outreach",
-      tags: ["LinkedIn", "Connection", "Networking"],
-      performance: { sent: 156, opened: 134, replied: 45, responseRate: 28.8 },
-      lastUsed: "1 day ago",
-      created: "2024-01-20",
-      status: "Active"
-    },
-    {
-      id: 3,
-      name: "Demo Follow-up",
-      type: "email",
-      channel: "Email",
-      subject: "Thanks for the demo - Next steps",
-      content: "Hi {{firstName}},\n\nThank you for taking the time to see our demo yesterday. I hope you found the {{specificFeature}} capabilities as impressive as I do.\n\nBased on our conversation, it sounds like {{companyName}} could benefit significantly from:\n- {{benefit1}}\n- {{benefit2}}\n- {{benefit3}}\n\nI'd love to discuss how we can customize our solution for {{companyName}}'s specific needs. Are you available for a brief call this week?\n\nBest regards,\n{{senderName}}",
-      category: "Follow-up",
-      tags: ["Demo", "Follow-up", "Warm"],
-      performance: { sent: 78, opened: 72, replied: 34, responseRate: 43.6 },
-      lastUsed: "3 hours ago",
-      created: "2024-02-01",
-      status: "Active"
-    },
-    {
-      id: 4,
-      name: "WhatsApp Introduction",
-      type: "whatsapp",
-      channel: "WhatsApp",
-      subject: "WhatsApp Message",
-      content: "Hi {{firstName}}! 👋\n\nI'm {{senderName}} from {{companyName}}. I came across {{prospectCompany}} and was impressed by {{specificDetail}}.\n\nWe help companies like yours {{valueProposition}}. Would you be open to a quick chat about how we could help {{prospectCompany}}?\n\nThanks! 🙂",
-      category: "WhatsApp Outreach",
-      tags: ["WhatsApp", "Introduction", "Casual"],
-      performance: { sent: 34, opened: 32, replied: 18, responseRate: 52.9 },
-      lastUsed: "1 week ago",
-      created: "2024-02-05",
-      status: "Active"
-    }
-  ];
+  const { templates, stats, loading, error, refreshData, createTemplate, updateTemplate, deleteTemplate } = useRealTemplates();
 
   const getChannelIcon = (channel: string) => {
     switch (channel) {
@@ -223,7 +133,23 @@ export default function Templates() {
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline">Cancel</Button>
-                  <Button>Create Template</Button>
+                  <Button 
+                    onClick={async () => {
+                      try {
+                        await createTemplate({
+                          name: newTemplate.name,
+                          type: newTemplate.type,
+                          subject: newTemplate.subject,
+                          content: newTemplate.content,
+                        });
+                        setNewTemplate({ name: "", type: "email", subject: "", content: "" });
+                      } catch (error) {
+                        console.error('Failed to create template:', error);
+                      }
+                    }}
+                  >
+                    Create Template
+                  </Button>
                 </div>
               </div>
             </DialogContent>
@@ -281,7 +207,7 @@ export default function Templates() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">24</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.totalTemplates}</div>
                 <div className="text-sm text-gray-600">Total Templates</div>
               </div>
               <FileText className="h-8 w-8 text-premium-purple" />
@@ -293,7 +219,7 @@ export default function Templates() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">18</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.activeTemplates}</div>
                 <div className="text-sm text-gray-600">Active</div>
               </div>
               <Target className="h-8 w-8 text-premium-cyan" />
@@ -305,7 +231,7 @@ export default function Templates() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">23.7%</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.averageResponseRate}%</div>
                 <div className="text-sm text-gray-600">Avg Response Rate</div>
               </div>
               <TrendingUp className="h-8 w-8 text-premium-orange" />
@@ -328,7 +254,26 @@ export default function Templates() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="space-y-0">
-              {templates.map((template) => (
+              {loading ? (
+                <div className="p-4 text-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600">Loading templates...</p>
+                </div>
+              ) : error ? (
+                <div className="p-4 text-center">
+                  <p className="text-red-600 text-sm mb-2">Error: {error}</p>
+                  <Button onClick={refreshData} variant="outline" size="sm">
+                    Try Again
+                  </Button>
+                </div>
+              ) : templates.length === 0 ? (
+                <div className="p-4 text-center">
+                  <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm text-gray-600 mb-2">No templates yet</p>
+                  <p className="text-xs text-gray-500">Create your first template to get started</p>
+                </div>
+              ) : (
+              templates.map((template) => (
                 <div
                   key={template.id}
                   className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
@@ -387,7 +332,8 @@ export default function Templates() {
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -463,11 +409,16 @@ export default function Templates() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">Created:</span>
-                      <span className="ml-2">{selectedTemplate.created}</span>
+                      <span className="ml-2">{new Date(selectedTemplate.created_at).toLocaleDateString()}</span>
                     </div>
                     <div>
                       <span className="text-gray-600">Last used:</span>
-                      <span className="ml-2">{selectedTemplate.lastUsed}</span>
+                      <span className="ml-2">
+                        {selectedTemplate.lastUsed 
+                          ? new Date(selectedTemplate.lastUsed).toLocaleDateString()
+                          : 'Never'
+                        }
+                      </span>
                     </div>
                   </div>
                 </TabsContent>

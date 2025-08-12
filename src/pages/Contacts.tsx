@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Account } from "./Accounts";
+import { useRealContacts, Contact } from "@/hooks/useRealContacts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,52 +47,10 @@ import {
 
 export default function Contacts() {
   const [viewMode, setViewMode] = useState<"list" | "tile">("list");
-  const [editingContact, setEditingContact] = useState<Account | null>(null);
-  
-  const contacts = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      email: "sarah.johnson@techcorp.com",
-      phone: "+1 (555) 123-4567",
-      whatsapp: "+1 (555) 123-4567",
-      companyPhone: "+1 (555) 123-0000",
-      company: "TechCorp Solutions",
-      role: "Marketing Director",
-      location: "San Francisco, CA",
-      linkedin: "linkedin.com/in/sarah-johnson",
-      status: "Hot Lead",
-      lastContact: "2 days ago",
-      responseRate: 85,
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b829?w=400&h=400&fit=crop&crop=face",
-      campaigns: 3,
-      meetings: 2,
-      revenue: "$45,000",
-      currentCampaigns: ["Q1 Enterprise Outreach", "Product Demo Follow-up"]
-    },
-    {
-      id: 2,
-      name: "Michael Chen",
-      email: "michael.chen@innovatelabs.io",
-      phone: "+1 (555) 987-6543",
-      whatsapp: "+1 (555) 987-6543",
-      companyPhone: "+1 (555) 987-0000",
-      company: "InnovateLabs",
-      role: "Head of Sales",
-      location: "Austin, TX",
-      linkedin: "linkedin.com/in/michael-chen-sales",
-      status: "Warm Lead",
-      lastContact: "1 week ago",
-      responseRate: 72,
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-      campaigns: 2,
-      meetings: 1,
-      revenue: "$28,500",
-      currentCampaigns: ["Q1 Enterprise Outreach"]
-    }
-  ];
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const { contacts, stats, loading, error, refreshData, createContact, updateContact, deleteContact } = useRealContacts();
 
-  const handleEditContact = (contact: Account) => {
+  const handleEditContact = (contact: Contact) => {
     setEditingContact({ ...contact });
   };
 
@@ -140,10 +98,9 @@ export default function Contacts() {
                   <Users className="h-8 w-8 text-blue-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">247</div>
-                  <p className="text-xs text-green-600 mt-1">
-                    <TrendingUp className="h-3 w-3 inline mr-1" />
-                    +15 this month
+                  <div className="text-2xl font-bold text-gray-900">{stats.totalContacts}</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    All workspace contacts
                   </p>
                 </CardContent>
               </Card>
@@ -154,10 +111,9 @@ export default function Contacts() {
                   <Star className="h-8 w-8 text-orange-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">23</div>
-                  <p className="text-xs text-green-600 mt-1">
-                    <TrendingUp className="h-3 w-3 inline mr-1" />
-                    +8 this week
+                  <div className="text-2xl font-bold text-gray-900">{stats.hotLeads}</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Engagement score ≥70%
                   </p>
                 </CardContent>
               </Card>
@@ -168,10 +124,9 @@ export default function Contacts() {
                   <TrendingUp className="h-8 w-8 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">78%</div>
-                  <p className="text-xs text-green-600 mt-1">
-                    <TrendingUp className="h-3 w-3 inline mr-1" />
-                    +5% vs last month
+                  <div className="text-2xl font-bold text-gray-900">{stats.responseRate}%</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Average across campaigns
                   </p>
                 </CardContent>
               </Card>
@@ -182,10 +137,9 @@ export default function Contacts() {
                   <DollarSign className="h-8 w-8 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">$1.2M</div>
-                  <p className="text-xs text-green-600 mt-1">
-                    <TrendingUp className="h-3 w-3 inline mr-1" />
-                    +22% vs last quarter
+                  <div className="text-2xl font-bold text-gray-900">{stats.pipelineValue}</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Estimated total value
                   </p>
                 </CardContent>
               </Card>
@@ -217,7 +171,19 @@ export default function Contacts() {
             </div>
 
             {/* Contact Display */}
-            {viewMode === "list" ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p>Loading contacts...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-600 mb-4">Error: {error}</p>
+                <Button onClick={refreshData} variant="outline">
+                  Try Again
+                </Button>
+              </div>
+            ) : viewMode === "list" ? (
               <ContactsListView />
             ) : (
               <div>
@@ -237,22 +203,36 @@ export default function Contacts() {
                     </Button>
                   </div>
                 </div>
+                {contacts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No contacts yet</h3>
+                    <p className="text-gray-600 mb-6">Get started by adding your first contact</p>
+                    <Button className="bg-primary hover:bg-primary/90">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Contact
+                    </Button>
+                  </div>
+                ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {contacts.map((contact) => (
+                {contacts.map((contact) => {
+                  const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown Contact';
+                  const status = contact.engagement_score >= 70 ? 'Hot Lead' : contact.engagement_score >= 40 ? 'Warm Lead' : 'Cold Lead';
+                  
+                  return (
                   <Card key={contact.id} className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-start gap-3">
                           <Avatar className="h-12 w-12">
-                            <AvatarImage src={contact.avatar} alt={contact.name} />
                             <AvatarFallback className="bg-blue-100 text-blue-600">
-                              {contact.name.split(' ').map(n => n[0]).join('')}
+                              {fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
-                            <h3 className="font-semibold text-lg text-gray-900">{contact.name}</h3>
-                            <p className="text-blue-600 font-medium">{contact.role}</p>
-                            <p className="text-gray-600">{contact.company}</p>
+                            <h3 className="font-semibold text-lg text-gray-900">{fullName}</h3>
+                            <p className="text-blue-600 font-medium">{contact.title || 'Unknown Title'}</p>
+                            <p className="text-gray-600">{contact.accounts?.name || 'No Company'}</p>
                           </div>
                         </div>
                         
@@ -285,10 +265,10 @@ export default function Contacts() {
                       </div>
 
                       <div className="space-y-2 mb-4">
-                        <Badge variant={contact.status === "Hot Lead" ? "default" : "secondary"}>
-                          {contact.status}
+                        <Badge variant={status === "Hot Lead" ? "default" : "secondary"}>
+                          {status}
                         </Badge>
-                        <p className="text-xs text-gray-500">Last contact: {contact.lastContact}</p>
+                        <p className="text-xs text-gray-500">Added: {new Date(contact.created_at).toLocaleDateString()}</p>
                       </div>
 
                       <div className="space-y-3 mb-4">
@@ -296,22 +276,26 @@ export default function Contacts() {
                           <Mail className="h-4 w-4" />
                           <span className="truncate">{contact.email}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Phone className="h-4 w-4" />
-                          <span>{contact.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <MapPin className="h-4 w-4" />
-                          <span>{contact.location}</span>
-                        </div>
+                        {contact.phone && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Phone className="h-4 w-4" />
+                            <span>{contact.phone}</span>
+                          </div>
+                        )}
+                        {contact.linkedin_url && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Building2 className="h-4 w-4" />
+                            <span className="truncate">LinkedIn Profile</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-600">Response Rate</span>
-                          <span className="text-sm font-medium">{contact.responseRate}%</span>
+                          <span className="text-sm text-gray-600">Engagement Score</span>
+                          <span className="text-sm font-medium">{contact.engagement_score}%</span>
                         </div>
-                        <Progress value={contact.responseRate} className="h-2" />
+                        <Progress value={contact.engagement_score} className="h-2" />
                       </div>
 
                       <div className="flex gap-2">
@@ -326,8 +310,10 @@ export default function Contacts() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
                 </div>
+                )}
               </div>
             )}
           </div>

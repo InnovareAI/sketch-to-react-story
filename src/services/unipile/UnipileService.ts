@@ -432,6 +432,232 @@ class UnipileService {
       return [];
     }
   }
+
+  /**
+   * Get conversations for an account
+   */
+  async getConversations(accountId: string, limit = 50): Promise<any[]> {
+    try {
+      const account = await this.getAccountById(accountId);
+      if (!account?.unipileAccountId) throw new Error('Account not found');
+
+      const response = await fetch(`${this.baseUrl}/conversations?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.config.apiKey}`,
+          'X-API-KEY': this.config.apiKey,
+          'X-UNIPILE-ACCOUNT-ID': account.unipileAccountId
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get conversations');
+      }
+
+      const data = await response.json();
+      return data.conversations || [];
+    } catch (error) {
+      console.error('Error getting conversations:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Sync messages to database
+   */
+  async syncMessagesToDatabase(accountId: string): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const messages = await this.getMessages(accountId, 100);
+      
+      for (const message of messages) {
+        // Check if conversation exists, create if not
+        let conversationId = message.conversation_id;
+        
+        if (!conversationId) {
+          const { data: conversation, error: convError } = await supabase
+            .from('conversations')
+            .insert({
+              user_id: user.id,
+              platform: 'linkedin',
+              platform_conversation_id: message.thread_id || message.id,
+              participant_name: message.from?.name || 'Unknown',
+              participant_email: message.from?.email,
+              participant_profile_url: message.from?.profile_url,
+              last_message_at: message.created_at,
+              status: 'active'
+            })
+            .select('id')
+            .single();
+
+          if (convError) throw convError;
+          conversationId = conversation.id;
+        }
+
+        // Insert message
+        const { error: msgError } = await supabase
+          .from('conversation_messages')
+          .upsert({
+            conversation_id: conversationId,
+            platform_message_id: message.id,
+            sender_name: message.from?.name || 'Unknown',
+            sender_email: message.from?.email,
+            content: message.text || message.body,
+            message_type: message.type || 'text',
+            sent_at: message.created_at,
+            direction: message.direction || 'inbound',
+            platform_data: message
+          });
+
+        if (msgError) throw msgError;
+      }
+    } catch (error) {
+      console.error('Error syncing messages to database:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send message and track in database
+   */
+  async sendMessageWithTracking(
+    accountId: string, 
+    recipientUrl: string, 
+    message: string,
+    campaignId?: string
+  ): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Send message via Unipile
+      await this.sendMessage(accountId, recipientUrl, message);
+
+      // Find or create conversation
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('platform', 'linkedin')
+        .eq('participant_profile_url', recipientUrl)
+        .single();
+
+      let conversationId = conversation?.id;
+
+      if (!conversationId) {
+        const { data: newConv, error: newConvError } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: user.id,
+            platform: 'linkedin',
+            platform_conversation_id: crypto.randomUUID(),
+            participant_profile_url: recipientUrl,
+            last_message_at: new Date().toISOString(),
+            status: 'active'
+          })
+          .select('id')
+          .single();
+
+        if (newConvError) throw newConvError;
+        conversationId = newConv.id;
+      }
+
+      // Track message in database
+      const { error: msgError } = await supabase
+        .from('conversation_messages')
+        .insert({
+          conversation_id: conversationId,
+          platform_message_id: crypto.randomUUID(),
+          sender_name: 'You',
+          content: message,
+          message_type: 'text',
+          sent_at: new Date().toISOString(),
+          direction: 'outbound',
+          campaign_id: campaignId
+        });
+
+      if (msgError) throw msgError;
+
+    } catch (error) {
+      console.error('Error sending tracked message:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Setup webhook for real-time message notifications
+   */
+  async setupWebhook(webhookUrl: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/webhooks`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.config.apiKey}`,
+          'X-API-KEY': this.config.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: webhookUrl,
+          events: [
+            'message.received',
+            'message.sent',
+            'conversation.created',
+            'conversation.updated'
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to setup webhook');
+      }
+
+    } catch (error) {
+      console.error('Error setting up webhook:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all messages for global inbox
+   */
+  async getAllMessagesForInbox(userId: string): Promise<any[]> {
+    try {
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          conversation_messages (
+            *
+          )
+        `)
+        .eq('user_id', userId)
+        .order('last_message_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (conversations || []).map(conv => ({
+        id: conv.id,
+        from: conv.participant_name || 'Unknown',
+        avatar: conv.participant_avatar_url,
+        company: conv.participant_company,
+        channel: conv.platform,
+        subject: conv.latest_subject || `Message from ${conv.participant_name}`,
+        preview: conv.conversation_messages?.[0]?.content?.substring(0, 100) || '',
+        time: conv.last_message_at,
+        read: conv.status === 'read',
+        priority: conv.priority || 'medium',
+        labels: conv.tags || [],
+        fullMessage: conv.conversation_messages?.[0]?.content || '',
+        messages: conv.conversation_messages || []
+      }));
+
+    } catch (error) {
+      console.error('Error getting inbox messages:', error);
+      return [];
+    }
+  }
 }
 
 // Export singleton instance

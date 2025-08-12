@@ -134,8 +134,8 @@ class EnhancedBrightDataService {
   private activeSearches: Map<string, any>;
 
   constructor() {
-    // Use secure server-side endpoint
-    this.apiEndpoint = '/api/brightdata';
+    // Use secure server-side endpoint (Supabase Edge Function)
+    this.apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/brightdata-proxy`;
     
     // Initialize tracking systems
     this.usageStats = {
@@ -269,7 +269,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({ 
           country,
@@ -359,7 +360,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           searchUrl,
@@ -451,7 +453,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           searchUrl,
@@ -527,7 +530,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           searchUrl,
@@ -599,7 +603,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           companyUrl,
@@ -661,7 +666,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           profileUrl,
@@ -714,7 +720,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           postUrl,
@@ -786,7 +793,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           groupUrl,
@@ -855,7 +863,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           eventUrl,
@@ -928,7 +937,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           maxSuggestions: options.maxSuggestions || 50,
@@ -991,7 +1001,8 @@ class EnhancedBrightDataService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify(searchParams)
       });
@@ -1210,16 +1221,13 @@ class EnhancedBrightDataService {
   }
 
   /**
-   * Get authentication token from secure storage
+   * Get Supabase authentication headers
    */
-  private getAuthToken(): string {
-    // In production, this would get a secure token from your auth system
-    // Never store API keys in frontend code
-    const token = sessionStorage.getItem('auth_token');
-    if (!token) {
-      throw new Error('Not authenticated. Please log in.');
-    }
-    return token;
+  private getAuthHeaders(): Record<string, string> {
+    return {
+      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+    };
   }
   
   /**
@@ -1240,7 +1248,8 @@ class EnhancedBrightDataService {
           await fetch(`${this.apiEndpoint}/cancel/${searchInfo.workflowExecutionId}`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${this.getAuthToken()}`
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
             }
           });
         } catch (error) {
@@ -1284,7 +1293,8 @@ class EnhancedBrightDataService {
         try {
           const response = await fetch(`${this.apiEndpoint}/status/${searchInfo.workflowExecutionId}`, {
             headers: {
-              'Authorization': `Bearer ${this.getAuthToken()}`
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
             }
           });
           

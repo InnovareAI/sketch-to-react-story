@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { AnalyticsChart } from "@/components/dashboard/AnalyticsChart";
-import { useAnalytics } from "@/hooks/useAnalytics";
-import { LinkedInAccountModal } from "@/components/linkedin/LinkedInAccountModal";
+import { useRealAnalytics } from "@/hooks/useRealAnalytics";
 import { 
   Users, 
   Mail, 
@@ -25,22 +24,8 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
-  const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const navigate = useNavigate();
-  const { analytics, chartData, campaignMetrics, refreshData, isLoading } = useAnalytics();
-  
-  // Mock workspaces data - in production this would come from your API
-  const workspaces = [
-    { id: '1', name: 'Acme Corporation' },
-    { id: '2', name: 'TechStart Inc' },
-    { id: '3', name: 'Global Sales Co' }
-  ];
-  
-  const handleLinkedInAccountAdded = (accountData: any) => {
-    console.log('LinkedIn account added:', accountData);
-    // Here you would save the account data to your backend
-    refreshData();
-  };
+  const { analytics, chartData, campaignMetrics, refreshData, isLoading, error } = useRealAnalytics();
 
   // Prepare chart data for different visualizations
   const campaignStatusData = [
@@ -49,9 +34,10 @@ export default function Dashboard() {
     { name: 'Completed', value: analytics.totalCampaigns - analytics.activeCampaigns - Math.floor(analytics.totalCampaigns * 0.3) }
   ];
 
-  const weeklyMessagesData = Array.from({ length: 7 }, (_, i) => ({
-    name: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-    value: Math.floor(Math.random() * 200) + 50
+  // Use last 7 days of real chart data for weekly view
+  const weeklyMessagesData = chartData.slice(-7).map((data, i) => ({
+    name: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i] || new Date(data.name).toLocaleDateString(),
+    value: data.value || 0
   }));
 
   return (
@@ -63,6 +49,12 @@ export default function Dashboard() {
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
                   <p className="text-gray-600 mt-1">Real-time insights into your outreach performance</p>
+                  {error && (
+                    <div className="mt-2 text-red-600 text-sm">
+                      <AlertTriangle className="h-4 w-4 inline mr-1" />
+                      {error}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button 
@@ -212,65 +204,39 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      { 
-                        type: "success", 
-                        message: "New response from Jennifer Fleming", 
-                        time: "2 min ago", 
-                        icon: CheckCircle2,
-                        campaign: "Q1 Sales Outreach"
-                      },
-                      { 
-                        type: "info", 
-                        message: "Campaign reached 1,000 contacts", 
-                        time: "1 hour ago", 
-                        icon: Users,
-                        campaign: "Product Demo Follow-up"
-                      },
-                      { 
-                        type: "warning", 
-                        message: "LinkedIn rate limit approaching", 
-                        time: "3 hours ago", 
-                        icon: AlertTriangle,
-                        campaign: "Executive Outreach"
-                      },
-                      { 
-                        type: "success", 
-                        message: "Meeting scheduled with David Chen", 
-                        time: "5 hours ago", 
-                        icon: Calendar,
-                        campaign: "Partnership Outreach"
-                      }
-                    ].map((activity, index) => (
-                      <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                        <div className={`p-2 rounded-full ${
-                          activity.type === "success" ? "bg-green-100" :
-                          activity.type === "warning" ? "bg-yellow-100" : "bg-blue-100"
-                        }`}>
-                          <activity.icon className={`h-4 w-4 ${
-                            activity.type === "success" ? "text-green-600" :
-                            activity.type === "warning" ? "text-yellow-600" : "text-premium-cyan"
-                          }`} />
+                    {campaignMetrics.slice(0, 4).map((campaign, index) => (
+                      <div key={campaign.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="p-2 rounded-full bg-blue-100">
+                          <Target className="h-4 w-4 text-premium-cyan" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                          <p className="text-xs text-gray-500">{activity.campaign} • {activity.time}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {campaign.name} - {campaign.sent} messages sent
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {campaign.responseRate}% response rate • {campaign.startDate}
+                          </p>
                         </div>
                       </div>
                     ))}
+                    {campaignMetrics.length === 0 && (
+                      <div className="text-center text-gray-500 py-8">
+                        <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>No recent activity. Create your first campaign to get started!</p>
+                        <Button 
+                          className="mt-4" 
+                          onClick={() => navigate('/campaign-setup')}
+                        >
+                          Create Campaign
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </div>
           </main>
       
-      {/* LinkedIn Account Modal - Disabled for testing
-      <LinkedInAccountModal
-        open={showLinkedInModal}
-        onClose={() => setShowLinkedInModal(false)}
-        workspaces={workspaces}
-        onComplete={handleLinkedInAccountAdded}
-      /> */}
     </div>
   );
 }
