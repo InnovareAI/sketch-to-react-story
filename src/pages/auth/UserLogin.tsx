@@ -20,18 +20,18 @@ import {
   AlertCircle,
   Building2
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 export default function UserLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { signIn, loading, isAuthenticated } = useAuth();
 
   useEffect(() => {
     // Load saved email if exists
@@ -42,173 +42,31 @@ export default function UserLogin() {
     }
 
     // Check if already logged in
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      // Check if user exists in our users table and is not super admin
-      const { data: userRecord } = await supabase
-        .from('users')
-        .select('role, tenant_id, name')
-        .eq('id', user.id)
-        .single();
-      
-      if (userRecord && userRecord.role !== 'owner') {
-        // Regular user, redirect to main dashboard
-        navigate('/dashboard');
-        return;
-      }
+    if (isAuthenticated) {
+      navigate('/dashboard');
     }
-  };
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
     try {
-      // For development mode, check if this is a test user or invited user
-      if (email.includes('@example.com') || email.includes('@test.com') || password === email) {
-        console.log('Using development mode for user login');
-        
-        // Check if user exists in users table
-        const { data: userRecord, error: userError } = await supabase
-          .from('users')
-          .select(`
-            id,
-            email,
-            name,
-            role,
-            tenant_id,
-            status,
-            tenants:tenant_id (
-              id,
-              name,
-              plan
-            )
-          `)
-          .eq('email', email.toLowerCase())
-          .single();
-
-        if (userError || !userRecord) {
-          throw new Error('User account not found. Please contact your workspace administrator.');
-        }
-
-        if (userRecord.role === 'owner') {
-          throw new Error('Super admin accounts cannot login here. Please use the admin login page.');
-        }
-
-        // For invited users, accept email as password (development mode)
-        if (userRecord.status === 'invited' && password !== email) {
-          throw new Error('For invited users in development mode, please use your email address as the password.');
-        }
-
-        // Mock successful authentication for development
-        const mockUser = {
-          id: userRecord.id,
-          email: userRecord.email
-        };
-
-        const profile = {
-          role: userRecord.role,
-          workspace_id: userRecord.tenant_id,
-          workspace_name: userRecord.tenants?.name || 'Unknown Workspace',
-          workspace_plan: userRecord.tenants?.plan || 'free',
-          full_name: userRecord.name ? 
-            (userRecord.name.length > 2 ? 
-              userRecord.name.charAt(0).toUpperCase() + userRecord.name.slice(1) : 
-              userRecord.name.toUpperCase()
-            ) : 
-            userRecord.email.split('@')[0].toUpperCase()
-        };
-
-        // Save credentials if requested
-        if (rememberMe) {
-          localStorage.setItem('user_email', email);
-        } else {
-          localStorage.removeItem('user_email');
-        }
-
-        // Store auth state for development
-        localStorage.setItem('user_auth_user', JSON.stringify(mockUser));
-        localStorage.setItem('user_auth_profile', JSON.stringify(profile));
-
-        toast.success(`Welcome, ${profile.full_name}! (Dev Mode)`);
-        navigate('/dashboard');
-        return;
+      const { error } = await signIn(email.toLowerCase(), password);
+      
+      if (error) {
+        throw error;
       }
 
-      // Normal Supabase Auth flow
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase(),
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Check if user exists in our users table and get their workspace info
-        const { data: userRecord, error: userError } = await supabase
-          .from('users')
-          .select(`
-            id,
-            email,
-            name,
-            role,
-            tenant_id,
-            status,
-            tenants:tenant_id (
-              id,
-              name,
-              plan
-            )
-          `)
-          .eq('id', data.user.id)
-          .single();
-
-        if (userError || !userRecord) {
-          console.error('User lookup failed:', userError);
-          await supabase.auth.signOut();
-          throw new Error('User account not found. Please contact your workspace administrator.');
-        }
-
-        // Check if user is super admin (should use admin login)
-        if (userRecord.role === 'owner') {
-          await supabase.auth.signOut();
-          throw new Error('Super admin accounts cannot login here. Please use the admin login page.');
-        }
-
-        // Check if account setup is complete
-        if (userRecord.status === 'invited') {
-          await supabase.auth.signOut();
-          throw new Error('Account setup incomplete. Please use "Set up password" below to activate your account.');
-        }
-
-        const profile = {
-          role: userRecord.role,
-          workspace_id: userRecord.tenant_id,
-          workspace_name: userRecord.tenants?.name || 'Unknown Workspace',
-          workspace_plan: userRecord.tenants?.plan || 'free',
-          full_name: userRecord.name ? 
-            (userRecord.name.length > 2 ? 
-              userRecord.name.charAt(0).toUpperCase() + userRecord.name.slice(1) : 
-              userRecord.name.toUpperCase()
-            ) : 
-            (data.user.email?.split('@')[0] || 'User').toUpperCase()
-        };
-
-        // Save credentials if requested
-        if (rememberMe) {
-          localStorage.setItem('user_email', email);
-        } else {
-          localStorage.removeItem('user_email');
-        }
-
-        toast.success(`Welcome back, ${profile.full_name}!`);
-        navigate('/dashboard');
+      // Save credentials if requested
+      if (rememberMe) {
+        localStorage.setItem('user_email', email);
+      } else {
+        localStorage.removeItem('user_email');
       }
+
+      toast.success('Welcome back!');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error details:', error);
       

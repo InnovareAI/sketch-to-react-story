@@ -2,7 +2,7 @@
 // Orchestrates all LinkedIn search types with Bright Data, n8n, and optimization
 
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { enhancedBrightDataService } from '@/services/brightdata-proxy-secure';
 import { ProspectSearchService } from '@/services/prospect-search';
 import { ProspectSearchOptimizer } from '@/services/prospect-search-optimizer';

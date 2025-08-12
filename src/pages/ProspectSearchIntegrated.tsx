@@ -27,6 +27,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from '@/contexts/AuthContext';
 import { useSearchConfigurations, useProspectProfiles, useSearchExecution, useCsvUpload, useCampaignAssignments } from '@/hooks/useProspectSearch';
 import { ProspectSearchService } from '@/services/prospect-search';
 import type { 
@@ -76,6 +77,7 @@ type CsvUploadError = {
 export default function ProspectSearchIntegrated() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [selectedSearchType, setSelectedSearchType] = useState<SearchTypeUI | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<DatabaseSearchMethod | null>(null);
   const [linkedInUrl, setLinkedInUrl] = useState("");
@@ -86,8 +88,8 @@ export default function ProspectSearchIntegrated() {
   const [currentSearchConfig, setCurrentSearchConfig] = useState<string | null>(null);
 
   const campaignName = searchParams.get('campaign') || 'Current Campaign';
-  const workspaceId = 'temp-workspace-id'; // TODO: Get from auth context
-  const userId = 'temp-user-id'; // TODO: Get from auth context
+  const workspaceId = user?.workspace_id || '';
+  const userId = user?.id || '';
 
   // Database hooks
   const { configurations, createConfiguration } = useSearchConfigurations(workspaceId);

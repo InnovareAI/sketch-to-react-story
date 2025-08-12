@@ -1,22 +1,53 @@
-// n8n Workflow Templates for LinkedIn Prospect Search
-// Complete workflow definitions for each search type with Bright Data integration
+// N8N Workflow Templates for LinkedIn Campaign Automation
+// Complete workflow definitions for different campaign types with Unipile integration
 
-export const N8N_LINKEDIN_WORKFLOW_TEMPLATES = {
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  campaign_type: string;
+  nodes: any[];
+  connections: Record<string, any>;
+  settings: {
+    daily_limit: number;
+    priority: 'low' | 'medium' | 'high';
+    working_hours: {
+      start: string;
+      end: string;
+      days: string[];
+    };
+  };
+  variables: Record<string, any>;
+}
+
+export const N8N_CAMPAIGN_WORKFLOW_TEMPLATES = {
   
-  // 1. LinkedIn Basic Search Workflow
-  LINKEDIN_BASIC_SEARCH: {
-    name: "LinkedIn Basic Search with Bright Data",
-    description: "Scrapes LinkedIn basic search results using residential proxies",
+  // 1. LinkedIn Connector Campaign Template
+  LINKEDIN_CONNECTOR: {
+    id: 'connector-template',
+    name: 'LinkedIn Connector Campaign',
+    description: 'Automated connection requests with follow-up messages',
+    campaign_type: 'connector',
+    settings: {
+      daily_limit: 50,
+      priority: 'medium' as const,
+      working_hours: { start: '09:00', end: '17:00', days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] }
+    },
+    variables: {
+      connection_message: 'Hi {{prospect_name}}, I\'d like to connect and share insights about {{industry}}.',
+      follow_up_delay: '3 days',
+      max_follow_ups: 2
+    },
     nodes: [
       {
         id: "webhook-trigger",
-        name: "LinkedIn Basic Search Trigger",
+        name: "Campaign Trigger",
         type: "n8n-nodes-base.webhook",
         typeVersion: 1,
         position: [240, 300],
         parameters: {
           httpMethod: "POST",
-          path: "linkedin-basic-search",
+          path: "connector-campaign",
           responseMode: "responseNode",
           options: {}
         }

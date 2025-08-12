@@ -34,7 +34,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-export default function Analytics() {
+export default function EnhancedAnalytics() {
   const [timeRange, setTimeRange] = useState('30d');
   const [selectedCampaign, setSelectedCampaign] = useState('all');
 

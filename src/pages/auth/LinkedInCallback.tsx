@@ -27,7 +27,25 @@ export default function LinkedInCallback() {
 
       // Check for OAuth errors
       if (error) {
-        throw new Error(errorDescription || error);
+        let errorMessage = errorDescription || error;
+        // Provide more user-friendly error messages
+        switch (error) {
+          case 'access_denied':
+            errorMessage = 'LinkedIn authorization was cancelled. Please try again if you want to connect your account.';
+            break;
+          case 'invalid_client_id':
+            errorMessage = 'LinkedIn application configuration error. Please contact support.';
+            break;
+          case 'invalid_redirect_uri':
+            errorMessage = 'LinkedIn redirect configuration error. Please contact support.';
+            break;
+          case 'invalid_scope':
+            errorMessage = 'LinkedIn permission scope error. Please contact support.';
+            break;
+          default:
+            errorMessage = `LinkedIn authorization failed: ${errorMessage}`;
+        }
+        throw new Error(errorMessage);
       }
 
       let tokenData;
@@ -54,14 +72,24 @@ export default function LinkedInCallback() {
         }
 
         if (!code) {
-          throw new Error('No authorization code received');
+          throw new Error('No authorization code received from LinkedIn. Please try again.');
         }
 
         // Exchange code for token
-        tokenData = await linkedInOAuth.exchangeCodeForToken(code);
+        try {
+          tokenData = await linkedInOAuth.exchangeCodeForToken(code);
+        } catch (tokenError: any) {
+          console.error('Token exchange error:', tokenError);
+          throw new Error('Failed to exchange authorization code with LinkedIn. Please try again.');
+        }
         
         // Get user profile
-        profile = await linkedInOAuth.getUserProfile(tokenData.access_token);
+        try {
+          profile = await linkedInOAuth.getUserProfile(tokenData.access_token);
+        } catch (profileError: any) {
+          console.error('Profile fetch error:', profileError);
+          throw new Error('Failed to retrieve LinkedIn profile information. Please try again.');
+        }
       }
       
       // Try to save to Supabase if user is authenticated

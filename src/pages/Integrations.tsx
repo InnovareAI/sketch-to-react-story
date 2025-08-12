@@ -83,6 +83,17 @@ export default function Integrations() {
       features: ["Meeting scheduling", "Availability check", "Timezone handling", "Reminder automation"]
     },
     {
+      id: "mcp",
+      name: "MCP (Model Context Protocol)",
+      description: "Connect AI tools and data sources via the universal MCP standard",
+      icon: Bot,
+      category: "AI & Automation",
+      status: "available",
+      color: "text-emerald-600 bg-emerald-100",
+      accounts: 0,
+      features: ["Dynamic tool discovery", "Real-time data access", "Claude integration", "Custom MCP servers"]
+    },
+    {
       id: "zapier",
       name: "Zapier",
       description: "Connect to 5000+ apps through Zapier automation platform",

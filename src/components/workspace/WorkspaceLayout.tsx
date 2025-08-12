@@ -3,8 +3,7 @@
  * Main layout wrapper for authenticated workspace users
  */
 
-import { useState, useEffect } from 'react';
-import { useNavigate, Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
@@ -17,125 +16,22 @@ import {
   Bell,
   Linkedin
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  workspace_id: string;
-  workspace_name: string;
-  workspace_plan: string;
-}
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function WorkspaceLayout() {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const { user, loading, signOut } = useAuth();
   const location = useLocation();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    // Check for development auth bypass first
-    const userAuthUser = localStorage.getItem('user_auth_user');
-    const userAuthProfile = localStorage.getItem('user_auth_profile');
-
-    if (userAuthUser && userAuthProfile) {
-      console.log('Using development auth bypass for workspace layout');
-      const authUser = JSON.parse(userAuthUser);
-      const profile = JSON.parse(userAuthProfile);
-      console.log('Dev auth user:', authUser);
-      console.log('Dev auth profile:', profile);
-      
-      const userProfile: UserProfile = {
-        id: authUser.id,
-        email: authUser.email,
-        full_name: profile.full_name,
-        role: profile.role,
-        workspace_id: profile.workspace_id,
-        workspace_name: profile.workspace_name,
-        workspace_plan: profile.workspace_plan
-      };
-      
-      setUser(userProfile);
-      setLoading(false);
-      return;
-    }
-
-    // Normal Supabase Auth flow
-    const { data: { user: authUser }, error } = await supabase.auth.getUser();
-    
-    if (error || !authUser) {
-      navigate('/login');
-      return;
-    }
-
-    // Get user profile and workspace info
-    const { data: userRecord, error: userError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        email,
-        name,
-        role,
-        tenant_id,
-        status,
-        tenants:tenant_id (
-          id,
-          name,
-          plan
-        )
-      `)
-      .eq('id', authUser.id)
-      .single();
-
-    if (userError || !userRecord) {
-      toast.error('Failed to load user profile');
-      navigate('/login');
-      return;
-    }
-
-    // Check if user is super admin (shouldn't be here)
-    if (userRecord.role === 'owner') {
-      navigate('/admin/dashboard');
-      return;
-    }
-
-    const userProfile: UserProfile = {
-      id: userRecord.id,
-      email: userRecord.email,
-      full_name: userRecord.name ? 
-        (userRecord.name.length > 2 ? 
-          userRecord.name.charAt(0).toUpperCase() + userRecord.name.slice(1) : 
-          userRecord.name.toUpperCase()
-        ) : 
-        userRecord.email.split('@')[0].toUpperCase(),
-      role: userRecord.role,
-      workspace_id: userRecord.tenant_id,
-      workspace_name: userRecord.tenants?.name || 'Unknown Workspace',
-      workspace_plan: userRecord.tenants?.plan || 'free'
-    };
-
-    setUser(userProfile);
-    setLoading(false);
-  };
-
   const handleSignOut = async () => {
-    // Clear development auth state
-    localStorage.removeItem('user_auth_user');
-    localStorage.removeItem('user_auth_profile');
-    
-    // Sign out from Supabase (if applicable)
-    await supabase.auth.signOut();
-    
-    navigate('/login');
-    toast.success('Signed out successfully');
+    try {
+      await signOut();
+      toast.success('Signed out successfully');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Error signing out');
+    }
   };
 
   const getRoleBadge = (role: string) => {
@@ -300,23 +196,6 @@ export default function WorkspaceLayout() {
             {/* User profile section */}
             <div className="flex items-center space-x-4">
               <div className="flex gap-2">
-                {/* Debug info in development */}
-                {process.env.NODE_ENV === 'development' && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      localStorage.removeItem('user_auth_user');
-                      localStorage.removeItem('user_auth_profile');
-                      window.location.reload();
-                    }}
-                    size="sm"
-                    className="text-xs px-2"
-                    title="Clear cached auth data"
-                  >
-                    Clear Auth
-                  </Button>
-                )}
-                
                 <Button 
                   variant="ghost" 
                   onClick={handleSignOut} 

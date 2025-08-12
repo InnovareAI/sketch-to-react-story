@@ -2,7 +2,7 @@
 // Integrates with n8n workflows and provides comprehensive LinkedIn scraping
 // All credentials are handled server-side only
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { n8nService } from '@/services/n8n/N8nIntegrationService';
 
 // Enhanced data structures for different LinkedIn page types

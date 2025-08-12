@@ -1,7 +1,7 @@
 // Prospect Search Optimization Service
 // Handles error recovery, cost optimization, and performance monitoring
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { enhancedBrightDataService } from '@/services/brightdata-proxy-secure';
 import { ProspectSearchService } from '@/services/prospect-search';
 

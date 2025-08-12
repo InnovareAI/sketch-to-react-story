@@ -1,11 +1,11 @@
 // Enhanced Prospect Search Service
 // Integrates with Bright Data and n8n workflows for LinkedIn scraping
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { enhancedBrightDataService } from '@/services/brightdata-proxy-secure';
 import { n8nService } from '@/services/n8n/N8nIntegrationService';
 import { N8nProspectWorkflows } from '@/services/n8n-prospect-workflows';
-import { N8N_LINKEDIN_WORKFLOW_TEMPLATES, deployWorkflowToN8n } from '@/services/n8n-workflow-templates';
+import { deployWorkflowToN8n } from '@/services/n8n-workflow-templates';
 import {
   SearchConfiguration,
   SearchConfigurationInsert,

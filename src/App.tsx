@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -41,65 +43,95 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public/Auth Routes */}
-            <Route path="/login" element={<UserLogin />} />
-            <Route path="/auth/login" element={<UserLogin />} />
-            <Route path="/admin/login" element={<SuperAdminLogin />} />
-            <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
-            <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
-            
-            {/* Workspace Routes - All authenticated pages use WorkspaceLayout */}
-            <Route path="/" element={<WorkspaceLayout />}>
-              <Route index element={<Index />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="accounts" element={<Accounts />} />
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public/Auth Routes */}
+              <Route path="/login" element={<UserLogin />} />
+              <Route path="/auth/login" element={<UserLogin />} />
+              <Route path="/admin/login" element={<SuperAdminLogin />} />
+              <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
+              <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
               
-              {/* Core Navigation Routes - These should never 404 */}
-              <Route path="campaigns" element={<Campaigns />} />
-              <Route path="contacts" element={<Contacts />} />
-              <Route path="inbox" element={<GlobalInbox />} />
-              <Route path="templates" element={<Templates />} />
-              <Route path="analytics" element={<Analytics />} />
+              {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <WorkspaceLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Index />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="accounts" element={<Accounts />} />
+                
+                {/* Core Navigation Routes - These should never 404 */}
+                <Route path="campaigns" element={<Campaigns />} />
+                <Route path="contacts" element={<Contacts />} />
+                <Route path="inbox" element={<GlobalInbox />} />
+                <Route path="templates" element={<Templates />} />
+                <Route path="analytics" element={<Analytics />} />
+                
+                {/* Team Routes */}
+                <Route path="global-inbox" element={<GlobalInbox />} />
+                <Route path="team-settings" element={<TeamSettings />} />
+                <Route path="integrations" element={<Integrations />} />
+                
+                {/* Campaign & Setup Routes */}
+                <Route path="campaign-setup" element={<CampaignSetup />} />
+                <Route path="prospect-search" element={<ProspectSearch />} />
+                <Route path="search" element={<Search />} />
+                <Route path="search-results" element={<SearchResults />} />
+                <Route path="message-queue" element={<MessageQueue />} />
+                <Route path="requests" element={<Requests />} />
+                <Route path="placeholders" element={<Placeholders />} />
+                <Route path="company-profile" element={<Members />} />
+                <Route path="members" element={<Members />} />
+                <Route path="roles" element={<Roles />} />
+                <Route path="workspace-settings" element={<WorkspaceSettings />} />
+                <Route path="linkedin" element={<LinkedInIntegration />} />
+                <Route path="linkedin-integration" element={<LinkedInIntegration />} />
+                <Route 
+                  path="users-permissions" 
+                  element={
+                    <ProtectedRoute requireRole={['workspace_manager', 'admin']}>
+                      <UsersPermissions />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="admin/users" 
+                  element={
+                    <ProtectedRoute requireRole={['workspace_manager', 'admin']}>
+                      <UsersPermissions />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Agent/Chatbot Routes */}
+                <Route path="agent" element={<AgentFullScreen />} />
+                <Route path="agent-old" element={<Agent />} />
+              </Route>
               
-              {/* Team Routes */}
-              <Route path="global-inbox" element={<GlobalInbox />} />
-              <Route path="team-settings" element={<TeamSettings />} />
-              <Route path="integrations" element={<Integrations />} />
+              {/* Legacy redirect - /workspace/dashboard redirects to main dashboard */}
+              <Route 
+                path="/workspace/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <WorkspaceLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+              </Route>
               
-              {/* Campaign & Setup Routes */}
-              <Route path="campaign-setup" element={<CampaignSetup />} />
-              <Route path="prospect-search" element={<ProspectSearch />} />
-              <Route path="search" element={<Search />} />
-              <Route path="search-results" element={<SearchResults />} />
-              <Route path="message-queue" element={<MessageQueue />} />
-              <Route path="requests" element={<Requests />} />
-              <Route path="placeholders" element={<Placeholders />} />
-              <Route path="company-profile" element={<Members />} />
-              <Route path="members" element={<Members />} />
-              <Route path="roles" element={<Roles />} />
-              <Route path="workspace-settings" element={<WorkspaceSettings />} />
-              <Route path="linkedin" element={<LinkedInIntegration />} />
-              <Route path="linkedin-integration" element={<LinkedInIntegration />} />
-              <Route path="users-permissions" element={<UsersPermissions />} />
-              <Route path="admin/users" element={<UsersPermissions />} />
-              
-              {/* Agent/Chatbot Routes */}
-              <Route path="agent" element={<AgentFullScreen />} />
-              <Route path="agent-old" element={<Agent />} />
-            </Route>
-            
-            {/* Legacy redirect - /workspace/dashboard redirects to main dashboard */}
-            <Route path="/workspace/dashboard" element={<WorkspaceLayout />}>
-              <Route index element={<Dashboard />} />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
