@@ -40,13 +40,13 @@ export default function Profile() {
     email: profileUser.email || ''
   });
 
-  // Sync form data when profileUser changes
-  useEffect(() => {
-    setFormData({
-      full_name: profileUser.full_name || '',
-      email: profileUser.email || ''
-    });
-  }, [profileUser]);
+  // Don't sync form data when profileUser changes - causes issues
+  // useEffect(() => {
+  //   setFormData({
+  //     full_name: profileUser.full_name || '',
+  //     email: profileUser.email || ''
+  //   });
+  // }, [profileUser]);
 
   const handleSave = async () => {
     try {
