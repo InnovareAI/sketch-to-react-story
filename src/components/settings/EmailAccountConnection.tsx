@@ -403,6 +403,7 @@ export function EmailAccountConnection() {
                   </>
                 )}
               </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
