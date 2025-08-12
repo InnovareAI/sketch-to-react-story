@@ -7,6 +7,9 @@
 /* Import scrolling fixes */
 @import './styles/scrolling-fix.css';
 
+/* Import flat design system */
+@import './styles/flat-design.css';
+
 /* Import new design system */
 @import './styles/design-system.css';
 

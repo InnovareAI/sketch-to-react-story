@@ -43,6 +43,7 @@ import { LLMSettings } from "@/components/settings/LLMSettings";
 import { TeamAccountsSettings } from "@/components/settings/TeamAccountsSettings";
 import { LinkedInAccountConnection } from "@/components/settings/LinkedInAccountConnection";
 import { EmailAccountConnection } from "@/components/settings/EmailAccountConnection";
+import { CalendarIntegration } from "@/components/settings/CalendarIntegration";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
@@ -458,44 +459,7 @@ export default function WorkspaceSettings() {
 
                   {/* Calendar Tab */}
                   <TabsContent value="calendar" className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-purple-600" />
-                          Calendar Integration
-                        </CardTitle>
-                        <CardDescription>Connect your calendar accounts for scheduling and availability</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="w-10 h-10 bg-white rounded border flex items-center justify-center">
-                                <Calendar className="h-5 w-5 text-purple-600" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold">Google Calendar</h3>
-                                <p className="text-xs text-muted-foreground">Gmail & Google Workspace integration</p>
-                              </div>
-                            </div>
-                            <Button variant="outline" size="sm" className="w-full">Connect</Button>
-                          </div>
-                          
-                          <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="w-10 h-10 bg-white rounded border flex items-center justify-center">
-                                <Calendar className="h-5 w-5 text-blue-600" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold">Outlook Calendar</h3>
-                                <p className="text-xs text-muted-foreground">Microsoft Outlook Calendar</p>
-                              </div>
-                            </div>
-                            <Button variant="outline" size="sm" className="w-full">Connect</Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <CalendarIntegration />
                   </TabsContent>
 
                   {/* WhatsApp Tab */}
