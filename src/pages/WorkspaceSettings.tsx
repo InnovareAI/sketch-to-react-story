@@ -44,6 +44,8 @@ import { TeamAccountsSettings } from "@/components/settings/TeamAccountsSettings
 import { LinkedInAccountConnection } from "@/components/settings/LinkedInAccountConnection";
 import { EmailAccountConnection } from "@/components/settings/EmailAccountConnection";
 import { CalendarIntegration } from "@/components/settings/CalendarIntegration";
+import { AutoProvisioningStatus } from "@/components/settings/AutoProvisioningStatus";
+import { LinkedInOAuthExplainer } from "@/components/settings/LinkedInOAuthExplainer";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
@@ -232,8 +234,9 @@ export default function WorkspaceSettings() {
               </div>
               
               <div className="space-y-6">
-                <Tabs defaultValue="general" className="w-full">
-                  <TabsList className="grid w-full grid-cols-9">
+                <Tabs defaultValue="provisioning" className="w-full">
+                  <TabsList className="grid w-full grid-cols-10">
+                    <TabsTrigger value="provisioning">Auto Setup</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="llm">AI Models</TabsTrigger>
                     <TabsTrigger value="team-accounts">Team Accounts</TabsTrigger>
@@ -244,6 +247,11 @@ export default function WorkspaceSettings() {
                     <TabsTrigger value="notifications">Notifications</TabsTrigger>
                     <TabsTrigger value="security">Security</TabsTrigger>
                   </TabsList>
+
+                  {/* Auto Provisioning Tab */}
+                  <TabsContent value="provisioning" className="space-y-6">
+                    <AutoProvisioningStatus />
+                  </TabsContent>
 
                   {/* General Tab */}
                   <TabsContent value="general" className="space-y-6">
@@ -449,6 +457,7 @@ export default function WorkspaceSettings() {
 
                   {/* LinkedIn Tab - Now using our new component */}
                   <TabsContent value="linkedin" className="space-y-6">
+                    <LinkedInOAuthExplainer />
                     <LinkedInAccountConnection />
                   </TabsContent>
 
