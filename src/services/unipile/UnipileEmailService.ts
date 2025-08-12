@@ -42,13 +42,22 @@ export interface EmailMessage {
 
 export class UnipileEmailService {
   private static instance: UnipileEmailService;
-  private baseUrl = 'https://api.unipile.com/v1';
+  private baseUrl: string;
   private apiKey: string | null = null;
   private dsn: string | null = null;
 
   private constructor() {
+    // Use the same DSN configuration as UnipileService for LinkedIn
+    const dsn = import.meta.env.VITE_UNIPILE_DSN || 'api6.unipile.com:13670';
+    this.dsn = dsn;
+    this.baseUrl = `https://${dsn}/api/v1`;
     this.apiKey = import.meta.env.VITE_UNIPILE_API_KEY || null;
-    this.dsn = import.meta.env.VITE_UNIPILE_DSN || null;
+    
+    if (this.apiKey) {
+      console.log('UnipileEmailService initialized with API key from Netlify environment');
+    } else {
+      console.log('UnipileEmailService running in demo mode - no API key found');
+    }
   }
 
   public static getInstance(): UnipileEmailService {

@@ -524,26 +524,30 @@ export function EmailAccountConnection() {
       {/* Integration Status */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Email Integration Features</CardTitle>
+          <CardTitle className="text-lg">Integration Status</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-2">
-                <Send className="h-4 w-4 text-blue-600" />
+              <div className="rounded-full bg-green-100 p-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
               </div>
               <div>
-                <div className="font-medium">Send Emails</div>
-                <div className="text-sm text-muted-foreground">Automated outreach</div>
+                <div className="font-medium">Unipile API</div>
+                <div className="text-sm text-muted-foreground">
+                  {import.meta.env.VITE_UNIPILE_API_KEY ? 'Connected' : 'Demo Mode'}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-100 p-2">
-                <Inbox className="h-4 w-4 text-green-600" />
+              <div className="rounded-full bg-blue-100 p-2">
+                <Mail className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <div className="font-medium">Inbox Management</div>
-                <div className="text-sm text-muted-foreground">Unified inbox</div>
+                <div className="font-medium">Email OAuth</div>
+                <div className="text-sm text-muted-foreground">
+                  {import.meta.env.VITE_UNIPILE_API_KEY ? 'Available' : 'Using Demo'}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -551,11 +555,20 @@ export function EmailAccountConnection() {
                 <Shield className="h-4 w-4 text-purple-600" />
               </div>
               <div>
-                <div className="font-medium">Secure OAuth</div>
-                <div className="text-sm text-muted-foreground">No password storage</div>
+                <div className="font-medium">Security</div>
+                <div className="text-sm text-muted-foreground">OAuth 2.0 Enabled</div>
               </div>
             </div>
           </div>
+          {!import.meta.env.VITE_UNIPILE_API_KEY && (
+            <Alert className="mt-4 border-yellow-200 bg-yellow-50">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                <strong>Demo Mode:</strong> Unipile API credentials are configured in Netlify. 
+                The email connection flow will work but create demo accounts for testing.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </div>
