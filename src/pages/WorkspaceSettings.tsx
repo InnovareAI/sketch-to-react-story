@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,19 +36,153 @@ import {
   Brain
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { LLMSettings } from "@/components/settings/LLMSettings";
 import { TeamAccountsSettings } from "@/components/settings/TeamAccountsSettings";
 import { LinkedInAccountConnection } from "@/components/settings/LinkedInAccountConnection";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
+  const { user, refreshUser } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [workspaceData, setWorkspaceData] = useState({
+    companyName: '',
+    workspaceName: '',
+    website: '',
+    industry: '',
+    companySize: '',
+    description: '',
+    phone: '',
+    email: '',
+    address: '',
+    timezone: 'UTC-5'
+  });
+
+  // Load workspace data when component mounts
+  useEffect(() => {
+    const loadWorkspaceData = async () => {
+      if (!user?.workspace_id) return;
+      
+      try {
+        const { data: workspace, error } = await supabase
+          .from('workspaces')
+          .select('*')
+          .eq('id', user.workspace_id)
+          .single();
+          
+        if (error) {
+          console.error('Error loading workspace:', error);
+          return;
+        }
+        
+        if (workspace) {
+          setWorkspaceData(prev => ({
+            ...prev,
+            companyName: workspace.name || '',
+            workspaceName: workspace.name || '',
+            website: workspace.settings?.website || '',
+            industry: workspace.settings?.industry || '',
+            companySize: workspace.settings?.companySize || '',
+            description: workspace.settings?.description || '',
+            phone: workspace.settings?.phone || '',
+            email: workspace.settings?.email || '',
+            address: workspace.settings?.address || '',
+            timezone: workspace.settings?.timezone || 'UTC-5'
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading workspace data:', error);
+      }
+    };
+    
+    loadWorkspaceData();
+  }, [user?.workspace_id]);
+
+  // Handle input changes
+  const handleInputChange = (field: string, value: string) => {
+    setWorkspaceData(prev => {
+      const updated = {
+        ...prev,
+        [field]: value
+      };
+      
+      // Keep workspace name in sync with company name
+      if (field === 'companyName') {
+        updated.workspaceName = value;
+      }
+      
+      return updated;
+    });
+  };
 
   // Handle Save Company Profile
-  const handleSaveCompanyProfile = () => {
-    toast({
-      title: "Company Profile Saved",
-      description: "Your company profile information has been updated successfully.",
-    });
+  const handleSaveCompanyProfile = async () => {
+    if (!user?.workspace_id) {
+      toast({
+        title: "Error",
+        description: "No workspace found. Please try refreshing the page.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!workspaceData.companyName.trim()) {
+      toast({
+        title: "Error",
+        description: "Company name is required.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Use company name as workspace name if workspace name is empty
+    const finalWorkspaceName = workspaceData.workspaceName.trim() || workspaceData.companyName.trim();
+    
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase
+        .from('workspaces')
+        .update({
+          name: finalWorkspaceName,
+          settings: {
+            website: workspaceData.website.trim(),
+            industry: workspaceData.industry,
+            companySize: workspaceData.companySize,
+            description: workspaceData.description.trim(),
+            phone: workspaceData.phone.trim(),
+            email: workspaceData.email.trim(),
+            address: workspaceData.address.trim(),
+            timezone: workspaceData.timezone
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.workspace_id);
+        
+      console.log('Updating workspace:', user.workspace_id, 'with name:', finalWorkspaceName);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Refresh user data to update workspace name in the UI
+      await refreshUser();
+      
+      toast({
+        title: "Company Profile Saved",
+        description: "Your company profile information has been updated successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error saving workspace:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save company profile. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -94,18 +228,34 @@ export default function WorkspaceSettings() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="company-name">Company Name</Label>
-                              <Input id="company-name" defaultValue="Acme Corporation" />
+                              <Input 
+                                id="company-name" 
+                                value={workspaceData.companyName}
+                                onChange={(e) => handleInputChange('companyName', e.target.value)}
+                                placeholder="Enter your company name"
+                              />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="company-website">Website</Label>
-                              <Input id="company-website" type="url" placeholder="https://acme.com" />
+                              <Input 
+                                id="company-website" 
+                                type="url" 
+                                value={workspaceData.website}
+                                onChange={(e) => handleInputChange('website', e.target.value)}
+                                placeholder="https://your-company.com" 
+                              />
                             </div>
                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="industry">Industry</Label>
-                              <select id="industry" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                              <select 
+                                id="industry" 
+                                value={workspaceData.industry}
+                                onChange={(e) => handleInputChange('industry', e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
                                 <option value="">Select industry</option>
                                 <option value="technology">Technology</option>
                                 <option value="healthcare">Healthcare</option>
@@ -120,7 +270,12 @@ export default function WorkspaceSettings() {
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="company-size">Company Size</Label>
-                              <select id="company-size" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                              <select 
+                                id="company-size" 
+                                value={workspaceData.companySize}
+                                onChange={(e) => handleInputChange('companySize', e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
                                 <option value="">Select size</option>
                                 <option value="1-10">1-10 employees</option>
                                 <option value="11-50">11-50 employees</option>
@@ -137,6 +292,8 @@ export default function WorkspaceSettings() {
                             <textarea 
                               id="company-description" 
                               rows={3}
+                              value={workspaceData.description}
+                              onChange={(e) => handleInputChange('description', e.target.value)}
                               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               placeholder="Brief description of your company and what you do"
                             />
@@ -151,17 +308,34 @@ export default function WorkspaceSettings() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="phone">Phone Number</Label>
-                              <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
+                              <Input 
+                                id="phone" 
+                                type="tel" 
+                                value={workspaceData.phone}
+                                onChange={(e) => handleInputChange('phone', e.target.value)}
+                                placeholder="+1 (555) 123-4567" 
+                              />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="email">Business Email</Label>
-                              <Input id="email" type="email" placeholder="contact@acme.com" />
+                              <Input 
+                                id="email" 
+                                type="email" 
+                                value={workspaceData.email}
+                                onChange={(e) => handleInputChange('email', e.target.value)}
+                                placeholder="contact@your-company.com" 
+                              />
                             </div>
                           </div>
                           
                           <div className="space-y-2">
                             <Label htmlFor="address">Address</Label>
-                            <Input id="address" placeholder="123 Business Street, City, State 12345" />
+                            <Input 
+                              id="address" 
+                              value={workspaceData.address}
+                              onChange={(e) => handleInputChange('address', e.target.value)}
+                              placeholder="123 Business Street, City, State 12345" 
+                            />
                           </div>
                         </div>
 
@@ -173,11 +347,21 @@ export default function WorkspaceSettings() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="workspace-name">Workspace Name</Label>
-                              <Input id="workspace-name" defaultValue="Acme Corporation" />
+                              <Input 
+                                id="workspace-name" 
+                                value={workspaceData.workspaceName}
+                                onChange={(e) => handleInputChange('workspaceName', e.target.value)}
+                                placeholder="Enter your workspace name"
+                              />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="timezone">Timezone</Label>
-                              <select id="timezone" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                              <select 
+                                id="timezone" 
+                                value={workspaceData.timezone}
+                                onChange={(e) => handleInputChange('timezone', e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
                                 <option value="UTC-12">UTC-12 (Baker Island)</option>
                                 <option value="UTC-11">UTC-11 (American Samoa)</option>
                                 <option value="UTC-10">UTC-10 (Hawaii)</option>
@@ -208,7 +392,13 @@ export default function WorkspaceSettings() {
                           </div>
                         </div>
 
-                        <Button onClick={handleSaveCompanyProfile} className="w-fit">Save Company Profile</Button>
+                        <Button 
+                          onClick={handleSaveCompanyProfile} 
+                          disabled={loading}
+                          className="w-fit"
+                        >
+                          {loading ? 'Saving...' : 'Save Company Profile'}
+                        </Button>
                       </CardContent>
                     </Card>
                   </TabsContent>

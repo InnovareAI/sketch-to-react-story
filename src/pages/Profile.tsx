@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ import {
 export default function Profile() {
   const { user, loading: authLoading, refreshUser } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [privacySettings, setPrivacySettings] = useState({
@@ -362,7 +364,7 @@ export default function Profile() {
                     Workspace Information
                   </CardTitle>
                   <CardDescription>
-                    Your current workspace details and permissions
+                    Your current workspace details. To edit workspace settings, use the "Workspace Settings" button below.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -414,10 +416,7 @@ export default function Profile() {
                       Invite Members
                     </Button>
                     <Button variant="outline" className="flex-1" onClick={() => {
-                      toast({
-                        title: "Workspace Settings", 
-                        description: "Redirecting to workspace configuration..."
-                      });
+                      navigate('/workspace-settings');
                     }}>
                       Workspace Settings
                     </Button>
