@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { linkedInDataSync } from '@/services/linkedin/LinkedInDataSync';
+import { unipileDirectSync } from '@/services/unipile/UnipileDirectSync';
 import { toast } from 'sonner';
 
 interface Message {
@@ -164,18 +164,18 @@ export default function GlobalInbox() {
   const handleSyncMessages = async () => {
     try {
       setLoading(true);
-      toast.info('Syncing messages from LinkedIn...');
+      toast.info('Pinging Unipile API to sync LinkedIn messages...');
       
-      // Use the LinkedIn data sync service
-      await linkedInDataSync.manualSync();
+      // Use direct Unipile sync to fetch all messages
+      await unipileDirectSync.syncAllMessages();
       
       // Reload messages after sync
       await loadMessages();
       
-      toast.success('Messages synced successfully!');
+      toast.success('LinkedIn inbox synced successfully!');
     } catch (error) {
       console.error('Error syncing messages:', error);
-      toast.error('Failed to sync messages. Please try again.');
+      toast.error('Failed to sync messages. Please check your Unipile API configuration.');
     } finally {
       setLoading(false);
     }
@@ -362,9 +362,10 @@ export default function GlobalInbox() {
             variant="outline"
             onClick={handleSyncMessages}
             disabled={loading}
+            title="Sync all LinkedIn messages from Unipile API"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Sync Messages
+            Sync LinkedIn Inbox
           </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
