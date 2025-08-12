@@ -55,13 +55,15 @@ export default function Profile() {
     email: profileUser.email || ''
   });
 
-  // Don't sync form data when profileUser changes - causes issues
-  // useEffect(() => {
-  //   setFormData({
-  //     full_name: profileUser.full_name || '',
-  //     email: profileUser.email || ''
-  //   });
-  // }, [profileUser]);
+  // Sync form data when profileUser changes or when editing starts
+  useEffect(() => {
+    if (isEditing) {
+      setFormData({
+        full_name: profileUser.full_name || '',
+        email: profileUser.email || ''
+      });
+    }
+  }, [profileUser, isEditing]);
 
   const handleSave = async () => {
     try {
@@ -167,7 +169,16 @@ export default function Profile() {
               <p className="text-gray-600">Manage your account settings and preferences</p>
             </div>
             <Button
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                if (isEditing) {
+                  // Reset form data to current profile values when canceling
+                  setFormData({
+                    full_name: profileUser.full_name || '',
+                    email: profileUser.email || ''
+                  });
+                }
+                setIsEditing(!isEditing);
+              }}
               variant={isEditing ? "outline" : "default"}
             >
               <Settings className="h-4 w-4 mr-2" />
@@ -278,7 +289,14 @@ export default function Profile() {
                     <>
                       <Separator />
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsEditing(false)}>
+                        <Button variant="outline" onClick={() => {
+                          // Reset form data to current profile values when canceling
+                          setFormData({
+                            full_name: profileUser.full_name || '',
+                            email: profileUser.email || ''
+                          });
+                          setIsEditing(false);
+                        }}>
                           Cancel
                         </Button>
                         <Button onClick={handleSave}>
