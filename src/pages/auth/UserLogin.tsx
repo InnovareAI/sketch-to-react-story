@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function UserLogin() {
   const [email, setEmail] = useState('');
@@ -52,6 +53,54 @@ export default function UserLogin() {
     setError('');
 
     try {
+      // First check if user exists in our users table
+      const { data: userRecord, error: userError } = await supabase
+        .from('users')
+        .select('id, email, status')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (userError || !userRecord) {
+        setError('Email not found. Please check your email address or contact your workspace administrator.');
+        return;
+      }
+
+      if (userRecord.status === 'invited') {
+        // User exists but hasn't completed signup - create auth account
+        try {
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: email.toLowerCase(),
+            password: password,
+            options: {
+              data: {
+                user_id: userRecord.id
+              }
+            }
+          });
+
+          if (signUpError) {
+            console.error('Signup error:', signUpError);
+            setError('Failed to create account. Please try again or contact support.');
+            return;
+          }
+
+          // Update user status to active
+          await supabase
+            .from('users')
+            .update({ status: 'active' })
+            .eq('id', userRecord.id);
+
+          toast.success('Account created! Welcome to SAM AI!');
+          navigate('/dashboard');
+          return;
+        } catch (signupError) {
+          console.error('Account creation error:', signupError);
+          setError('Failed to create account. Please try again.');
+          return;
+        }
+      }
+
+      // Normal login flow
       const { error } = await signIn(email.toLowerCase(), password);
       
       if (error) {
@@ -81,8 +130,6 @@ export default function UserLogin() {
       }
       
       setError(errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -106,11 +153,9 @@ export default function UserLogin() {
       }
 
       if (userRecord.status === 'invited') {
-        // For development mode, show instructions instead of trying to send real email
-        toast.success(
-          `Account found! Since this is development mode, please contact your administrator to complete account setup. ` +
-          `Your email: ${email}`,
-          { duration: 8000 }
+        toast.info(
+          'Your account is ready! Please enter a password to complete your setup.',
+          { duration: 6000 }
         );
         return;
       }
@@ -241,25 +286,13 @@ export default function UserLogin() {
           </form>
 
           <div className="mt-4 text-center space-y-3">
-            <div className="bg-blue-50 p-3 rounded-lg text-center">
-              <p className="text-sm text-blue-800 font-medium mb-2">
-                Development Mode - Invited Users
-              </p>
-              <p className="text-xs text-blue-700 mb-1">
-                <strong>For invited users:</strong> Use your email address as the password
-              </p>
-              <p className="text-xs text-blue-600">
-                Example: If your email is john@company.com, use "john@company.com" as password
-              </p>
-            </div>
-            
             <button
               type="button"
               onClick={handlePasswordReset}
               disabled={resetLoading || loading}
               className="text-sm text-gray-600 hover:text-gray-800 disabled:text-gray-400"
             >
-              {resetLoading ? 'Sending...' : 'Need help with account setup?'}
+              {resetLoading ? 'Sending...' : 'Forgot your password?'}
             </button>
           </div>
 
