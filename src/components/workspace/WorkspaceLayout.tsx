@@ -23,13 +23,14 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function WorkspaceLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
 
-  // Mock user data
+  // Use auth user data or fallback to defaults
   const user = {
-    full_name: 'TL InnovareAI',
-    workspace_name: 'InnovareAI',
-    workspace_plan: 'pro',
-    role: 'admin'
+    full_name: authUser?.full_name || '',
+    workspace_name: authUser?.workspace_name || 'InnovareAI',
+    workspace_plan: authUser?.workspace_plan || 'pro',
+    role: authUser?.role || 'admin'
   };
 
   const handleSignOut = async () => {
@@ -194,41 +195,6 @@ export default function WorkspaceLayout() {
           </div>
         </div>
 
-        {/* Workspace Overview Banner */}
-        <div className={cn(
-          "px-6 py-3 border-b",
-          isConversational 
-            ? "bg-gray-800/50 border-gray-700/50" 
-            : "bg-blue-50 border-blue-200"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "text-sm font-medium",
-                isConversational ? "text-white" : "text-blue-900"
-              )}>
-                Welcome back, {user.full_name}
-              </div>
-              <Badge 
-                variant="outline" 
-                className={cn(
-                  "text-xs px-2 py-1",
-                  isConversational 
-                    ? "border-gray-600 text-gray-300 bg-gray-800/50" 
-                    : "border-blue-300 text-blue-700 bg-blue-100/50"
-                )}
-              >
-                {user.role.replace('_', ' ').charAt(0).toUpperCase() + user.role.replace('_', ' ').slice(1)}
-              </Badge>
-            </div>
-            <div className={cn(
-              "text-xs",
-              isConversational ? "text-gray-400" : "text-blue-600"
-            )}>
-              {user.workspace_name} • {user.workspace_plan.charAt(0).toUpperCase() + user.workspace_plan.slice(1)} Plan
-            </div>
-          </div>
-        </div>
 
         {/* Main Content */}
         <div className="flex-1 overflow-hidden">

@@ -1,107 +1,179 @@
-import { TrendingUp, TrendingDown, Users, User, Target, MessageSquare, BarChart3, Zap, Rocket, Star, Crown, Activity, ArrowUpRight, Eye, Clock, Globe, Plus, FolderOpen, Code, Database, Bot } from "lucide-react";
+import { useState, useEffect } from "react";
+import { TrendingUp, TrendingDown, Users, Target, MessageSquare, BarChart3, Zap, Rocket, Star, Crown, Activity, ArrowUpRight, Eye, Clock, Globe, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
 
-const metrics = [
-  {
-    title: "Total Campaigns",
-    value: "24",
-    change: "+12%",
-    trend: "up",
-    icon: Target,
-    color: "premium-purple",
-    gradient: "from-premium-purple to-premium-blue",
-    description: "Active multi-channel campaigns",
-  },
-  {
-    title: "Active Connections",
-    value: "1,247",
-    change: "+8.2%",
-    trend: "up",
-    icon: Users,
-    color: "premium-cyan",
-    gradient: "from-premium-cyan to-premium-green",
-    description: "Email & LinkedIn connections",
-  },
-  {
-    title: "Response Rate",
-    value: "23.5%",
-    change: "-2.1%",
-    trend: "down",
-    icon: MessageSquare,
-    color: "premium-orange",
-    gradient: "from-premium-orange to-premium-pink",
-    description: "Messages receiving replies",
-  },
-  {
-    title: "Conversion Rate",
-    value: "8.4%",
-    change: "+5.7%",
-    trend: "up",
-    icon: BarChart3,
-    color: "premium-green",
-    gradient: "from-premium-green to-premium-cyan",
-    description: "Leads converted to opportunities",
-  },
-];
+interface DashboardMetrics {
+  totalCampaigns: number;
+  activeConnections: number;
+  responseRate: number;
+  conversionRate: number;
+}
 
-const campaigns = [
-  {
-    name: "Who's Who in Impact Investing",
-    status: "Active",
-    contacted: "52.03%",
-    connected: "0%",
-    replied: "7.42%",
-    other: "0%",
-    progress: 52,
-    priority: "High",
-    leads: 142,
-    lastActivity: "2 hours ago",
-  },
-  {
-    name: "CO Impact Days 2024",
-    status: "Active",
-    contacted: "54.55%",
-    connected: "0%",
-    replied: "0%",
-    other: "0%",
-    progress: 55,
-    priority: "Medium",
-    leads: 89,
-    lastActivity: "4 hours ago",
-  },
-  {
-    name: "Intermediary Scale Campaign",
-    status: "Active",
-    contacted: "90.19%",
-    connected: "22.2%",
-    replied: "2.41%",
-    other: "0.47%",
-    progress: 90,
-    priority: "High",
-    leads: 234,
-    lastActivity: "1 hour ago",
-  },
-];
+interface CampaignData {
+  id: string;
+  name: string;
+  status: string;
+  type: string;
+  performance_metrics: any;
+  created_at: string;
+  updated_at: string;
+}
 
 export function WorkspaceDashboard() {
-  const openProjectDirectory = (path: string) => {
-    // This would typically open the directory in the user's file explorer
-    console.log(`Opening project directory: ${path}`);
-    // In a real implementation, this could trigger a file system API or send a command to the desktop app
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalCampaigns: 0,
+    activeConnections: 0,
+    responseRate: 0,
+    conversionRate: 0,
+  });
+  const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch total campaigns
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
+        .select('*');
+
+      if (campaignsError) throw campaignsError;
+
+      // Fetch contacts count
+      const { data: contactsData, error: contactsError } = await supabase
+        .from('contacts')
+        .select('id');
+
+      if (contactsError) throw contactsError;
+
+      // Fetch messages for response rate calculation
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('id, status, replied_at, sent_at');
+
+      if (messagesError) throw messagesError;
+
+      // Calculate metrics
+      const totalCampaigns = campaignsData?.length || 0;
+      const activeConnections = contactsData?.length || 0;
+      
+      const sentMessages = messagesData?.filter(msg => msg.sent_at) || [];
+      const repliedMessages = messagesData?.filter(msg => msg.replied_at) || [];
+      const responseRate = sentMessages.length > 0 ? (repliedMessages.length / sentMessages.length) * 100 : 0;
+      
+      // Simple conversion rate calculation (replied messages / sent messages * some factor)
+      const conversionRate = sentMessages.length > 0 ? (repliedMessages.length / sentMessages.length) * 50 : 0;
+
+      setMetrics({
+        totalCampaigns,
+        activeConnections,
+        responseRate: Math.round(responseRate * 10) / 10,
+        conversionRate: Math.round(conversionRate * 10) / 10,
+      });
+
+      // Set campaigns (limit to 3 for display)
+      setCampaigns(campaignsData?.slice(0, 3) || []);
+
+    } catch (err: any) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const getMetricsArray = () => [
+    {
+      title: "Total Campaigns",
+      value: loading ? "..." : metrics.totalCampaigns.toString(),
+      change: "+12%",
+      trend: "up" as const,
+      icon: Target,
+      color: "premium-purple",
+      gradient: "from-premium-purple to-premium-blue",
+      description: "Active multi-channel campaigns",
+    },
+    {
+      title: "Active Connections",
+      value: loading ? "..." : metrics.activeConnections.toLocaleString(),
+      change: "+8.2%",
+      trend: "up" as const,
+      icon: Users,
+      color: "premium-cyan",
+      gradient: "from-premium-cyan to-premium-green",
+      description: "Email & LinkedIn connections",
+    },
+    {
+      title: "Response Rate",
+      value: loading ? "..." : `${metrics.responseRate}%`,
+      change: "-2.1%",
+      trend: "down" as const,
+      icon: MessageSquare,
+      color: "premium-orange",
+      gradient: "from-premium-orange to-premium-pink",
+      description: "Messages receiving replies",
+    },
+    {
+      title: "Conversion Rate",
+      value: loading ? "..." : `${metrics.conversionRate}%`,
+      change: "+5.7%",
+      trend: "up" as const,
+      icon: BarChart3,
+      color: "premium-green",
+      gradient: "from-premium-green to-premium-cyan",
+      description: "Leads converted to opportunities",
+    },
+  ];
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 24) {
+      return `${diffInHours} hours ago`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays} days ago`;
+    }
+  };
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <Card className="p-8 text-center max-w-md">
+          <CardContent>
+            <h2 className="text-xl font-bold text-red-600 mb-2">Error Loading Dashboard</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={fetchDashboardData}>
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const metricsArray = getMetricsArray();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
 
-        {/* Workspace Overview Banner with Account Info */}
+        {/* Workspace Overview Banner */}
         <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl backdrop-blur-xl bg-white/80 border border-white/20 p-4 lg:p-8 shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10" />
           <div className="relative z-10">
-            <div className="flex flex-col lg:flex-row items-start justify-between mb-4 lg:mb-6 gap-4">
+            <div className="mb-4 lg:mb-6">
               <div className="flex items-center gap-3 lg:gap-4">
                 <div className="p-2 lg:p-3 rounded-2xl bg-gradient-to-br from-purple-600/20 to-blue-600/20 backdrop-blur-sm border border-purple-300/30">
                   <Crown className="h-6 w-6 lg:h-8 lg:w-8 text-purple-600" />
@@ -111,32 +183,6 @@ export function WorkspaceDashboard() {
                     Workspace Overview
                   </h1>
                   <p className="text-slate-600 text-base lg:text-lg">Monitor your multi-channel outreach performance</p>
-                </div>
-              </div>
-              
-              {/* Account Information - Moved to Right */}
-              <div className="w-full lg:w-auto backdrop-blur-sm bg-gradient-to-r from-white/70 to-white/50 rounded-xl p-4 border border-white/40 shadow-lg">
-                <div className="flex items-center gap-3 lg:gap-4">
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
-                    <User className="h-5 w-5 lg:h-6 lg:w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-slate-900">Jennifer Fleming</h3>
-                    <p className="text-sm text-slate-600">Senior Account Executive</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge className="bg-emerald-100/80 text-emerald-700 border-emerald-200/50 text-xs backdrop-blur-sm">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1" />
-                        LinkedIn
-                      </Badge>
-                      <Badge className="bg-blue-100/80 text-blue-700 border-blue-200/50 text-xs backdrop-blur-sm">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1" />
-                        Email
-                      </Badge>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm" className="hover:bg-purple-100/50 backdrop-blur-sm">
-                    <Eye className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             </div>
@@ -161,7 +207,7 @@ export function WorkspaceDashboard() {
 
         {/* Premium Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          {metrics.map((metric, index) => (
+          {metricsArray.map((metric, index) => (
             <Card key={metric.title} className="group relative overflow-hidden backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1">
               <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-purple-400/30 to-blue-400/30" />
               <div className="absolute inset-0 bg-white/95 backdrop-blur-xl" />
@@ -172,7 +218,10 @@ export function WorkspaceDashboard() {
                     <metric.icon className="h-5 w-5 text-white" />
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
+                    <div className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                      {metric.value}
+                      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    </div>
                     <div className="flex items-center gap-1 text-xs">
                       {metric.trend === "up" ? (
                         <TrendingUp className="h-3 w-3 text-premium-green" />
@@ -212,7 +261,10 @@ export function WorkspaceDashboard() {
                   <Rocket className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-bold text-gray-900">Active Campaigns</CardTitle>
+                  <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    Active Campaigns
+                    {loading && <Loader2 className="h-5 w-5 animate-spin" />}
+                  </CardTitle>
                   <p className="text-gray-600">Monitor your outreach performance</p>
                 </div>
               </div>
@@ -224,84 +276,68 @@ export function WorkspaceDashboard() {
           </CardHeader>
           
           <CardContent className="space-y-6">
-            {campaigns.map((campaign, index) => (
-              <div key={campaign.name} className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-muted/30 to-muted/10 border border-border/50 p-6 hover:shadow-xl transition-all duration-300">
-                <div className="absolute inset-0 bg-gradient-to-r from-premium-blue/5 to-premium-purple/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                <div className="relative z-10">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg text-foreground">{campaign.name}</h3>
-                        <Badge className={`px-3 py-1 ${
-                          campaign.priority === "High" 
-                            ? "bg-premium-orange/10 text-premium-orange border-premium-orange/20" 
-                            : "bg-premium-cyan/10 text-premium-cyan border-premium-cyan/20"
-                        }`}>
-                          {campaign.priority} Priority
-                        </Badge>
-                        <Badge className="bg-premium-green/10 text-premium-green border-premium-green/20">
-                          {campaign.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {campaign.leads} leads
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {campaign.lastActivity}
-                        </span>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="hover:bg-premium-purple/10">
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {loading ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-premium-purple" />
+                <p className="text-gray-600 mt-2">Loading campaigns...</p>
+              </div>
+            ) : campaigns.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">
+                <p>No campaigns found. Create your first campaign to get started!</p>
+              </div>
+            ) : (
+              campaigns.map((campaign) => (
+                <div key={campaign.id} className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-muted/30 to-muted/10 border border-border/50 p-6 hover:shadow-xl transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-r from-premium-blue/5 to-premium-purple/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   
-                  <div className="grid grid-cols-4 gap-4 mb-4">
-                    <div className="text-center">
-                      <div className="text-sm font-medium text-foreground">{campaign.contacted}</div>
-                      <div className="text-xs text-muted-foreground">Contacted</div>
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-lg text-foreground">{campaign.name}</h3>
+                          <Badge className="bg-premium-green/10 text-premium-green border-premium-green/20">
+                            {campaign.status}
+                          </Badge>
+                          <Badge className="bg-premium-blue/10 text-premium-blue border-premium-blue/20">
+                            {campaign.type}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDate(campaign.updated_at)}
+                          </span>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="hover:bg-premium-purple/10">
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <div className="text-center">
-                      <div className="text-sm font-medium text-foreground">{campaign.connected}</div>
-                      <div className="text-xs text-muted-foreground">Connected</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm font-medium text-foreground">{campaign.replied}</div>
-                      <div className="text-xs text-muted-foreground">Replied</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm font-medium text-foreground">{campaign.other}</div>
-                      <div className="text-xs text-muted-foreground">Other</div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Campaign Progress</span>
-                      <span className="font-medium text-foreground">{campaign.progress}%</span>
-                    </div>
-                    <div className="relative h-2 bg-muted/30 rounded-full overflow-hidden">
-                      <div 
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-premium-purple to-premium-blue rounded-full transition-all duration-1000 ease-out"
-                        style={{ width: `${campaign.progress}%` }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Campaign Status</span>
+                        <span className="font-medium text-foreground capitalize">{campaign.status}</span>
+                      </div>
+                      <div className="relative h-2 bg-muted/30 rounded-full overflow-hidden">
+                        <div 
+                          className="absolute inset-y-0 left-0 bg-gradient-to-r from-premium-purple to-premium-blue rounded-full transition-all duration-1000 ease-out"
+                          style={{ width: `${campaign.status === 'active' ? 75 : campaign.status === 'paused' ? 50 : 25}%` }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
         {/* Premium Action Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           {/* Quick Actions */}
-          <Card className="glass-card border-0 premium-shadow group hover:scale-[1.02] transition-all duration-300">
+          <Card className="backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl group hover:scale-[1.02] transition-all duration-300">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-gradient-to-br from-premium-orange to-premium-pink">
@@ -327,7 +363,7 @@ export function WorkspaceDashboard() {
           </Card>
 
           {/* Performance Insights */}
-          <Card className="glass-card border-0 premium-shadow group hover:scale-[1.02] transition-all duration-300">
+          <Card className="backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl group hover:scale-[1.02] transition-all duration-300">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-gradient-to-br from-premium-cyan to-premium-blue">
@@ -343,17 +379,21 @@ export function WorkspaceDashboard() {
               </div>
               <div className="flex justify-between items-center p-3 rounded-xl bg-gradient-to-r from-premium-blue/10 to-premium-purple/10 border border-premium-blue/20">
                 <span className="text-sm text-muted-foreground">Avg. response time</span>
-                <span className="font-semibold text-premium-blue">2.4 hours</span>
+                <span className="font-semibold text-premium-blue">
+                  {loading ? "..." : "2.4 hours"}
+                </span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-xl bg-gradient-to-r from-premium-orange/10 to-premium-pink/10 border border-premium-orange/20">
-                <span className="text-sm text-muted-foreground">Active accounts</span>
-                <span className="font-semibold text-premium-orange">1</span>
+                <span className="text-sm text-muted-foreground">Active campaigns</span>
+                <span className="font-semibold text-premium-orange">
+                  {loading ? "..." : metrics.totalCampaigns}
+                </span>
               </div>
             </CardContent>
           </Card>
 
           {/* System Status */}
-          <Card className="glass-card border-0 premium-shadow group hover:scale-[1.02] transition-all duration-300">
+          <Card className="backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl group hover:scale-[1.02] transition-all duration-300">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-gradient-to-br from-premium-green to-premium-cyan">
@@ -378,11 +418,11 @@ export function WorkspaceDashboard() {
                 </Badge>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-premium-purple/10 to-premium-pink/10 border border-premium-purple/20">
-                <span className="text-sm text-muted-foreground">Last Sync</span>
-                <span className="text-sm font-semibold text-premium-purple flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  2 min ago
-                </span>
+                <span className="text-sm text-muted-foreground">Database Status</span>
+                <Badge className={`px-3 py-1 ${error ? "bg-red-100 text-red-600 border-red-200" : "bg-premium-purple/10 text-premium-purple border-premium-purple/20"}`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 animate-pulse ${error ? "bg-red-600" : "bg-premium-purple"}`} />
+                  {error ? "Error" : "Connected"}
+                </Badge>
               </div>
             </CardContent>
           </Card>
