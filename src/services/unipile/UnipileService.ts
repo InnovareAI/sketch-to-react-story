@@ -409,24 +409,30 @@ class UnipileService {
    */
   async getMessages(accountId: string, limit = 50): Promise<any[]> {
     try {
-      const account = await this.getAccountById(accountId);
-      if (!account?.unipileAccountId) throw new Error('Account not found');
+      // If no API key, return empty
+      if (!this.config.apiKey || this.config.apiKey === 'demo_key_not_configured') {
+        console.log('No Unipile API key configured');
+        return [];
+      }
 
       const response = await fetch(`${this.baseUrl}/messages?limit=${limit}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.config.apiKey}`,
           'X-API-KEY': this.config.apiKey,
-          'X-UNIPILE-ACCOUNT-ID': account.unipileAccountId
+          'X-ACCOUNT-ID': accountId
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get LinkedIn messages');
+        const errorText = await response.text();
+        console.error('Unipile API error:', errorText);
+        throw new Error(`Failed to get LinkedIn messages: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.messages || [];
+      console.log('Fetched messages from Unipile:', data);
+      return data.items || data.messages || [];
     } catch (error) {
       console.error('Error getting LinkedIn messages:', error);
       return [];

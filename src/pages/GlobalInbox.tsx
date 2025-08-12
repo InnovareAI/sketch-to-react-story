@@ -99,50 +99,8 @@ export default function GlobalInbox() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        console.log('No authenticated user, showing demo messages');
-        // Show demo messages when not authenticated
-        const demoMessages: Message[] = [
-          {
-            id: 1,
-            from: 'Sarah Johnson',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-            company: 'TechCorp Inc.',
-            channel: 'linkedin',
-            subject: 'Re: Partnership Opportunity',
-            preview: 'Thank you for reaching out! I\'d love to discuss the partnership opportunity further. Are you available for a call next week?',
-            time: '10:30 AM',
-            read: false,
-            priority: 'high',
-            tags: ['LinkedIn', 'Partnership']
-          },
-          {
-            id: 2,
-            from: 'Michael Chen',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael',
-            company: 'Innovation Labs',
-            channel: 'linkedin',
-            subject: 'Following up on our conversation',
-            preview: 'It was great connecting at the conference. As discussed, I\'m attaching our product deck for your review.',
-            time: '9:15 AM',
-            read: true,
-            priority: 'medium',
-            tags: ['LinkedIn', 'Follow-up']
-          },
-          {
-            id: 3,
-            from: 'Emma Wilson',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
-            company: 'Growth Partners',
-            channel: 'linkedin',
-            subject: 'Introduction from John Smith',
-            preview: 'John mentioned you might be interested in our new automation platform. Would love to show you a quick demo.',
-            time: 'Yesterday',
-            read: false,
-            priority: 'normal',
-            tags: ['LinkedIn', 'Introduction']
-          }
-        ];
-        setMessages(demoMessages);
+        console.log('No authenticated user');
+        setMessages([]);
         setLoading(false);
         return;
       }
@@ -197,23 +155,7 @@ export default function GlobalInbox() {
       setMessages(inboxMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
-      // Show demo messages on error
-      const fallbackMessages: Message[] = [
-        {
-          id: 1,
-          from: 'Demo User',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Demo',
-          company: 'Demo Company',
-          channel: 'linkedin',
-          subject: 'Demo Message',
-          preview: 'This is a demo message. Connect your LinkedIn account and sync to see real messages.',
-          time: 'Now',
-          read: false,
-          priority: 'normal',
-          tags: ['Demo']
-        }
-      ];
-      setMessages(fallbackMessages);
+      setMessages([]);
     } finally {
       setLoading(false);
     }

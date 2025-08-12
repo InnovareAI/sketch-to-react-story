@@ -82,16 +82,73 @@ export class LinkedInDataSync {
     try {
       console.log('Syncing data for account:', account.name || account.account_name);
       
-      // For demo purposes, create sample data
-      await this.createSampleMessages(account);
-      await this.createSampleContacts(account);
+      // Check if we have Unipile credentials
+      const hasUnipileKey = import.meta.env.VITE_UNIPILE_API_KEY && 
+                           import.meta.env.VITE_UNIPILE_API_KEY !== '' &&
+                           import.meta.env.VITE_UNIPILE_API_KEY !== 'demo_key_not_configured';
       
-      // In production, you would call Unipile API here:
-      // const messages = await unipileService.getMessages(account.unipileAccountId);
-      // const contacts = await unipileService.getContacts(account.unipileAccountId);
+      if (hasUnipileKey && account.unipileAccountId) {
+        // Use real Unipile API to sync messages
+        console.log('Using Unipile API to sync real LinkedIn data...');
+        await unipileService.syncMessagesToDatabase(account.id);
+        
+        // Also sync contacts if available
+        try {
+          const contacts = await unipileService.getContacts(account.unipileAccountId);
+          await this.syncContactsToDatabase(contacts);
+        } catch (error) {
+          console.error('Error syncing contacts:', error);
+        }
+      } else {
+        // Fall back to sample data if no Unipile connection
+        console.log('No Unipile API key configured, creating sample data...');
+        await this.createSampleMessages(account);
+        await this.createSampleContacts(account);
+      }
       
     } catch (error) {
       console.error('Error syncing account data:', error);
+      // Fall back to sample data on error
+      await this.createSampleMessages(account);
+      await this.createSampleContacts(account);
+    }
+  }
+
+  /**
+   * Sync real contacts to database
+   */
+  private async syncContactsToDatabase(contacts: any[]): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      for (const contact of contacts) {
+        await supabase
+          .from('contacts')
+          .upsert({
+            user_id: user.id,
+            name: contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),
+            email: contact.email || '',
+            company: contact.company || '',
+            role: contact.title || '',
+            linkedin_url: contact.profile_url || '',
+            phone: contact.phone || '',
+            location: contact.location || '',
+            status: 'active',
+            metadata: {
+              avatar: contact.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${contact.name}`,
+              linkedin_id: contact.id,
+              connection_degree: contact.connection_degree,
+              mutual_connections: contact.mutual_connections_count
+            },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+      }
+      
+      console.log(`Synced ${contacts.length} contacts to database`);
+    } catch (error) {
+      console.error('Error syncing contacts to database:', error);
     }
   }
 
