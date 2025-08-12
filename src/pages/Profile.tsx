@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,31 @@ export default function Profile() {
     avatar_url: ''
   });
 
+  // Load profile from database on mount
+  useEffect(() => {
+    loadProfileFromDB();
+  }, []);
+
+  const loadProfileFromDB = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profileUser.id)
+        .single();
+      
+      if (data && !error) {
+        setProfileUser(prev => ({
+          ...prev,
+          full_name: data.full_name || prev.full_name,
+          email: data.email || prev.email
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
+
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [privacySettings, setPrivacySettings] = useState({
@@ -68,28 +94,60 @@ export default function Profile() {
   const handleSave = async () => {
     try {
       console.log('Saving form data:', formData);
-      console.log('Current profileUser:', profileUser);
       
-      // Update the profile user data with form data
+      // Save to Supabase database
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.full_name,
+          email: formData.email
+        })
+        .eq('id', profileUser.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Database error:', error);
+        // If database save fails, try upsert (create if doesn't exist)
+        const { data: upsertData, error: upsertError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: profileUser.id,
+            full_name: formData.full_name,
+            email: formData.email,
+            role: profileUser.role,
+            workspace_id: profileUser.workspace_id
+          })
+          .select()
+          .single();
+          
+        if (upsertError) {
+          throw upsertError;
+        }
+        console.log('Profile created/updated:', upsertData);
+      } else {
+        console.log('Profile updated:', data);
+      }
+      
+      // Update local state
       const updatedUser = {
         ...profileUser,
         full_name: formData.full_name,
         email: formData.email
       };
       
-      console.log('Updated user:', updatedUser);
       setProfileUser(updatedUser);
       
       toast({
         title: "Profile Updated",
-        description: "Your profile has been updated successfully."
+        description: "Your profile has been saved to the database successfully."
       });
       setIsEditing(false);
     } catch (error) {
       console.error('Save error:', error);
       toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
+        title: "Error", 
+        description: "Failed to save profile to database. Please try again.",
         variant: "destructive"
       });
     }
