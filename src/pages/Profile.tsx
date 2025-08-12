@@ -68,6 +68,7 @@ export default function Profile() {
   const handleSave = async () => {
     try {
       console.log('Saving form data:', formData);
+      console.log('Current profileUser:', profileUser);
       
       // Update the profile user data with form data
       const updatedUser = {
