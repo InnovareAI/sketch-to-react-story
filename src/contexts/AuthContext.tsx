@@ -236,29 +236,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
+      console.log('🔐 AuthContext signIn called:', { email });
       setLoading(true);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
+        console.error('❌ Supabase auth error:', error);
         return { error };
       }
 
+      console.log('✅ Supabase auth successful:', { userId: data.user?.id });
+
       if (data.user) {
         setAuthUser(data.user);
+        console.log('🔄 Loading user profile...');
+        
         const profile = await loadUserProfile(data.user.id);
         setUser(profile);
         
         if (!profile) {
+          console.error('❌ Profile loading failed, signing out user');
           await supabase.auth.signOut();
           return { error: new Error('Failed to load user profile') };
         }
+        
+        console.log('✅ Profile loaded successfully:', profile.email);
       }
 
       return { error: null };
     } catch (error: any) {
+      console.error('💥 Unexpected error in signIn:', error);
       return { error };
     } finally {
       setLoading(false);

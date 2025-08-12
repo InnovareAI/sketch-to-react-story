@@ -33,6 +33,14 @@ export default function UserLogin() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { signIn, loading, isAuthenticated } = useAuth();
+  
+  // Debug: Log component mount and auth state
+  console.log('🔍 UserLogin component rendered:', { 
+    loading, 
+    isAuthenticated,
+    email: email.length > 0,
+    password: password.length > 0 
+  });
 
   useEffect(() => {
     // Load saved email if exists
@@ -51,110 +59,67 @@ export default function UserLogin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    console.log('🔍 Login attempt started:', { email: email.toLowerCase(), hasPassword: !!password });
+
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
 
     try {
-      // First check if user exists in our users table
-      const { data: userRecord, error: userError } = await supabase
-        .from('users')
-        .select('id, email, status')
-        .eq('email', email.toLowerCase())
-        .single();
-
-      if (userError || !userRecord) {
-        setError('Email not found. Please check your email address or contact your workspace administrator.');
+      console.log('🔍 Attempting direct sign in with AuthContext...');
+      
+      // Try direct login first with AuthContext
+      const { error: signInError } = await signIn(email.toLowerCase(), password);
+      
+      if (!signInError) {
+        console.log('✅ Login successful!');
+        
+        // Save credentials if requested
+        if (rememberMe) {
+          localStorage.setItem('user_email', email);
+        } else {
+          localStorage.removeItem('user_email');
+        }
+        
+        toast.success('Welcome back!');
+        navigate('/dashboard');
         return;
       }
-
-      if (userRecord.status === 'invited') {
-        // User exists but hasn't completed signup - check if auth user already exists
-        try {
-          // First try normal login in case auth user already exists
-          const { error: loginError } = await signIn(email.toLowerCase(), password);
-          
-          if (!loginError) {
-            // Login successful, update status to active
-            await supabase
-              .from('users')
-              .update({ status: 'active' })
-              .eq('id', userRecord.id);
-
-            toast.success('Welcome back to SAM AI!');
-            navigate('/dashboard');
-            return;
-          }
-
-          // If login failed, try creating new auth account
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: email.toLowerCase(),
-            password: password,
-            options: {
-              data: {
-                user_id: userRecord.id
-              }
-            }
-          });
-
-          if (signUpError) {
-            // If signup also fails, it might be because user already exists
-            // Try login one more time with better error handling
-            console.error('Signup error:', signUpError);
-            
-            if (signUpError.message?.includes('already registered')) {
-              // User exists in auth, try login again
-              const { error: retryLoginError } = await signIn(email.toLowerCase(), password);
-              if (!retryLoginError) {
-                await supabase
-                  .from('users')
-                  .update({ status: 'active' })
-                  .eq('id', userRecord.id);
-
-                toast.success('Welcome back to SAM AI!');
-                navigate('/dashboard');
-                return;
-              }
-              setError('Invalid password. Please check your password and try again.');
-            } else {
-              setError('Failed to create account. Please try again or contact support.');
-            }
-            return;
-          }
-
-          // Update user status to active
-          await supabase
-            .from('users')
-            .update({ status: 'active' })
-            .eq('id', userRecord.id);
-
-          toast.success('Account created! Welcome to SAM AI!');
-          navigate('/dashboard');
-          return;
-        } catch (signupError) {
-          console.error('Account creation error:', signupError);
-          setError('Authentication failed. Please check your password and try again.');
+      
+      console.error('❌ Direct login failed:', signInError);
+      
+      // If direct login fails, check if it's a profiles table issue
+      if (signInError.message?.includes('Failed to load user profile')) {
+        console.log('🔍 Profile loading issue - checking if profile exists...');
+        
+        // Try to get current auth user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          console.log('✅ Auth user exists, profile creation may be needed');
+          // The AuthContext should handle profile creation, so just refresh
+          window.location.reload();
           return;
         }
       }
-
-      // Normal login flow
-      const { error } = await signIn(email.toLowerCase(), password);
       
-      if (error) {
-        throw error;
-      }
-
-      // Save credentials if requested
-      if (rememberMe) {
-        localStorage.setItem('user_email', email);
+      // Handle different error types
+      if (signInError.message?.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials.');
+      } else if (signInError.message?.includes('Failed to fetch')) {
+        setError('Connection failed. Please check your internet connection and try again.');
+      } else if (signInError.message?.includes('Email not confirmed')) {
+        setError('Please check your email and click the confirmation link before signing in.');
       } else {
-        localStorage.removeItem('user_email');
+        console.error('🔍 Full error details:', signInError);
+        setError(signInError.message || 'Login failed. Please try again.');
       }
-
-      toast.success('Welcome back!');
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error('Login error details:', error);
       
-      let errorMessage = 'Login failed. Please try again.';
+    } catch (error: any) {
+      console.error('💥 Unexpected login error:', error);
+      
+      let errorMessage = 'An unexpected error occurred. Please try again.';
       
       if (error.message?.includes('Invalid login credentials')) {
         errorMessage = 'Invalid email or password. Please check your credentials.';
@@ -235,7 +200,10 @@ export default function UserLogin() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={(e) => {
+            console.log('🚀 Form submitted!');
+            handleLogin(e);
+          }} className="space-y-4">
             {error && (
               <Alert className="border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4 text-red-600" />
@@ -251,7 +219,10 @@ export default function UserLogin() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  console.log('📧 Email changed:', e.target.value);
+                  setEmail(e.target.value);
+                }}
                 placeholder="your.email@company.com"
                 required
                 disabled={loading}
@@ -266,7 +237,10 @@ export default function UserLogin() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    console.log('🔐 Password changed, length:', e.target.value.length);
+                    setPassword(e.target.value);
+                  }}
                   placeholder="Enter your password"
                   required
                   disabled={loading}
@@ -305,6 +279,15 @@ export default function UserLogin() {
               type="submit"
               className="w-full"
               disabled={loading}
+              onClick={(e) => {
+                console.log('🖱️ Sign In button clicked!');
+                console.log('Button disabled?', loading);
+                console.log('Form data:', { email, password: password ? `${password.length} chars` : 'empty' });
+                console.log('Event details:', e.type, e.currentTarget.tagName);
+                
+                // Don't prevent default here - let form submission happen
+                // e.preventDefault() would block the form onSubmit
+              }}
             >
               {loading ? (
                 <>
@@ -328,6 +311,20 @@ export default function UserLogin() {
               className="text-sm text-gray-600 hover:text-gray-800 disabled:text-gray-400"
             >
               {resetLoading ? 'Sending...' : 'Forgot your password?'}
+            </button>
+            
+            {/* Debug button */}
+            <button
+              type="button"
+              onClick={() => {
+                console.log('🔧 Debug button clicked');
+                console.log('Current form state:', { email, password, loading });
+                setEmail('test-1755018100009@example.com');
+                setPassword('TestPassword123!');
+              }}
+              className="block text-xs text-blue-500 hover:text-blue-700 mx-auto"
+            >
+              [Debug] Fill test credentials
             </button>
           </div>
 
