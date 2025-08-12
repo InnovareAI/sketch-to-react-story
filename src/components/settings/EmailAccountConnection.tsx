@@ -228,15 +228,7 @@ export function EmailAccountConnection() {
                 </CardDescription>
               </div>
             </div>
-            {accounts.length === 0 ? (
-              <Button 
-                onClick={() => setShowConnectionDialog(true)}
-                disabled={isConnecting}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Connect Email Account
-              </Button>
-            ) : (
+            {accounts.length > 0 && (
               <Badge className="bg-green-100 text-green-800 px-3 py-1">
                 <CheckCircle className="h-4 w-4 mr-1" />
                 {accounts.length} Account{accounts.length > 1 ? 's' : ''} Connected
