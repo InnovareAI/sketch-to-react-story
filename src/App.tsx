@@ -21,7 +21,7 @@ import Members from "./pages/Members";
 import Roles from "./pages/Roles";
 import WorkspaceSettings from "./pages/WorkspaceSettings";
 import Agent from "./pages/Agent";
-import LinkedInIntegration from "./pages/LinkedInIntegration";
+import LinkedInIntegrationSimple from "./pages/LinkedInIntegrationSimple";
 import CampaignSetup from "./pages/CampaignSetup";
 import AgentFullScreen from "./pages/AgentFullScreen";
 import UsersPermissions from "./pages/admin/UsersPermissions";
@@ -89,8 +89,8 @@ const App: React.FC = () => {
                 <Route path="roles" element={<Roles />} />
                 <Route path="workspace-settings" element={<WorkspaceSettings />} />
                 <Route path="profile" element={<Profile />} />
-                <Route path="linkedin" element={<LinkedInIntegration />} />
-                <Route path="linkedin-integration" element={<LinkedInIntegration />} />
+                <Route path="linkedin" element={<LinkedInIntegrationSimple />} />
+                <Route path="linkedin-integration" element={<LinkedInIntegrationSimple />} />
                 <Route 
                   path="users-permissions" 
                   element={<UsersPermissions />} 
