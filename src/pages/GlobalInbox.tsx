@@ -254,64 +254,8 @@ export default function GlobalInbox() {
     }
   };
 
-  const demoMessages = [
-    {
-      id: 1,
-      from: "Jennifer Fleming",
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b829?w=400&h=400&fit=crop&crop=face",
-      company: "TechCorp Solutions",
-      channel: "email",
-      subject: "Re: Enterprise Solution Demo",
-      preview: "Thank you for the comprehensive demo yesterday. I'm impressed with the scalability features...",
-      time: "2 hours ago",
-      read: false,
-      priority: "high",
-      labels: ["Hot Lead", "Demo Follow-up"],
-      fullMessage: "Thank you for the comprehensive demo yesterday. I'm impressed with the scalability features and would like to discuss pricing for our enterprise deployment. Could we schedule a follow-up call this week to go over the implementation timeline?"
-    },
-    {
-      id: 2,
-      from: "David Chen",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-      company: "InnovateLabs",
-      channel: "linkedin",
-      subject: "LinkedIn connection accepted",
-      preview: "Thanks for connecting! I'm interested in learning more about your automation platform...",
-      time: "4 hours ago",
-      read: true,
-      priority: "medium",
-      labels: ["LinkedIn", "New Connection"],
-      fullMessage: "Thanks for connecting! I'm interested in learning more about your automation platform. We're looking to streamline our development workflow and your solution seems like a great fit. Would you be available for a brief call next week?"
-    },
-    {
-      id: 3,
-      from: "Sarah Williams",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
-      company: "GrowthMetrics",
-      channel: "whatsapp",
-      subject: "WhatsApp message",
-      preview: "Hi! Saw your post about marketing automation. Very relevant to our current challenges...",
-      time: "6 hours ago",
-      read: false,
-      priority: "medium",
-      labels: ["WhatsApp", "Marketing"],
-      fullMessage: "Hi! Saw your post about marketing automation. Very relevant to our current challenges. We're evaluating different solutions for our marketing team. Would love to learn more about your platform and see if it's a good fit for our needs."
-    },
-    {
-      id: 4,
-      from: "Michael Rodriguez",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-      company: "ScaleCorp",
-      channel: "email",
-      subject: "Meeting Request - Operations Automation",
-      preview: "Following up on our conversation at the trade show. Would like to schedule a formal presentation...",
-      time: "1 day ago",
-      read: true,
-      priority: "low",
-      labels: ["Meeting Request", "Trade Show"],
-      fullMessage: "Following up on our conversation at the trade show. Would like to schedule a formal presentation for our operations team. We're particularly interested in the workflow automation features. Are you available for a demo next Wednesday?"
-    }
-  ];
+  // Empty messages array - will be populated from database
+  const demoMessages: Message[] = [];
 
   const getChannelIcon = (channel: string) => {
     switch (channel) {
