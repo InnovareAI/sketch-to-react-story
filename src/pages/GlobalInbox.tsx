@@ -109,16 +109,30 @@ export default function GlobalInbox() {
       
       console.log('✅ User:', user.email);
 
-      // Load conversations with messages from database
+      // Get workspace_id from profiles
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('workspace_id')
+        .eq('id', user.id)
+        .single();
+        
+      if (!profile?.workspace_id) {
+        console.log('❌ No workspace found for user');
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Load conversations with messages from inbox tables
       const { data: conversations, error } = await supabase
-        .from('conversations')
+        .from('inbox_conversations')
         .select(`
           *,
-          conversation_messages (
+          inbox_messages (
             *
           )
         `)
-        .eq('user_id', user.id)
+        .eq('workspace_id', profile.workspace_id)
         .order('last_message_at', { ascending: false });
 
       if (error) {
@@ -138,7 +152,7 @@ export default function GlobalInbox() {
 
       // Transform conversations into inbox messages format
       const inboxMessages: Message[] = conversations.map((conv, index) => {
-        const latestMessage = conv.conversation_messages?.[conv.conversation_messages.length - 1];
+        const latestMessage = conv.inbox_messages?.[conv.inbox_messages.length - 1];
         return {
           id: index + 1,
           from: conv.participant_name || 'Unknown',

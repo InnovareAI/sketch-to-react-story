@@ -126,13 +126,25 @@ export async function syncLinkedInMessages() {
 async function saveMessagesToDatabase(messages: any[], userId: string) {
   console.log(`💾 Saving ${messages.length} messages to database`);
   
+  // Get workspace_id from profiles
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('workspace_id')
+    .eq('id', userId)
+    .single();
+    
+  if (!profile?.workspace_id) {
+    console.error('No workspace found for user');
+    return;
+  }
+  
   for (const msg of messages) {
     try {
-      // Create conversation
+      // Create conversation in inbox_conversations
       const { data: conversation } = await supabase
-        .from('conversations')
+        .from('inbox_conversations')
         .upsert({
-          user_id: userId,
+          workspace_id: profile.workspace_id,
           platform: 'linkedin',
           platform_conversation_id: msg.conversation_id || msg.thread_id || msg.id,
           participant_name: msg.from?.name || msg.sender?.name || 'LinkedIn Contact',
@@ -147,9 +159,9 @@ async function saveMessagesToDatabase(messages: any[], userId: string) {
         .single();
       
       if (conversation) {
-        // Create message
+        // Create message in inbox_messages
         await supabase
-          .from('conversation_messages')
+          .from('inbox_messages')
           .upsert({
             conversation_id: conversation.id,
             platform_message_id: msg.id,
@@ -172,6 +184,18 @@ async function saveMessagesToDatabase(messages: any[], userId: string) {
 
 async function createSampleData(userId: string) {
   console.log('📝 Creating sample LinkedIn messages...');
+  
+  // Get workspace_id from profiles
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('workspace_id')
+    .eq('id', userId)
+    .single();
+    
+  if (!profile?.workspace_id) {
+    console.error('No workspace found for user');
+    return;
+  }
   
   const sampleMessages = [
     {
@@ -208,11 +232,11 @@ async function createSampleData(userId: string) {
   
   for (const msg of sampleMessages) {
     try {
-      // Create conversation
+      // Create conversation in inbox_conversations
       const { data: conversation } = await supabase
-        .from('conversations')
+        .from('inbox_conversations')
         .upsert({
-          user_id: userId,
+          workspace_id: profile.workspace_id,
           platform: 'linkedin',
           platform_conversation_id: `linkedin_${Date.now()}_${Math.random()}`,
           participant_name: msg.from,
@@ -226,9 +250,9 @@ async function createSampleData(userId: string) {
         .single();
       
       if (conversation) {
-        // Create message
+        // Create message in inbox_messages
         await supabase
-          .from('conversation_messages')
+          .from('inbox_messages')
           .insert({
             conversation_id: conversation.id,
             role: 'assistant',
