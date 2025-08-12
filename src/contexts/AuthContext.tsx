@@ -18,6 +18,7 @@ export interface UserProfile {
   workspace_name: string;
   workspace_plan: string;
   status: string;
+  avatar_url?: string | null;
 }
 
 export interface AuthContextType {
@@ -115,6 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           full_name,
           role,
           workspace_id,
+          avatar_url,
           workspaces:workspace_id (
             id,
             name,
@@ -144,7 +146,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         workspace_id: newProfile.workspace_id,
         workspace_name: newProfile.workspaces?.name || 'Unknown Workspace',
         workspace_plan: newProfile.workspaces?.subscription_tier || 'free',
-        status: 'active'
+        status: 'active',
+        avatar_url: newProfile.avatar_url
       };
 
       return userProfile;
@@ -166,6 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           full_name,
           role,
           workspace_id,
+          avatar_url,
           workspaces:workspace_id (
             id,
             name,
@@ -212,7 +216,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         workspace_id: userRecord.workspace_id,
         workspace_name: userRecord.workspaces?.name || 'Unknown Workspace',
         workspace_plan: userRecord.workspaces?.subscription_tier || 'free',
-        status: 'active'
+        status: 'active',
+        avatar_url: userRecord.avatar_url
       };
 
       return userProfile;

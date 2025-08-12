@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -27,21 +29,10 @@ import {
 } from "lucide-react";
 
 export default function Profile() {
-  // Static user data - no authentication
-  const [profileUser, setProfileUser] = useState({
-    id: '3d0cafd6-57cd-4bcb-a105-af7784038105',
-    email: 'tl@innovareai.com',
-    full_name: 'TL InnovareAI',
-    role: 'admin',
-    workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-    workspace_name: 'InnovareAI',
-    workspace_plan: 'pro',
-    status: 'active',
-    avatar_url: ''
-  });
-
+  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [privacySettings, setPrivacySettings] = useState({
     emailNotifications: true,
     profileVisibility: true,
@@ -50,30 +41,73 @@ export default function Profile() {
   });
 
   const [formData, setFormData] = useState({
-    full_name: profileUser.full_name || '',
-    email: profileUser.email || ''
+    full_name: '',
+    email: ''
   });
 
+  // Initialize form data when user loads
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        full_name: user.full_name || '',
+        email: user.email || ''
+      });
+    }
+  }, [user]);
+
   const handleSave = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "No user found. Please try logging in again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.full_name.trim()) {
+      toast({
+        title: "Error",
+        description: "Full name is required.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    
     try {
-      // Update the profile user data
-      setProfileUser(prev => ({
-        ...prev,
-        full_name: formData.full_name,
-        email: formData.email
-      }));
+      // Update profile in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.full_name.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        throw error;
+      }
+
+      // Refresh user data from context
+      await refreshUser();
       
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully."
       });
       setIsEditing(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Profile update error:', error);
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,6 +119,20 @@ export default function Profile() {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Show loading or redirect if no user
+  if (!user) {
+    return (
+      <div className="flex-1 bg-gray-50">
+        <main className="flex-1 p-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading Profile...</h1>
+            <p className="text-gray-600">Please wait while we load your profile information.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const handleChangePassword = () => {
     const newPassword = prompt("Enter new password:");
@@ -103,8 +151,10 @@ export default function Profile() {
   };
 
   const handleDownloadData = () => {
+    if (!user) return;
+    
     const userData = {
-      profile: profileUser,
+      profile: user,
       exportDate: new Date().toISOString(),
       dataType: "Profile Export"
     };
@@ -151,7 +201,16 @@ export default function Profile() {
               <p className="text-gray-600">Manage your account settings and preferences</p>
             </div>
             <Button
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                if (isEditing) {
+                  // Reset form data when cancelling
+                  setFormData({
+                    full_name: user?.full_name || '',
+                    email: user?.email || ''
+                  });
+                }
+                setIsEditing(!isEditing);
+              }}
               variant={isEditing ? "outline" : "default"}
             >
               <Settings className="h-4 w-4 mr-2" />
@@ -167,9 +226,9 @@ export default function Profile() {
                   <div className="flex justify-center mb-4">
                     <div className="relative">
                       <Avatar className="h-24 w-24">
-                        <AvatarImage src={profileUser.avatar_url} />
+                        <AvatarImage src={user.avatar_url || undefined} />
                         <AvatarFallback className="text-lg">
-                          {getInitials(profileUser.full_name)}
+                          {getInitials(user.full_name || user.email)}
                         </AvatarFallback>
                       </Avatar>
                       {isEditing && (
@@ -183,31 +242,31 @@ export default function Profile() {
                       )}
                     </div>
                   </div>
-                  <CardTitle className="text-xl">{profileUser.full_name}</CardTitle>
-                  <CardDescription>{profileUser.email}</CardDescription>
+                  <CardTitle className="text-xl">{user.full_name || 'No name set'}</CardTitle>
+                  <CardDescription>{user.email}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Role</span>
                     <Badge variant="secondary" className="capitalize">
                       <Shield className="h-3 w-3 mr-1" />
-                      {profileUser.role}
+                      {user.role}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Workspace</span>
                     <Badge variant="outline">
                       <Building2 className="h-3 w-3 mr-1" />
-                      {profileUser.workspace_name}
+                      {user.workspace_name}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Plan</span>
                     <Badge 
-                      variant={profileUser.workspace_plan === 'pro' ? 'default' : 'secondary'}
+                      variant={user.workspace_plan === 'pro' ? 'default' : 'secondary'}
                       className="capitalize"
                     >
-                      {profileUser.workspace_plan}
+                      {user.workspace_plan}
                     </Badge>
                   </div>
                 </CardContent>
@@ -240,7 +299,7 @@ export default function Profile() {
                         />
                       ) : (
                         <div className="p-2 bg-gray-50 rounded border">
-                          {profileUser.full_name}
+                          {user.full_name || 'No name set'}
                         </div>
                       )}
                     </div>
@@ -249,7 +308,7 @@ export default function Profile() {
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-gray-400" />
                         <div className="p-2 bg-gray-50 rounded border flex-1">
-                          {profileUser.email}
+                          {user.email}
                         </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
@@ -262,12 +321,18 @@ export default function Profile() {
                     <>
                       <Separator />
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsEditing(false)}>
+                        <Button variant="outline" onClick={() => {
+                          setFormData({
+                            full_name: user?.full_name || '',
+                            email: user?.email || ''
+                          });
+                          setIsEditing(false);
+                        }}>
                           Cancel
                         </Button>
-                        <Button onClick={handleSave}>
+                        <Button onClick={handleSave} disabled={loading}>
                           <Save className="h-4 w-4 mr-2" />
-                          Save Changes
+                          {loading ? 'Saving...' : 'Save Changes'}
                         </Button>
                       </div>
                     </>
@@ -291,26 +356,26 @@ export default function Profile() {
                     <div>
                       <Label>Workspace Name</Label>
                       <div className="p-2 bg-gray-50 rounded border">
-                        {profileUser.workspace_name}
+                        {user.workspace_name}
                       </div>
                     </div>
                     <div>
                       <Label>Subscription Plan</Label>
                       <div className="p-2 bg-gray-50 rounded border capitalize">
-                        {profileUser.workspace_plan}
+                        {user.workspace_plan}
                       </div>
                     </div>
                     <div>
                       <Label>Your Role</Label>
                       <div className="p-2 bg-gray-50 rounded border capitalize">
-                        {profileUser.role}
+                        {user.role}
                       </div>
                     </div>
                     <div>
                       <Label>Status</Label>
                       <div className="p-2 bg-gray-50 rounded border">
                         <Badge variant="outline" className="text-green-600">
-                          Active
+                          {user.status}
                         </Badge>
                       </div>
                     </div>
