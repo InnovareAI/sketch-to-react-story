@@ -223,12 +223,14 @@ export default function WorkspaceSettings() {
   };
 
   return (
-    <div className="flex-1 bg-gray-50">
-      <main className="flex-1 p-8">
+    <div className="flex-1 bg-white">
+      <main className="flex-1 p-8 bg-white">
         <div className="max-w-7xl mx-auto">
               <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
-                  <Settings className="h-8 w-8 text-primary" />
+                  <div className="p-2 rounded-lg bg-blue-50">
+                    <Settings className="h-8 w-8 text-blue-600" />
+                  </div>
                   <h1 className="text-3xl font-bold text-gray-900">Workspace Settings</h1>
                 </div>
                 <p className="text-gray-600">Manage your workspace configuration and integrations</p>
@@ -236,7 +238,7 @@ export default function WorkspaceSettings() {
               
               <div className="space-y-6">
                 <Tabs defaultValue="provisioning" className="w-full">
-                  <TabsList className="grid w-full grid-cols-10">
+                  <TabsList className="grid w-full grid-cols-10 bg-gray-100/50 p-1">
                     <TabsTrigger value="provisioning">Auto Setup</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="llm">AI Models</TabsTrigger>
