@@ -266,16 +266,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('AuthContext signIn called:', { email });
       setLoading(true);
       
-      // Check for bypass user
-      if (email.toLowerCase() === 'tl@innovareai.com') {
-        console.log('Using bypass authentication for tl@innovareai.com');
+      // Check for bypass users
+      const bypassEmails = ['tl@innovareai.com', 'cl@innovareai.com'];
+      if (bypassEmails.includes(email.toLowerCase())) {
+        console.log(`Using bypass authentication for ${email}`);
         
-        // Create mock user profile
+        // Create mock user profile based on email
+        const isCL = email.toLowerCase() === 'cl@innovareai.com';
         const mockUser: UserProfile = {
-          id: 'bypass-user-tl',
-          email: 'tl@innovareai.com',
-          full_name: 'Thorsten Linz',
-          role: 'owner',
+          id: isCL ? 'bypass-user-cl' : 'bypass-user-tl',
+          email: email.toLowerCase(),
+          full_name: isCL ? 'CL InnovareAI' : 'Thorsten Linz',
+          role: isCL ? 'admin' : 'owner',
           workspace_id: 'bypass-workspace-id',
           workspace_name: 'InnovareAI',
           workspace_plan: 'pro',
@@ -285,9 +287,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Create mock auth user
         const mockAuthUser = {
-          id: 'bypass-user-tl',
-          email: 'tl@innovareai.com',
-          user_metadata: { full_name: 'TL InnovareAI' }
+          id: mockUser.id,
+          email: mockUser.email,
+          user_metadata: { full_name: mockUser.full_name }
         } as User;
         
         // Store bypass data in localStorage
