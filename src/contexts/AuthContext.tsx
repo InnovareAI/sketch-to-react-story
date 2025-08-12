@@ -274,7 +274,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const mockUser: UserProfile = {
           id: 'bypass-user-tl',
           email: 'tl@innovareai.com',
-          full_name: 'TL InnovareAI',
+          full_name: 'Thorsten Linz',
           role: 'owner',
           workspace_id: 'bypass-workspace-id',
           workspace_name: 'InnovareAI',

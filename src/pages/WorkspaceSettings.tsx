@@ -115,6 +115,55 @@ export default function WorkspaceSettings() {
     setLoading(true);
     
     try {
+      // Check if this is a bypass user
+      const isBypassUser = localStorage.getItem('bypass_auth') === 'true';
+      
+      if (isBypassUser) {
+        // For bypass user, update localStorage
+        const bypassUserData = localStorage.getItem('bypass_user');
+        if (bypassUserData) {
+          const userData = JSON.parse(bypassUserData);
+          userData.workspace_name = finalWorkspaceName;
+          localStorage.setItem('bypass_user', JSON.stringify(userData));
+          
+          // Also save workspace data in localStorage
+          const bypassWorkspaceData = {
+            id: 'bypass-workspace-id',
+            name: finalWorkspaceName,
+            settings: {
+              website: workspaceData.website.trim(),
+              industry: workspaceData.industry,
+              companySize: workspaceData.companySize,
+              description: workspaceData.description.trim(),
+              phone: workspaceData.phone.trim(),
+              email: workspaceData.email.trim(),
+              address: workspaceData.address.trim(),
+              timezone: workspaceData.timezone
+            }
+          };
+          localStorage.setItem('bypass_workspace', JSON.stringify(bypassWorkspaceData));
+          
+          // Simulate save delay
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Refresh workspace data to update the UI
+          await refreshWorkspace();
+          
+          // Refresh user data to update workspace name in the UI
+          if (user) {
+            await refreshUser();
+          }
+          
+          toast({
+            title: "Company Profile Saved",
+            description: "Your company profile information has been updated successfully.",
+          });
+          
+          setLoading(false);
+          return;
+        }
+      }
+      
       console.log('Saving workspace data:', workspaceId, 'with name:', finalWorkspaceName);
       
       const updateData = {

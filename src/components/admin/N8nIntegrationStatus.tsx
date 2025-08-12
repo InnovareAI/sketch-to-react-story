@@ -22,6 +22,7 @@ import {
   Settings,
   Database
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { n8nIntegrationManager } from '@/services/n8n-integration-manager';
 import type { N8nIntegrationStatus } from '@/services/n8n-integration-manager';
 
@@ -91,10 +92,10 @@ export function N8nIntegrationStatus() {
         }
       );
       
-      alert(`Workflow triggered successfully! Execution ID: ${result.executionId || 'N/A'}`);
+      toast.success(`Workflow triggered successfully! Execution ID: ${result.executionId || 'N/A'}`);
       loadIntegrationStatus(); // Refresh status
     } catch (error) {
-      alert(`Workflow trigger failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Workflow trigger failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

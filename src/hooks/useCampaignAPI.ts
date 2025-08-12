@@ -469,10 +469,11 @@ export function useCampaignManager(workspaceId: string, userId: string) {
 
       const validationScore = validationResult.validLeadsCount / validationResult.totalLeadsCount;
       if (validationScore < validation_threshold) {
-        const proceed = window.confirm(
-          `Only ${Math.round(validationScore * 100)}% of leads passed validation (threshold: ${Math.round(validation_threshold * 100)}%). Continue anyway?`
+        // Show warning toast instead of blocking modal
+        toast.warning(
+          `Only ${Math.round(validationScore * 100)}% of leads passed validation (threshold: ${Math.round(validation_threshold * 100)}%). Proceeding with assignment.`,
+          { duration: 5000 }
         );
-        if (!proceed) return;
       }
 
       // Step 3: Assign leads

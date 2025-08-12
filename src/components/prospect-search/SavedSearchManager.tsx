@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -254,19 +255,17 @@ export function SavedSearchManager({
 
   // Delete search configuration
   const handleDeleteSearch = async (config: SearchConfiguration) => {
-    if (confirm(`Are you sure you want to delete "${config.name}"?`)) {
-      try {
-        await deleteConfiguration(config.id);
-        
-        // Remove from favorites if present
-        if (favorites.includes(config.id)) {
-          saveFavorites(favorites.filter(id => id !== config.id));
-        }
-        
-        toast.success('Search configuration deleted');
-      } catch (error) {
-        toast.error('Failed to delete search configuration');
+    try {
+      await deleteConfiguration(config.id);
+      
+      // Remove from favorites if present
+      if (favorites.includes(config.id)) {
+        saveFavorites(favorites.filter(id => id !== config.id));
       }
+      
+      toast.success('Search configuration deleted');
+    } catch (error) {
+      toast.error('Failed to delete search configuration');
     }
   };
 
@@ -523,13 +522,34 @@ export function SavedSearchManager({
                             Duplicate
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteSearch(config)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Search Configuration</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{config.name}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteSearch(config)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

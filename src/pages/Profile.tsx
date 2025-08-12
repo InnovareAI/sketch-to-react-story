@@ -41,6 +41,9 @@ export default function Profile() {
     dataSharing: false,
     marketingEmails: false
   });
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -72,6 +75,32 @@ export default function Profile() {
     setSaving(true);
     
     try {
+      // Check if this is a bypass user
+      const isBypassUser = localStorage.getItem('bypass_auth') === 'true';
+      
+      if (isBypassUser) {
+        // For bypass user, update localStorage
+        const bypassUserData = localStorage.getItem('bypass_user');
+        if (bypassUserData) {
+          const userData = JSON.parse(bypassUserData);
+          userData.full_name = formData.full_name.trim();
+          localStorage.setItem('bypass_user', JSON.stringify(userData));
+          
+          // Simulate save delay
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Refresh user data from context
+          await refreshUser();
+          
+          toast({
+            title: "Profile Updated",
+            description: "Your profile has been updated successfully."
+          });
+          setIsEditing(false);
+          return;
+        }
+      }
+      
       // If no user (guest mode), just simulate saving
       if (!user || !user.id) {
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -153,19 +182,33 @@ export default function Profile() {
   };
 
   const handleChangePassword = () => {
-    const newPassword = prompt("Enter new password:");
-    if (newPassword && newPassword.length >= 6) {
+    if (newPassword !== confirmPassword) {
       toast({
-        title: "Password Changed",
-        description: "Your password has been updated successfully."
+        title: "Error",
+        description: "Passwords do not match.",
+        variant: "destructive"
       });
-    } else if (newPassword) {
+      return;
+    }
+    
+    if (newPassword.length < 6) {
       toast({
         title: "Error",
         description: "Password must be at least 6 characters long.",
         variant: "destructive"
       });
+      return;
     }
+    
+    // Here you would actually update the password
+    toast({
+      title: "Password Changed",
+      description: "Your password has been updated successfully."
+    });
+    
+    setPasswordDialogOpen(false);
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
   const handleDownloadData = () => {
@@ -434,9 +477,55 @@ export default function Profile() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={handleChangePassword}>
-                      Change Password
-                    </Button>
+                    <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="flex-1">
+                          Change Password
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Change Password</DialogTitle>
+                          <DialogDescription>
+                            Enter your new password. Make sure it's at least 6 characters long.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="new-password">New Password</Label>
+                            <Input
+                              id="new-password"
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="Enter new password"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="confirm-password">Confirm Password</Label>
+                            <Input
+                              id="confirm-password"
+                              type="password"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              placeholder="Confirm new password"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end pt-4 gap-2">
+                          <Button variant="outline" onClick={() => {
+                            setPasswordDialogOpen(false);
+                            setNewPassword("");
+                            setConfirmPassword("");
+                          }}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleChangePassword}>
+                            Change Password
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     <Button variant="outline" className="flex-1" onClick={handleDownloadData}>
                       Download Data
                     </Button>

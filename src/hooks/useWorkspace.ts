@@ -33,7 +33,23 @@ export function useWorkspace() {
       
       // Handle bypass user workspace
       if (workspaceId === 'bypass-workspace-id') {
-        console.log('🚀 Using mock workspace for bypass user');
+        console.log('🚀 Loading workspace for bypass user');
+        
+        // Check if there's saved workspace data in localStorage
+        const savedWorkspaceData = localStorage.getItem('bypass_workspace');
+        if (savedWorkspaceData) {
+          try {
+            const parsedWorkspace = JSON.parse(savedWorkspaceData);
+            console.log('Loaded saved workspace data:', parsedWorkspace);
+            setWorkspace(parsedWorkspace);
+            setLoading(false);
+            return;
+          } catch (error) {
+            console.error('Error parsing saved workspace data:', error);
+          }
+        }
+        
+        // Default mock workspace if no saved data
         const mockWorkspace: WorkspaceData = {
           id: 'bypass-workspace-id',
           name: 'InnovareAI',
