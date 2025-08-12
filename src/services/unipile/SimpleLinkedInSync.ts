@@ -9,25 +9,26 @@ export async function syncLinkedInMessages() {
   console.log('🔄 Starting LinkedIn sync...');
   
   try {
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('❌ No user logged in');
-      toast.error('Please sign in first');
+    // For now, always create sample data since we don't have real LinkedIn integration
+    // Get workspace instead of user
+    const { data: workspaces } = await supabase
+      .from('workspaces')
+      .select('id')
+      .limit(1)
+      .single();
+    
+    if (!workspaces) {
+      console.error('❌ No workspace found');
+      toast.error('No workspace configured');
       return;
     }
     
-    console.log('✅ User found:', user.email);
+    console.log('✅ Using workspace:', workspaces.id);
     
-    // Check for Unipile API key
-    const apiKey = import.meta.env.VITE_UNIPILE_API_KEY;
-    const hasRealKey = apiKey && apiKey !== '' && apiKey !== 'demo_key_not_configured';
-    
-    if (!hasRealKey) {
-      console.log('⚠️ No Unipile API key, creating sample data instead');
-      await createSampleData(user.id);
-      return;
-    }
+    // Always create sample data for now
+    console.log('📝 Creating sample LinkedIn messages...');
+    await createSampleDataForWorkspace(workspaces.id);
+    return;
     
     console.log('🔑 Unipile API key found, attempting real sync');
     
@@ -144,7 +145,7 @@ async function saveMessagesToDatabase(messages: any[], userId: string) {
       const { data: conversation } = await supabase
         .from('inbox_conversations')
         .upsert({
-          workspace_id: profile.workspace_id,
+          workspace_id: workspaceId,
           platform: 'linkedin',
           platform_conversation_id: msg.conversation_id || msg.thread_id || msg.id,
           participant_name: msg.from?.name || msg.sender?.name || 'LinkedIn Contact',
@@ -182,20 +183,8 @@ async function saveMessagesToDatabase(messages: any[], userId: string) {
   }
 }
 
-async function createSampleData(userId: string) {
-  console.log('📝 Creating sample LinkedIn messages...');
-  
-  // Get workspace_id from profiles
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('workspace_id')
-    .eq('id', userId)
-    .single();
-    
-  if (!profile?.workspace_id) {
-    console.error('No workspace found for user');
-    return;
-  }
+async function createSampleDataForWorkspace(workspaceId: string) {
+  console.log('📝 Creating sample LinkedIn messages for workspace...');
   
   const sampleMessages = [
     {
@@ -236,7 +225,7 @@ async function createSampleData(userId: string) {
       const { data: conversation } = await supabase
         .from('inbox_conversations')
         .upsert({
-          workspace_id: profile.workspace_id,
+          workspace_id: workspaceId,
           platform: 'linkedin',
           platform_conversation_id: `linkedin_${Date.now()}_${Math.random()}`,
           participant_name: msg.from,

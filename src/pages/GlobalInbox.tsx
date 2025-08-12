@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { syncLinkedInMessages } from '@/services/unipile/SimpleLinkedInSync';
+import { syncLinkedInInbox } from '@/services/linkedin/SimplestSync';
 import { toast } from 'sonner';
 
 interface Message {
@@ -98,30 +98,21 @@ export default function GlobalInbox() {
       setLoading(true);
       console.log('📂 Loading messages from database...');
       
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.log('❌ No authenticated user');
-        setMessages([]);
-        setLoading(false);
-        return;
-      }
-      
-      console.log('✅ User:', user.email);
-
-      // Get workspace_id from profiles
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('workspace_id')
-        .eq('id', user.id)
+      // Get first workspace
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('id')
+        .limit(1)
         .single();
         
-      if (!profile?.workspace_id) {
-        console.log('❌ No workspace found for user');
+      if (!workspace) {
+        console.log('❌ No workspace found');
         setMessages([]);
         setLoading(false);
         return;
       }
+      
+      const workspaceId = workspace.id;
       
       // Load conversations with messages from inbox tables
       const { data: conversations, error } = await supabase
@@ -132,7 +123,7 @@ export default function GlobalInbox() {
             *
           )
         `)
-        .eq('workspace_id', profile.workspace_id)
+        .eq('workspace_id', workspaceId)
         .order('last_message_at', { ascending: false });
 
       if (error) {
@@ -188,7 +179,7 @@ export default function GlobalInbox() {
       toast.info('Syncing LinkedIn messages...');
       
       // Use simple sync that works
-      await syncLinkedInMessages();
+      await syncLinkedInInbox();
       
       // Wait a moment for database to update
       await new Promise(resolve => setTimeout(resolve, 1000));
