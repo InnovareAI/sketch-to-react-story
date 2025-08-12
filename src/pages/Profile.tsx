@@ -8,6 +8,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { 
   User,
   Building2,
@@ -34,6 +43,12 @@ export default function Profile() {
 
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [privacySettings, setPrivacySettings] = useState({
+    emailNotifications: true,
+    profileVisibility: true,
+    dataSharing: false,
+    marketingEmails: false
+  });
 
   const [formData, setFormData] = useState({
     full_name: profileUser.full_name || '',
@@ -127,17 +142,17 @@ export default function Profile() {
     });
   };
 
-  const handlePrivacySettings = () => {
-    const settings = [
-      "✓ Email notifications enabled",
-      "✓ Profile visibility: Public", 
-      "✓ Data sharing: Disabled",
-      "✓ Marketing emails: Disabled"
-    ];
-    
+  const handlePrivacySettingChange = (setting: keyof typeof privacySettings) => {
+    setPrivacySettings(prev => ({
+      ...prev,
+      [setting]: !prev[setting]
+    }));
+  };
+
+  const savePrivacySettings = () => {
     toast({
-      title: "Privacy Settings",
-      description: settings.join("\n")
+      title: "Privacy Settings Saved",
+      description: "Your privacy preferences have been updated successfully."
     });
   };
 
@@ -335,9 +350,76 @@ export default function Profile() {
                     <Button variant="outline" className="flex-1" onClick={handleDownloadData}>
                       Download Data
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={handlePrivacySettings}>
-                      Privacy Settings
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="flex-1">
+                          Privacy Settings
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Privacy Settings</DialogTitle>
+                          <DialogDescription>
+                            Manage your privacy preferences and data sharing settings.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-6">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label className="text-base">Email Notifications</Label>
+                              <div className="text-sm text-muted-foreground">
+                                Receive email notifications about account activity
+                              </div>
+                            </div>
+                            <Switch
+                              checked={privacySettings.emailNotifications}
+                              onCheckedChange={() => handlePrivacySettingChange('emailNotifications')}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label className="text-base">Profile Visibility</Label>
+                              <div className="text-sm text-muted-foreground">
+                                Make your profile visible to other users
+                              </div>
+                            </div>
+                            <Switch
+                              checked={privacySettings.profileVisibility}
+                              onCheckedChange={() => handlePrivacySettingChange('profileVisibility')}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label className="text-base">Data Sharing</Label>
+                              <div className="text-sm text-muted-foreground">
+                                Share anonymized data for product improvement
+                              </div>
+                            </div>
+                            <Switch
+                              checked={privacySettings.dataSharing}
+                              onCheckedChange={() => handlePrivacySettingChange('dataSharing')}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label className="text-base">Marketing Emails</Label>
+                              <div className="text-sm text-muted-foreground">
+                                Receive emails about new features and updates
+                              </div>
+                            </div>
+                            <Switch
+                              checked={privacySettings.marketingEmails}
+                              onCheckedChange={() => handlePrivacySettingChange('marketingEmails')}
+                            />
+                          </div>
+                          <div className="flex justify-end pt-4">
+                            <Button onClick={savePrivacySettings}>
+                              Save Settings
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </CardContent>
               </Card>
