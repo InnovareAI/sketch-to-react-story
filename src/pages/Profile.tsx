@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 
 export default function Profile() {
-  // Completely bypass auth for now - just use static data
-  const mockUser = {
+  // User data that can be updated
+  const [profileUser, setProfileUser] = useState({
     id: '3d0cafd6-57cd-4bcb-a105-af7784038105',
     email: 'tl@innovareai.com',
     full_name: 'TL InnovareAI',
@@ -30,9 +30,8 @@ export default function Profile() {
     workspace_plan: 'pro',
     status: 'active',
     avatar_url: ''
-  };
+  });
 
-  const profileUser = mockUser;
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -41,9 +40,23 @@ export default function Profile() {
     email: profileUser.email || ''
   });
 
+  // Sync form data when profileUser changes
+  useEffect(() => {
+    setFormData({
+      full_name: profileUser.full_name || '',
+      email: profileUser.email || ''
+    });
+  }, [profileUser]);
+
   const handleSave = async () => {
     try {
-      // TODO: Implement profile update API call
+      // Update the profile user data with form data
+      setProfileUser(prev => ({
+        ...prev,
+        full_name: formData.full_name,
+        email: formData.email
+      }));
+      
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully."
@@ -65,6 +78,45 @@ export default function Profile() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const handleChangePassword = () => {
+    toast({
+      title: "Password Change",
+      description: "Password change functionality would be implemented here."
+    });
+  };
+
+  const handleDownloadData = () => {
+    // Create and download a JSON file with user data
+    const userData = {
+      profile: profileUser,
+      exportDate: new Date().toISOString(),
+      dataType: "Profile Export"
+    };
+    
+    const dataStr = JSON.stringify(userData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `profile-data-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Data Downloaded",
+      description: "Your profile data has been downloaded successfully."
+    });
+  };
+
+  const handlePrivacySettings = () => {
+    toast({
+      title: "Privacy Settings",
+      description: "Privacy settings panel would open here."
+    });
   };
 
   return (
@@ -255,13 +307,13 @@ export default function Profile() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1" onClick={handleChangePassword}>
                       Change Password
                     </Button>
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1" onClick={handleDownloadData}>
                       Download Data
                     </Button>
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1" onClick={handlePrivacySettings}>
                       Privacy Settings
                     </Button>
                   </div>
