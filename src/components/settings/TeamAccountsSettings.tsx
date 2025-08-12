@@ -31,12 +31,13 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
-import { TeamAccountsService, LinkedInAccount, EmailAccount } from "@/services/accounts/TeamAccountsService";
+import { TeamAccountsSupabaseService, LinkedInAccount, EmailAccount, TeamMember } from "@/services/accounts/TeamAccountsSupabaseService";
 
 export function TeamAccountsSettings() {
-  const [teamAccounts] = useState(() => TeamAccountsService.getInstance());
+  const [teamAccounts] = useState(() => TeamAccountsSupabaseService.getInstance());
   const [linkedInAccounts, setLinkedInAccounts] = useState<LinkedInAccount[]>([]);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [accountHealth, setAccountHealth] = useState<any | null>(null);
   const [showCredentials, setShowCredentials] = useState<Record<string, boolean>>({});
   
@@ -67,10 +68,18 @@ export function TeamAccountsSettings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadAccounts = useCallback(() => {
-    setLinkedInAccounts(teamAccounts.getLinkedInAccounts());
-    setEmailAccounts(teamAccounts.getEmailAccounts());
-    setAccountHealth(teamAccounts.getAccountHealth());
+  const loadAccounts = useCallback(async () => {
+    const [members, linkedIn, email, health] = await Promise.all([
+      teamAccounts.getTeamMembers(),
+      teamAccounts.getLinkedInAccounts(),
+      teamAccounts.getEmailAccounts(),
+      teamAccounts.getAccountHealth()
+    ]);
+    
+    setTeamMembers(members);
+    setLinkedInAccounts(linkedIn);
+    setEmailAccounts(email);
+    setAccountHealth(health);
   }, [teamAccounts]);
 
   const addLinkedIn = async () => {
