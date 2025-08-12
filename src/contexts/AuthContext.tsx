@@ -263,12 +263,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
-      console.log('🔐 AuthContext signIn called:', { email });
+      console.log('AuthContext signIn called:', { email });
       setLoading(true);
       
       // Check for bypass user
       if (email.toLowerCase() === 'tl@innovareai.com') {
-        console.log('🚀 Using bypass authentication for tl@innovareai.com');
+        console.log('Using bypass authentication for tl@innovareai.com');
         
         // Create mock user profile
         const mockUser: UserProfile = {
@@ -290,8 +290,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           user_metadata: { full_name: 'TL InnovareAI' }
         } as User;
         
+        // Store bypass data in localStorage
+        localStorage.setItem('bypass_user', JSON.stringify(mockUser));
+        localStorage.setItem('bypass_auth', 'true');
+        
         setAuthUser(mockAuthUser);
         setUser(mockUser);
+        
+        console.log('Bypass authentication successful:', mockUser.email);
         
         return { error: null };
       }
@@ -439,7 +445,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signOut,
     refreshUser,
-    isAuthenticated: !!authUser && !!user // Return true only if both auth user and profile exist
+    isAuthenticated: !!user // Return true if user profile exists (covers both bypass and regular auth)
   };
 
   return (

@@ -34,13 +34,8 @@ export default function UserLogin() {
   const navigate = useNavigate();
   const { signIn, loading, isAuthenticated } = useAuth();
   
-  // Debug: Log component mount and auth state
-  console.log('🔍 UserLogin component rendered:', { 
-    loading, 
-    isAuthenticated,
-    email: email.length > 0,
-    password: password.length > 0 
-  });
+  // Component mount debug info
+  console.log('UserLogin mounted:', { loading, isAuthenticated });
 
   useEffect(() => {
     // Load saved email if exists
@@ -60,47 +55,41 @@ export default function UserLogin() {
     e.preventDefault();
     setError('');
     
-    console.log('🔍 Login attempt started:', { email: email.toLowerCase(), hasPassword: !!password });
+    console.log('Login attempt:', { email: email.toLowerCase() });
 
     if (!email || !password) {
       setError('Please enter both email and password.');
       return;
     }
 
-    // Check for bypass user
+    // Check for bypass user - use AuthContext signIn instead of manual handling
     if (email.toLowerCase() === 'tl@innovareai.com') {
-      console.log('🚀 Bypass authentication for tl@innovareai.com');
+      console.log('Using bypass authentication for tl@innovareai.com');
       
-      // Create mock user data
-      const mockUser = {
-        id: 'bypass-user-tl',
-        email: 'tl@innovareai.com',
-        full_name: 'TL InnovareAI',
-        role: 'owner',
-        workspace_id: 'bypass-workspace-id',
-        workspace_name: 'InnovareAI',
-        workspace_plan: 'pro',
-        status: 'active',
-        avatar_url: null
-      };
-      
-      // Store bypass user data in localStorage
-      localStorage.setItem('bypass_user', JSON.stringify(mockUser));
-      localStorage.setItem('bypass_auth', 'true');
-      
-      // Save credentials if requested
-      if (rememberMe) {
-        localStorage.setItem('user_email', email);
-      } else {
-        localStorage.removeItem('user_email');
+      try {
+        // Use AuthContext signIn which handles bypass logic
+        const { error: signInError } = await signIn(email.toLowerCase(), password);
+        
+        if (!signInError) {
+          // Save credentials if requested
+          if (rememberMe) {
+            localStorage.setItem('user_email', email);
+          } else {
+            localStorage.removeItem('user_email');
+          }
+          
+          toast.success('Welcome back, TL!');
+          navigate('/dashboard');
+          return;
+        } else {
+          setError(signInError.message || 'Bypass authentication failed');
+          return;
+        }
+      } catch (error: any) {
+        console.error('Bypass authentication error:', error);
+        setError('Bypass authentication failed');
+        return;
       }
-      
-      // Simulate brief loading before redirect
-      setTimeout(() => {
-        toast.success('Welcome back, TL!');
-        navigate('/dashboard');
-      }, 500);
-      return;
     }
 
     try {
