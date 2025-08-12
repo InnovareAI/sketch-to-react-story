@@ -71,18 +71,40 @@ export function useRealTemplates() {
       }
 
       // Get message templates (reusable messages)
-      const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          campaigns (
-            name,
-            type
-          )
-        `)
+      // First, try to get templates from a dedicated templates table if it exists
+      let messages = null;
+      let messagesError = null;
+
+      // Check if templates table exists and try to use it first
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('templates')
+        .select('*')
         .eq('workspace_id', workspaceId)
-        .not('subject', 'is', null) // Only messages with subjects (templates)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      // If templates table doesn't exist or is empty, use messages table
+      if (templatesError || !templatesData || templatesData.length === 0) {
+        const { data: messagesData, error: msgError } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            campaigns (
+              name,
+              type
+            )
+          `)
+          .eq('workspace_id', workspaceId)
+          .or('status.eq.template,and(not.subject.is.null,status.ne.failed)') // Templates or messages with subjects
+          .order('created_at', { ascending: false });
+        
+        messages = messagesData;
+        messagesError = msgError;
+      } else {
+        // Use templates from dedicated table
+        messages = templatesData;
+        messagesError = templatesError;
+      }
 
       if (messagesError) throw messagesError;
 

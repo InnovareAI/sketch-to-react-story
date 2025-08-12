@@ -19,8 +19,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Inbox, 
   Mail, 
@@ -56,6 +60,20 @@ export default function GlobalInbox() {
   const [activeTab, setActiveTab] = useState("all");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [replyModalOpen, setReplyModalOpen] = useState(false);
+  const [forwardModalOpen, setForwardModalOpen] = useState(false);
+  const [scheduleMeetingModalOpen, setScheduleMeetingModalOpen] = useState(false);
+  
+  // Form states
+  const [replyContent, setReplyContent] = useState("");
+  const [forwardTo, setForwardTo] = useState("");
+  const [forwardContent, setForwardContent] = useState("");
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [meetingDate, setMeetingDate] = useState("");
+  const [meetingTime, setMeetingTime] = useState("");
+  const [meetingDescription, setMeetingDescription] = useState("");
 
   useEffect(() => {
     loadMessages();
@@ -94,6 +112,145 @@ export default function GlobalInbox() {
       setMessages(demoMessages);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Action handlers
+  const handleReply = () => {
+    if (selectedMessage) {
+      setReplyContent(`Dear ${selectedMessage.from},\n\nThank you for your message. `);
+      setReplyModalOpen(true);
+    }
+  };
+
+  const handleForward = () => {
+    if (selectedMessage) {
+      setForwardContent(`---------- Forwarded message ----------\nFrom: ${selectedMessage.from}\nSubject: ${selectedMessage.subject}\n\n${selectedMessage.preview}`);
+      setForwardModalOpen(true);
+    }
+  };
+
+  const handleScheduleMeeting = () => {
+    if (selectedMessage) {
+      setMeetingTitle(`Meeting with ${selectedMessage.from}`);
+      setMeetingDescription(`Following up on: ${selectedMessage.subject}`);
+      setScheduleMeetingModalOpen(true);
+    }
+  };
+
+  const sendReply = async () => {
+    try {
+      if (!selectedMessage) return;
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get current user's profile
+      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+      
+      // Insert reply message into database
+      const { error } = await supabase
+        .from('conversation_messages')
+        .insert({
+          conversation_id: selectedMessage.id, // Use message ID as conversation ID for simplicity
+          role: 'user',
+          content: replyContent,
+          metadata: {
+            type: 'reply',
+            original_message_id: selectedMessage.id,
+            recipient: selectedMessage.from
+          }
+        });
+
+      if (error) throw error;
+
+      setReplyModalOpen(false);
+      setReplyContent("");
+      
+      // Refresh messages
+      loadMessages();
+    } catch (error) {
+      console.error('Error sending reply:', error);
+    }
+  };
+
+  const sendForward = async () => {
+    try {
+      if (!selectedMessage) return;
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+      
+      // Insert forward message into database
+      const { error } = await supabase
+        .from('conversation_messages')
+        .insert({
+          conversation_id: `forward_${Date.now()}`, // Generate unique conversation ID
+          role: 'user',
+          content: forwardContent,
+          metadata: {
+            type: 'forward',
+            original_message_id: selectedMessage.id,
+            recipient: forwardTo
+          }
+        });
+
+      if (error) throw error;
+
+      setForwardModalOpen(false);
+      setForwardTo("");
+      setForwardContent("");
+      
+      // Refresh messages
+      loadMessages();
+    } catch (error) {
+      console.error('Error forwarding message:', error);
+    }
+  };
+
+  const scheduleMeeting = async () => {
+    try {
+      if (!selectedMessage) return;
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+      
+      // Insert meeting schedule into database
+      const { error } = await supabase
+        .from('conversation_messages')
+        .insert({
+          conversation_id: `meeting_${Date.now()}`, // Generate unique conversation ID
+          role: 'system',
+          content: `Meeting scheduled: ${meetingTitle}`,
+          metadata: {
+            type: 'meeting_schedule',
+            original_message_id: selectedMessage.id,
+            meeting_details: {
+              title: meetingTitle,
+              date: meetingDate,
+              time: meetingTime,
+              description: meetingDescription,
+              attendee: selectedMessage.from
+            }
+          }
+        });
+
+      if (error) throw error;
+
+      setScheduleMeetingModalOpen(false);
+      setMeetingTitle("");
+      setMeetingDate("");
+      setMeetingTime("");
+      setMeetingDescription("");
+      
+      // Refresh messages
+      loadMessages();
+    } catch (error) {
+      console.error('Error scheduling meeting:', error);
     }
   };
 
@@ -461,15 +618,15 @@ export default function GlobalInbox() {
                 </div>
 
                 <div className="flex gap-2 pt-4 border-t">
-                  <Button>
+                  <Button onClick={handleReply}>
                     <Reply className="h-4 w-4 mr-2" />
                     Reply
                   </Button>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={handleForward}>
                     <Forward className="h-4 w-4 mr-2" />
                     Forward
                   </Button>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={handleScheduleMeeting}>
                     <Calendar className="h-4 w-4 mr-2" />
                     Schedule Meeting
                   </Button>
@@ -491,6 +648,140 @@ export default function GlobalInbox() {
       </div>
         </div>
       </main>
+
+      {/* Reply Modal */}
+      <Dialog open={replyModalOpen} onOpenChange={setReplyModalOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Reply to {selectedMessage?.from}</DialogTitle>
+            <DialogDescription>
+              Compose your reply to: {selectedMessage?.subject}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="reply-content">Message</Label>
+              <Textarea
+                id="reply-content"
+                placeholder="Type your reply here..."
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                className="min-h-[150px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReplyModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={sendReply} disabled={!replyContent.trim()}>
+              Send Reply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Forward Modal */}
+      <Dialog open={forwardModalOpen} onOpenChange={setForwardModalOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Forward Message</DialogTitle>
+            <DialogDescription>
+              Forward this message to another contact
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="forward-to">Forward To</Label>
+              <Input
+                id="forward-to"
+                placeholder="Enter email address"
+                value={forwardTo}
+                onChange={(e) => setForwardTo(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="forward-content">Message</Label>
+              <Textarea
+                id="forward-content"
+                placeholder="Add a note (optional)"
+                value={forwardContent}
+                onChange={(e) => setForwardContent(e.target.value)}
+                className="min-h-[150px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setForwardModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={sendForward} disabled={!forwardTo.trim()}>
+              Forward Message
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Meeting Modal */}
+      <Dialog open={scheduleMeetingModalOpen} onOpenChange={setScheduleMeetingModalOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Schedule Meeting</DialogTitle>
+            <DialogDescription>
+              Schedule a meeting with {selectedMessage?.from}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="meeting-title">Meeting Title</Label>
+              <Input
+                id="meeting-title"
+                placeholder="Enter meeting title"
+                value={meetingTitle}
+                onChange={(e) => setMeetingTitle(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="meeting-date">Date</Label>
+                <Input
+                  id="meeting-date"
+                  type="date"
+                  value={meetingDate}
+                  onChange={(e) => setMeetingDate(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="meeting-time">Time</Label>
+                <Input
+                  id="meeting-time"
+                  type="time"
+                  value={meetingTime}
+                  onChange={(e) => setMeetingTime(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="meeting-description">Description</Label>
+              <Textarea
+                id="meeting-description"
+                placeholder="Meeting agenda and details..."
+                value={meetingDescription}
+                onChange={(e) => setMeetingDescription(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleMeetingModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={scheduleMeeting} disabled={!meetingTitle.trim() || !meetingDate || !meetingTime}>
+              Schedule Meeting
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

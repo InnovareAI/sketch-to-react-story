@@ -209,14 +209,29 @@ export default function Campaigns() {
                 ) : (
                   campaigns.map((campaign) => {
                     // Use real campaign data with performance metrics
-                    const performanceMetrics = campaign.performance_metrics || {
-                      sent: 0,
-                      delivered: 0,
-                      opened: 0,
-                      clicked: 0,
-                      replied: 0,
-                      converted: 0
-                    };
+                    // Handle both JSONB performance_metrics field and potential legacy fields
+                    const performanceMetrics = (() => {
+                      if (campaign.performance_metrics && typeof campaign.performance_metrics === 'object') {
+                        return {
+                          sent: campaign.performance_metrics.sent || 0,
+                          delivered: campaign.performance_metrics.delivered || 0,
+                          opened: campaign.performance_metrics.opened || 0,
+                          clicked: campaign.performance_metrics.clicked || 0,
+                          replied: campaign.performance_metrics.replied || 0,
+                          converted: campaign.performance_metrics.converted || 0
+                        };
+                      }
+                      
+                      // Fallback to default values if no metrics found
+                      return {
+                        sent: 0,
+                        delivered: 0,
+                        opened: 0,
+                        clicked: 0,
+                        replied: 0,
+                        converted: 0
+                      };
+                    })();
 
                     const responseRate = performanceMetrics.sent > 0 
                       ? ((performanceMetrics.replied / performanceMetrics.sent) * 100)

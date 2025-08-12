@@ -7,10 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from '@/integrations/supabase/client';
 import { ContactsListView } from "@/components/contacts/ContactsListView";
 import { 
   Mail, 
@@ -48,15 +49,142 @@ import {
 export default function Contacts() {
   const [viewMode, setViewMode] = useState<"list" | "tile">("list");
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const { contacts, stats, loading, error, refreshData, createContact, updateContact, deleteContact } = useRealContacts();
 
   const handleEditContact = (contact: Contact) => {
     setEditingContact({ ...contact });
   };
 
-  const handleSaveContact = () => {
-    console.log("Saving contact:", editingContact);
-    setEditingContact(null);
+  const handleSaveContact = async () => {
+    if (!editingContact) return;
+    
+    try {
+      await updateContact(editingContact.id, {
+        first_name: editingContact.first_name,
+        last_name: editingContact.last_name,
+        email: editingContact.email,
+        title: editingContact.title,
+        phone: editingContact.phone,
+        linkedin_url: editingContact.linkedin_url,
+        department: editingContact.department,
+      });
+      setEditingContact(null);
+      refreshData();
+    } catch (error) {
+      console.error('Error updating contact:', error);
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      // Create CSV content
+      const csvHeaders = ['First Name', 'Last Name', 'Email', 'Title', 'Department', 'Phone', 'LinkedIn URL'];
+      const csvRows = contacts.map(contact => [
+        contact.first_name || '',
+        contact.last_name || '',
+        contact.email || '',
+        contact.title || '',
+        contact.department || '',
+        contact.phone || '',
+        contact.linkedin_url || ''
+      ]);
+      
+      const csvContent = [
+        csvHeaders.join(','),
+        ...csvRows.map(row => row.map(field => `"${field}"`).join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `contacts_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting contacts:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImport = () => {
+    setImportModalOpen(true);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+    }
+  };
+
+  const processImport = async () => {
+    if (!csvFile) return;
+    
+    setImporting(true);
+    try {
+      const text = await csvFile.text();
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      
+      // Parse CSV and create contacts
+      const newContacts = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        if (values.length >= 3 && values[2]) { // Must have email
+          const contact = {
+            first_name: values[0] || null,
+            last_name: values[1] || null,
+            email: values[2],
+            title: values[3] || null,
+            department: values[4] || null,
+            phone: values[5] || null,
+            linkedin_url: values[6] || null,
+          };
+          newContacts.push(contact);
+        }
+      }
+
+      // Get current workspace ID
+      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+      const workspaceId = userProfile.workspace_id;
+
+      if (!workspaceId) {
+        throw new Error('No workspace found');
+      }
+
+      // Insert contacts into database
+      for (const contact of newContacts) {
+        try {
+          await supabase
+            .from('contacts')
+            .insert({
+              ...contact,
+              workspace_id: workspaceId,
+            });
+        } catch (error) {
+          console.error('Error inserting contact:', error);
+          // Continue with other contacts even if one fails
+        }
+      }
+
+      setImportModalOpen(false);
+      setCsvFile(null);
+      refreshData();
+    } catch (error) {
+      console.error('Error importing contacts:', error);
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -71,15 +199,11 @@ export default function Contacts() {
                 <p className="text-gray-600 mt-1">Manage your LinkedIn contacts and prospects</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleExport} disabled={exporting || contacts.length === 0}>
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  {exporting ? 'Exporting...' : 'Export'}
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleImport}>
                   <Upload className="h-4 w-4 mr-2" />
                   Import
                 </Button>
@@ -319,6 +443,125 @@ export default function Contacts() {
           </div>
         </div>
       </main>
+
+      {/* Import CSV Modal */}
+      <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Import Contacts</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file to import your contacts. The file should have columns: First Name, Last Name, Email, Title, Department, Phone, LinkedIn URL.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="csv-file">CSV File</Label>
+              <Input
+                id="csv-file"
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+              />
+              {csvFile && (
+                <p className="text-sm text-green-600">
+                  Selected: {csvFile.name}
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImportModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={processImport} disabled={!csvFile || importing}>
+              {importing ? 'Importing...' : 'Import Contacts'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Contact Modal */}
+      {editingContact && (
+        <Dialog open={!!editingContact} onOpenChange={() => setEditingContact(null)}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Contact</DialogTitle>
+              <DialogDescription>
+                Update the contact information below.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="first-name">First Name</Label>
+                  <Input
+                    id="first-name"
+                    value={editingContact.first_name || ''}
+                    onChange={(e) => setEditingContact({ ...editingContact, first_name: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="last-name">Last Name</Label>
+                  <Input
+                    id="last-name"
+                    value={editingContact.last_name || ''}
+                    onChange={(e) => setEditingContact({ ...editingContact, last_name: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={editingContact.email}
+                  onChange={(e) => setEditingContact({ ...editingContact, email: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="title">Job Title</Label>
+                <Input
+                  id="title"
+                  value={editingContact.title || ''}
+                  onChange={(e) => setEditingContact({ ...editingContact, title: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="department">Department</Label>
+                <Input
+                  id="department"
+                  value={editingContact.department || ''}
+                  onChange={(e) => setEditingContact({ ...editingContact, department: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={editingContact.phone || ''}
+                  onChange={(e) => setEditingContact({ ...editingContact, phone: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="linkedin">LinkedIn URL</Label>
+                <Input
+                  id="linkedin"
+                  value={editingContact.linkedin_url || ''}
+                  onChange={(e) => setEditingContact({ ...editingContact, linkedin_url: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingContact(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveContact}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
