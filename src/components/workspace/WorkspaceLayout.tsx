@@ -3,7 +3,7 @@
  * Main layout wrapper for authenticated workspace users
  */
 
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
@@ -23,6 +23,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function WorkspaceLayout() {
   const { user, loading, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
