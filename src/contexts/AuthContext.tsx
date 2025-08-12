@@ -48,7 +48,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authUser, setAuthUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false); // Set to false to bypass authentication
+  const [loading, setLoading] = useState(true); // Start with loading true for proper auth check
 
   // Timeout to prevent infinite loading
   useEffect(() => {
@@ -278,11 +278,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Initialize auth state and listen for changes
   useEffect(() => {
-    // Skip authentication entirely
-    console.log('Authentication disabled: App will run without login requirements');
-    setLoading(false);
+    console.log('Initializing authentication system...');
     
-    // Still listen for auth changes in case user wants to login later
+    // Get initial session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          console.log('Found existing session for user:', session.user.id);
+          setAuthUser(session.user);
+          const profile = await loadUserProfile(session.user.id);
+          if (profile) {
+            setUser(profile);
+            console.log('User profile loaded successfully:', profile.email);
+          } else {
+            console.error('Failed to load user profile');
+          }
+        } else {
+          console.log('No existing session found');
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+    
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
@@ -313,7 +338,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signOut,
     refreshUser,
-    isAuthenticated: true // Always return true to bypass authentication
+    isAuthenticated: !!authUser && !!user // Return true only if both auth user and profile exist
   };
 
   return (

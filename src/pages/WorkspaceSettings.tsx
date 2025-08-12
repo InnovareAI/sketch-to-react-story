@@ -38,6 +38,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { LLMSettings } from "@/components/settings/LLMSettings";
 import { TeamAccountsSettings } from "@/components/settings/TeamAccountsSettings";
 import { LinkedInAccountConnection } from "@/components/settings/LinkedInAccountConnection";
@@ -45,7 +46,9 @@ import { LinkedInAccountConnection } from "@/components/settings/LinkedInAccount
 export default function WorkspaceSettings() {
   const { toast } = useToast();
   const { user, refreshUser } = useAuth();
+  const { workspace, workspaceId, refreshWorkspace } = useWorkspace();
   const [loading, setLoading] = useState(false);
+  
   const [workspaceData, setWorkspaceData] = useState({
     companyName: '',
     workspaceName: '',
@@ -59,45 +62,24 @@ export default function WorkspaceSettings() {
     timezone: 'UTC-5'
   });
 
-  // Load workspace data when component mounts
+  // Load workspace data when workspace changes
   useEffect(() => {
-    const loadWorkspaceData = async () => {
-      if (!user?.workspace_id) return;
-      
-      try {
-        const { data: workspace, error } = await supabase
-          .from('workspaces')
-          .select('*')
-          .eq('id', user.workspace_id)
-          .single();
-          
-        if (error) {
-          console.error('Error loading workspace:', error);
-          return;
-        }
-        
-        if (workspace) {
-          setWorkspaceData(prev => ({
-            ...prev,
-            companyName: workspace.name || '',
-            workspaceName: workspace.name || '',
-            website: workspace.settings?.website || '',
-            industry: workspace.settings?.industry || '',
-            companySize: workspace.settings?.companySize || '',
-            description: workspace.settings?.description || '',
-            phone: workspace.settings?.phone || '',
-            email: workspace.settings?.email || '',
-            address: workspace.settings?.address || '',
-            timezone: workspace.settings?.timezone || 'UTC-5'
-          }));
-        }
-      } catch (error) {
-        console.error('Error loading workspace data:', error);
-      }
-    };
-    
-    loadWorkspaceData();
-  }, [user?.workspace_id]);
+    if (workspace) {
+      console.log('Loading workspace data from hook:', workspace);
+      setWorkspaceData({
+        companyName: workspace.name || 'My Company',
+        workspaceName: workspace.name || 'My Company',
+        website: workspace.settings?.website || '',
+        industry: workspace.settings?.industry || '',
+        companySize: workspace.settings?.companySize || '',
+        description: workspace.settings?.description || '',
+        phone: workspace.settings?.phone || '',
+        email: workspace.settings?.email || '',
+        address: workspace.settings?.address || '',
+        timezone: workspace.settings?.timezone || 'UTC-5'
+      });
+    }
+  }, [workspace]);
 
   // Handle input changes
   const handleInputChange = (field: string, value: string) => {
@@ -118,15 +100,6 @@ export default function WorkspaceSettings() {
 
   // Handle Save Company Profile
   const handleSaveCompanyProfile = async () => {
-    if (!user?.workspace_id) {
-      toast({
-        title: "Error",
-        description: "No workspace found. Please try refreshing the page.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     if (!workspaceData.companyName.trim()) {
       toast({
         title: "Error",
@@ -142,32 +115,42 @@ export default function WorkspaceSettings() {
     setLoading(true);
     
     try {
-      const { error } = await supabase
+      console.log('Saving workspace data:', workspaceId, 'with name:', finalWorkspaceName);
+      
+      const updateData = {
+        name: finalWorkspaceName,
+        settings: {
+          website: workspaceData.website.trim(),
+          industry: workspaceData.industry,
+          companySize: workspaceData.companySize,
+          description: workspaceData.description.trim(),
+          phone: workspaceData.phone.trim(),
+          email: workspaceData.email.trim(),
+          address: workspaceData.address.trim(),
+          timezone: workspaceData.timezone
+        },
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
         .from('workspaces')
-        .update({
-          name: finalWorkspaceName,
-          settings: {
-            website: workspaceData.website.trim(),
-            industry: workspaceData.industry,
-            companySize: workspaceData.companySize,
-            description: workspaceData.description.trim(),
-            phone: workspaceData.phone.trim(),
-            email: workspaceData.email.trim(),
-            address: workspaceData.address.trim(),
-            timezone: workspaceData.timezone
-          },
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.workspace_id);
+        .update(updateData)
+        .eq('id', workspaceId)
+        .select();
         
-      console.log('Updating workspace:', user.workspace_id, 'with name:', finalWorkspaceName);
+      console.log('Update result:', { data, error });
         
       if (error) {
         throw error;
       }
       
-      // Refresh user data to update workspace name in the UI
-      await refreshUser();
+      // Refresh workspace data to update the UI
+      await refreshWorkspace();
+      
+      // Refresh user data to update workspace name in the UI (if authenticated)
+      if (user) {
+        await refreshUser();
+      }
       
       toast({
         title: "Company Profile Saved",

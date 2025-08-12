@@ -14,23 +14,57 @@ import {
   UserCheck,
   Building2,
   Bell,
-  Linkedin
+  Linkedin,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useEffect } from 'react';
 
 export default function WorkspaceLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser, loading: authLoading, signOut } = useAuth();
+  const { user: authUser, loading: authLoading, signOut, isAuthenticated } = useAuth();
+  const { workspace } = useWorkspace();
 
-  // Use authUser if available, otherwise use defaults for display
-  const user = authUser || {
-    full_name: 'Guest User',
-    workspace_name: 'InnovareAI',
-    workspace_plan: 'pro',
-    role: 'admin'
+  // Handle authentication check with proper loading state
+  useEffect(() => {
+    // Don't redirect while still loading
+    if (authLoading) return;
+    
+    // If not authenticated and not loading, redirect to login
+    if (!isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
+      navigate('/login', { replace: true });
+      return;
+    }
+    
+    console.log('User authenticated:', authUser?.email);
+  }, [isAuthenticated, authLoading, navigate, authUser]);
+
+  // Show loading screen while auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Use authUser (we know it exists due to isAuthenticated check)
+  const user = {
+    ...authUser!,
+    workspace_name: workspace?.name || authUser!.workspace_name || 'My Company'
   };
 
   const handleSignOut = async () => {
@@ -181,20 +215,22 @@ export default function WorkspaceLayout() {
             {/* User profile section */}
             <div className="flex items-center space-x-4">
               <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  onClick={handleSignOut} 
-                  size="sm"
-                  className={cn(
-                    "px-3 py-2 rounded-xl transition-all",
-                    isConversational
-                      ? "text-gray-300 hover:text-white hover:bg-red-900/20 hover:border-red-500/50"
-                      : "text-gray-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
-                  )}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
+                {authUser && (
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleSignOut} 
+                    size="sm"
+                    className={cn(
+                      "px-3 py-2 rounded-xl transition-all",
+                      isConversational
+                        ? "text-gray-300 hover:text-white hover:bg-red-900/20 hover:border-red-500/50"
+                        : "text-gray-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
+                    )}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
+                )}
               </div>
             </div>
           </div>
