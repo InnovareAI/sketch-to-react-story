@@ -136,7 +136,7 @@ export default function WorkspaceLayout() {
   const isConversational = location.pathname.startsWith('/agent');
 
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar */}
       <WorkspaceSidebar 
         isConversational={isConversational} 
@@ -144,7 +144,7 @@ export default function WorkspaceLayout() {
       />
       
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col h-full">
         {/* Enhanced Top Header */}
         <div className={cn(
           "border-b px-6 py-4 flex items-center justify-between shrink-0 backdrop-blur-sm",
@@ -238,7 +238,7 @@ export default function WorkspaceLayout() {
 
 
         {/* Main Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-auto">
           <Outlet />
         </div>
       </div>

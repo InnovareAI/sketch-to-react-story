@@ -32,10 +32,12 @@ import {
   EyeOff
 } from "lucide-react";
 import { TeamAccountsSupabaseService, LinkedInAccount, EmailAccount, TeamMember } from "@/services/accounts/TeamAccountsSupabaseService";
+import { LinkedInAccountData } from "@/services/unipile/UnipileService";
 
 export function TeamAccountsSettings() {
   const [teamAccounts] = useState(() => TeamAccountsSupabaseService.getInstance());
   const [linkedInAccounts, setLinkedInAccounts] = useState<LinkedInAccount[]>([]);
+  const [localLinkedInAccounts, setLocalLinkedInAccounts] = useState<LinkedInAccountData[]>([]);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [accountHealth, setAccountHealth] = useState<any | null>(null);
@@ -76,8 +78,13 @@ export function TeamAccountsSettings() {
       teamAccounts.getAccountHealth()
     ]);
     
+    // Also load local LinkedIn accounts from localStorage
+    const localAccountsData = localStorage.getItem('linkedin_accounts');
+    const localAccounts = localAccountsData ? JSON.parse(localAccountsData) : [];
+    
     setTeamMembers(members);
     setLinkedInAccounts(linkedIn);
+    setLocalLinkedInAccounts(localAccounts);
     setEmailAccounts(email);
     setAccountHealth(health);
   }, [teamAccounts]);
@@ -165,6 +172,42 @@ export function TeamAccountsSettings() {
     }
   };
 
+  // Convert local LinkedIn account to display format compatible with team accounts
+  const convertLocalToDisplayFormat = (localAccount: LinkedInAccountData) => {
+    return {
+      id: localAccount.id,
+      account_name: localAccount.name,
+      email: localAccount.email,
+      profile_url: localAccount.profileUrl,
+      account_type: 'personal' as const,
+      status: localAccount.status,
+      daily_limit: 50,
+      weekly_limit: 350,
+      daily_used: 0,
+      weekly_used: 0,
+      proxy_location: localAccount.metadata?.proxy_location,
+      metadata: localAccount.metadata,
+      isLocal: true // Flag to identify local accounts
+    };
+  };
+
+  // Combine and deduplicate accounts
+  const getAllLinkedInAccounts = () => {
+    const supabaseAccounts = linkedInAccounts.map(acc => ({ ...acc, isLocal: false }));
+    const localDisplayAccounts = localLinkedInAccounts.map(convertLocalToDisplayFormat);
+    
+    // Remove duplicates by checking if a local account is already in Supabase
+    const filteredLocalAccounts = localDisplayAccounts.filter(localAcc => {
+      return !supabaseAccounts.some(supabaseAcc => {
+        return supabaseAcc.email === localAcc.email || 
+               supabaseAcc.linkedin_id === localAcc.id ||
+               supabaseAcc.metadata?.original_id === localAcc.id;
+      });
+    });
+    
+    return [...supabaseAccounts, ...filteredLocalAccounts];
+  };
+
   return (
     <div className="space-y-6">
       {/* Account Health Overview */}
@@ -186,16 +229,24 @@ export function TeamAccountsSettings() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Total:</span>
-                    <span>{accountHealth.linkedIn.total}</span>
+                    <span>{getAllLinkedInAccounts().length}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Active:</span>
-                    <Badge variant="default">{accountHealth.linkedIn.active}</Badge>
+                    <Badge variant="default">{getAllLinkedInAccounts().filter(acc => acc.status === 'active').length}</Badge>
                   </div>
-                  {accountHealth.linkedIn.rateLimited > 0 && (
+                  <div className="flex justify-between">
+                    <span>Personal:</span>
+                    <Badge variant="secondary">{getAllLinkedInAccounts().filter(acc => acc.isLocal).length}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Team:</span>
+                    <Badge variant="default">{getAllLinkedInAccounts().filter(acc => !acc.isLocal).length}</Badge>
+                  </div>
+                  {getAllLinkedInAccounts().filter(acc => acc.status === 'rate_limited').length > 0 && (
                     <div className="flex justify-between">
                       <span>Rate Limited:</span>
-                      <Badge variant="destructive">{accountHealth.linkedIn.rateLimited}</Badge>
+                      <Badge variant="destructive">{getAllLinkedInAccounts().filter(acc => acc.status === 'rate_limited').length}</Badge>
                     </div>
                   )}
                 </div>
@@ -320,25 +371,67 @@ export function TeamAccountsSettings() {
 
           {/* LinkedIn Accounts List */}
           <div className="space-y-2">
-            {linkedInAccounts.map(account => (
+            {getAllLinkedInAccounts().length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Linkedin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-semibold mb-2">No LinkedIn Accounts Connected</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Connect your LinkedIn accounts to enable automated outreach and team collaboration.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Go to <strong>LinkedIn Settings</strong> to connect your personal account, 
+                    or add team member accounts using the form above.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              getAllLinkedInAccounts().map(account => (
               <Card key={account.id}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${getStatusColor(account.status)}`} />
                       <div>
-                        <div className="font-medium">{account.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{account.account_name}</span>
+                          {account.isLocal && (
+                            <Badge variant="secondary" className="text-xs">
+                              Personal
+                            </Badge>
+                          )}
+                          {!account.isLocal && (
+                            <Badge variant="default" className="text-xs">
+                              Team
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-sm text-muted-foreground">{account.email}</div>
+                        {account.profile_url && (
+                          <a 
+                            href={account.profile_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            View Profile
+                          </a>
+                        )}
                       </div>
-                      <Badge variant="outline">{account.type}</Badge>
+                      <Badge variant="outline">{account.account_type}</Badge>
+                      {account.proxy_location && (
+                        <Badge variant="outline" className="text-xs">
+                          {account.proxy_location}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-sm">
                         <span className="text-muted-foreground">Daily: </span>
-                        <span>{account.dailyUsed}/{account.dailyLimit}</span>
+                        <span>{account.daily_used}/{account.daily_limit}</span>
                       </div>
                       <Progress 
-                        value={(account.dailyUsed / account.dailyLimit) * 100} 
+                        value={(account.daily_used / account.daily_limit) * 100} 
                         className="w-20"
                       />
                       <Button size="icon" variant="ghost">
@@ -346,9 +439,15 @@ export function TeamAccountsSettings() {
                       </Button>
                     </div>
                   </div>
+                  {account.isLocal && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Connected via LinkedIn OAuth • Managed in LinkedIn Settings
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            ))}
+              ))
+            )}
           </div>
         </TabsContent>
 

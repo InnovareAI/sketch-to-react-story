@@ -34,6 +34,8 @@ import {
 import { toast } from 'sonner';
 import { unipileService, LinkedInAccountData } from '@/services/unipile/UnipileService';
 import { linkedInOAuth } from '@/services/linkedin/LinkedInOAuth';
+import { TeamAccountsSupabaseService } from '@/services/accounts/TeamAccountsSupabaseService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProxyLocation {
   code: string;
@@ -51,6 +53,8 @@ const proxyLocations: ProxyLocation[] = [
 
 export function LinkedInAccountConnection() {
   console.log('LinkedInAccountConnection component mounting...');
+  const { user } = useAuth();
+  const [teamAccountsService] = useState(() => TeamAccountsSupabaseService.getInstance());
   const [accounts, setAccounts] = useState<LinkedInAccountData[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
@@ -68,6 +72,47 @@ export function LinkedInAccountConnection() {
     window.addEventListener('message', handleOAuthMessage);
     return () => window.removeEventListener('message', handleOAuthMessage);
   }, []);
+
+  const saveToSupabase = async (linkedInAccount: LinkedInAccountData) => {
+    if (!user?.workspace_id) {
+      console.error('No workspace_id available to save LinkedIn account');
+      return;
+    }
+
+    try {
+      const supabaseAccount = {
+        account_name: linkedInAccount.name,
+        email: linkedInAccount.email,
+        profile_url: linkedInAccount.profileUrl,
+        linkedin_id: linkedInAccount.unipileAccountId.replace('linkedin_', ''),
+        account_type: 'personal' as const,
+        status: 'active' as const,
+        daily_limit: 50,
+        weekly_limit: 350,
+        daily_used: 0,
+        weekly_used: 0,
+        proxy_location: linkedInAccount.metadata?.proxy_location || 'US',
+        metadata: {
+          ...linkedInAccount.metadata,
+          profilePicture: linkedInAccount.profilePicture,
+          connected_via: 'direct_oauth',
+          original_id: linkedInAccount.id
+        }
+      };
+
+      console.log('Saving LinkedIn account to Supabase:', supabaseAccount);
+      const result = await teamAccountsService.addLinkedInAccount(supabaseAccount);
+      
+      if (result) {
+        console.log('LinkedIn account saved to Supabase successfully:', result.id);
+        toast.success('LinkedIn account synced to team accounts');
+      } else {
+        console.error('Failed to save LinkedIn account to Supabase');
+      }
+    } catch (error) {
+      console.error('Error saving LinkedIn account to Supabase:', error);
+    }
+  };
 
   const handleOAuthMessage = (event: MessageEvent) => {
     if (event.origin !== 'https://sameaisalesassistant.netlify.app') return;
@@ -91,6 +136,40 @@ export function LinkedInAccountConnection() {
       console.error('LinkedIn auth error:', event.data.error);
       toast.error(`LinkedIn connection failed: ${event.data.error}`);
       setIsConnecting(false);
+    }
+  };
+
+  const syncExistingAccountsToSupabase = async () => {
+    if (!user?.workspace_id) {
+      console.log('No workspace_id available, skipping sync to Supabase');
+      return;
+    }
+
+    try {
+      // Get existing accounts from localStorage
+      const persistedAccounts = localStorage.getItem('linkedin_accounts');
+      if (!persistedAccounts) return;
+
+      const localAccounts: LinkedInAccountData[] = JSON.parse(persistedAccounts);
+      
+      // Get existing Supabase accounts to avoid duplicates
+      const supabaseAccounts = await teamAccountsService.getLinkedInAccounts();
+      const existingLinkedInIds = supabaseAccounts.map(acc => acc.linkedin_id || acc.metadata?.original_id);
+
+      for (const localAccount of localAccounts) {
+        // Check if this account is already in Supabase (by original_id or linkedin_id)
+        const alreadyExists = existingLinkedInIds.includes(localAccount.id) || 
+                            existingLinkedInIds.includes(localAccount.unipileAccountId.replace('linkedin_', ''));
+        
+        if (!alreadyExists) {
+          console.log('Syncing local LinkedIn account to Supabase:', localAccount.email);
+          await saveToSupabase(localAccount);
+        }
+      }
+      
+      console.log('Finished syncing existing LinkedIn accounts to Supabase');
+    } catch (error) {
+      console.error('Error syncing existing accounts to Supabase:', error);
     }
   };
 
@@ -142,6 +221,9 @@ export function LinkedInAccountConnection() {
         setAccounts(updatedAccounts);
         localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
         
+        // Save to Supabase for team accounts
+        await saveToSupabase(newAccount);
+        
         // Clear session storage
         sessionStorage.removeItem('linkedin_profile');
         sessionStorage.removeItem('linkedin_token');
@@ -158,6 +240,10 @@ export function LinkedInAccountConnection() {
           setAccounts([]);
         }
       }
+      
+      // Sync any existing localStorage accounts to Supabase
+      await syncExistingAccountsToSupabase();
+      
     } catch (error) {
       console.error('Error loading accounts:', error);
       // Don't show error toast - just log it
@@ -318,7 +404,7 @@ export function LinkedInAccountConnection() {
       toast.warning('No LinkedIn integration configured. Creating demo connection.');
       
       // Simulate a delay for authentication
-      setTimeout(() => {
+      setTimeout(async () => {
         const mockAccount: LinkedInAccountData = {
           id: crypto.randomUUID?.() || `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           provider: 'LINKEDIN',
@@ -337,6 +423,15 @@ export function LinkedInAccountConnection() {
         };
         
         setAccounts(prev => [...prev, mockAccount]);
+        
+        // Save to localStorage for persistence
+        const existingAccounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+        const updatedAccounts = [...existingAccounts, mockAccount];
+        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+        
+        // Save to Supabase for team accounts
+        await saveToSupabase(mockAccount);
+        
         toast.success('Demo LinkedIn account connected successfully!');
         setShowConnectionForm(false);
         setConnectionStep('proxy');
@@ -659,7 +754,7 @@ export function LinkedInAccountConnection() {
                   {import.meta.env.DEV && (
                     <Button
                       variant="secondary"
-                      onClick={() => {
+                      onClick={async () => {
                         // Mock successful connection for demo
                         const mockAccount: LinkedInAccountData = {
                           id: crypto.randomUUID?.() || `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -678,6 +773,15 @@ export function LinkedInAccountConnection() {
                           }
                         };
                         setAccounts([...accounts, mockAccount]);
+                        
+                        // Save to localStorage for persistence
+                        const existingAccounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+                        const updatedAccounts = [...existingAccounts, mockAccount];
+                        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+                        
+                        // Save to Supabase for team accounts
+                        await saveToSupabase(mockAccount);
+                        
                         toast.success('Demo account added successfully!');
                         setShowConnectionForm(false);
                         setConnectionStep('proxy');
