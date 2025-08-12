@@ -478,22 +478,29 @@ export function LinkedInAccountConnection() {
                 </CardDescription>
               </div>
             </div>
-            <Button 
-              onClick={() => {
-                setShowConnectionForm(true);
-                setConnectionStep('proxy');
-              }}
-              disabled={isConnecting}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add LinkedIn Account
-            </Button>
+            {accounts.length === 0 ? (
+              <Button 
+                onClick={() => {
+                  setShowConnectionForm(true);
+                  setConnectionStep('proxy');
+                }}
+                disabled={isConnecting}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Connect LinkedIn Account
+              </Button>
+            ) : (
+              <Badge className="bg-green-100 text-green-800 px-3 py-1">
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Account Connected
+              </Badge>
+            )}
           </div>
         </CardHeader>
       </Card>
 
-      {/* Connection Form - Two Steps */}
-      {showConnectionForm && (
+      {/* Connection Form - Two Steps - Only show if no account connected */}
+      {showConnectionForm && accounts.length === 0 && (
         <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -880,7 +887,7 @@ export function LinkedInAccountConnection() {
           <CardContent className="py-12">
             <div className="text-center space-y-3">
               <Linkedin className="h-12 w-12 text-muted-foreground mx-auto" />
-              <h3 className="font-semibold">No LinkedIn Accounts Connected</h3>
+              <h3 className="font-semibold">No LinkedIn Account Connected</h3>
               <p className="text-sm text-muted-foreground">
                 Connect your LinkedIn account to start automating outreach and syncing data
               </p>
@@ -889,7 +896,7 @@ export function LinkedInAccountConnection() {
                 className="mt-4"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Connect Your First Account
+                Connect Your LinkedIn Account
               </Button>
             </div>
           </CardContent>
