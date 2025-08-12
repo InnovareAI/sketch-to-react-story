@@ -193,11 +193,13 @@ export function EmailAccountConnection() {
       case 'GMAIL':
         return '📧';
       case 'OUTLOOK':
-      case 'OFFICE365':
         return '📮';
+      case 'OFFICE365':
+        return '🏢';
       case 'EXCHANGE':
         return '📪';
       case 'IMAP':
+      case 'SMTP':
         return '📬';
       default:
         return '✉️';
@@ -242,19 +244,13 @@ export function EmailAccountConnection() {
       <Dialog open={showConnectionDialog} onOpenChange={setShowConnectionDialog}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Connect Email Account</DialogTitle>
+            <DialogTitle>Configure IMAP/SMTP Settings</DialogTitle>
             <DialogDescription>
-              Choose your email provider and connection method
+              Enter your email server details for manual configuration
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={connectionType} onValueChange={(v) => setConnectionType(v as 'oauth' | 'imap')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="oauth">OAuth (Recommended)</TabsTrigger>
-              <TabsTrigger value="imap">IMAP/SMTP</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="oauth" className="space-y-4">
+          <div className="space-y-4">
               <Alert>
                 <Shield className="h-4 w-4" />
                 <AlertDescription>
@@ -265,52 +261,66 @@ export function EmailAccountConnection() {
               <div className="grid grid-cols-1 gap-3">
                 <Button
                   variant="outline"
-                  className="justify-start h-auto p-4"
+                  className="justify-start h-auto p-4 hover:bg-red-50 hover:border-red-300 transition-colors"
                   onClick={() => initiateOAuthConnection('GMAIL')}
                   disabled={isConnecting}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">📧</span>
-                    <div className="text-left">
-                      <div className="font-semibold">Gmail</div>
-                      <div className="text-sm text-muted-foreground">Connect your Gmail account</div>
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                        <path d="M22 8.608v8.142a3.25 3.25 0 0 1-3.25 3.25h-13.5A3.25 3.25 0 0 1 2 16.75V8.67l9.723 5.834a.75.75 0 0 0 .777 0L22 8.608Z" fill="#EA4335"/>
+                        <path d="M22 6.908V8.608l-9.5 5.894L3 8.638V6.908C3 5.3 4.3 4 5.908 4h14.184C21.7 4 23 5.3 23 6.908h-1Z" fill="#FBBC04"/>
+                        <path d="M12.5 14.502L22 8.608V6.908C22 5.3 20.7 4 19.092 4H12.5v10.502Z" fill="#34A853"/>
+                        <path d="M3 8.638l9.5 5.864V4H5.908C4.3 4 3 5.3 3 6.908v1.73Z" fill="#4285F4"/>
+                      </svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-semibold">Gmail / Google Workspace</div>
+                      <div className="text-sm text-muted-foreground">Personal and business Gmail accounts</div>
                     </div>
                   </div>
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="justify-start h-auto p-4"
+                  className="justify-start h-auto p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors"
                   onClick={() => initiateOAuthConnection('OUTLOOK')}
                   disabled={isConnecting}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">📮</span>
-                    <div className="text-left">
-                      <div className="font-semibold">Outlook</div>
-                      <div className="text-sm text-muted-foreground">Connect your Outlook account</div>
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5Z" fill="#0078D4"/>
+                        <path d="M12 2v20c5.16-1.26 9-6.45 9-12V7l-9-4.5Z" fill="#0064B5"/>
+                        <path d="M12 8.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" fill="white"/>
+                        <path d="M12 15c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4Z" fill="white"/>
+                      </svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-semibold">Outlook.com / Hotmail</div>
+                      <div className="text-sm text-muted-foreground">Personal Microsoft email accounts</div>
                     </div>
                   </div>
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="justify-start h-auto p-4"
+                  className="justify-start h-auto p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors"
                   onClick={() => initiateOAuthConnection('OFFICE365')}
                   disabled={isConnecting}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🏢</span>
-                    <div className="text-left">
-                      <div className="font-semibold">Office 365</div>
-                      <div className="text-sm text-muted-foreground">Connect your Office 365 account</div>
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21.53 4.306l-10.159-4.28a1.885 1.885 0 0 0-1.442 0L3.273 2.665a1.86 1.86 0 0 0-1.263 1.77v14.863c0 .816.509 1.566 1.262 1.858l6.657 2.587a1.843 1.843 0 0 0 1.442 0l10.16-4.279a1.86 1.86 0 0 0 1.262-1.77V6.165a1.86 1.86 0 0 0-1.263-1.859zM12 16.351l-7-2.625V5.774l7 2.625v7.952z"/>
+                      </svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-semibold">Microsoft 365 / Office 365</div>
+                      <div className="text-sm text-muted-foreground">Business and enterprise accounts</div>
                     </div>
                   </div>
                 </Button>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="imap" className="space-y-4">
               <Alert className="border-yellow-200 bg-yellow-50">
                 <AlertCircle className="h-4 w-4 text-yellow-600" />
                 <AlertDescription className="text-yellow-800">
@@ -393,8 +403,7 @@ export function EmailAccountConnection() {
                   </>
                 )}
               </Button>
-            </TabsContent>
-          </Tabs>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -492,26 +501,97 @@ export function EmailAccountConnection() {
             </Card>
           ))}
         </div>
-      ) : (
+      ) : !loading ? (
         <Card>
-          <CardContent className="py-12">
-            <div className="text-center space-y-3">
-              <Mail className="h-12 w-12 text-muted-foreground mx-auto" />
-              <h3 className="font-semibold">No Email Accounts Connected</h3>
-              <p className="text-sm text-muted-foreground">
-                Connect your email account to manage inbox and send automated emails
-              </p>
-              <Button 
-                onClick={() => setShowConnectionDialog(true)}
-                className="mt-4"
+          <CardHeader>
+            <CardTitle>Choose Your Email Provider</CardTitle>
+            <CardDescription>Select your email service to connect your account</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                className="justify-start h-auto p-4 hover:bg-red-50 hover:border-red-300 transition-colors"
+                onClick={() => initiateOAuthConnection('GMAIL')}
+                disabled={isConnecting}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Connect Your Email Account
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                      <path d="M22 8.608v8.142a3.25 3.25 0 0 1-3.25 3.25h-13.5A3.25 3.25 0 0 1 2 16.75V8.67l9.723 5.834a.75.75 0 0 0 .777 0L22 8.608Z" fill="#EA4335"/>
+                      <path d="M22 6.908V8.608l-9.5 5.894L3 8.638V6.908C3 5.3 4.3 4 5.908 4h14.184C21.7 4 23 5.3 23 6.908h-1Z" fill="#FBBC04"/>
+                      <path d="M12.5 14.502L22 8.608V6.908C22 5.3 20.7 4 19.092 4H12.5v10.502Z" fill="#34A853"/>
+                      <path d="M3 8.638l9.5 5.864V4H5.908C4.3 4 3 5.3 3 6.908v1.73Z" fill="#4285F4"/>
+                    </svg>
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold">Gmail</div>
+                    <div className="text-xs text-muted-foreground">Personal & business</div>
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="justify-start h-auto p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                onClick={() => initiateOAuthConnection('OUTLOOK')}
+                disabled={isConnecting}
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5Z" fill="#0078D4"/>
+                      <path d="M12 2v20c5.16-1.26 9-6.45 9-12V7l-9-4.5Z" fill="#0064B5"/>
+                      <path d="M12 8.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" fill="white"/>
+                      <path d="M12 15c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4Z" fill="white"/>
+                    </svg>
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold">Outlook</div>
+                    <div className="text-xs text-muted-foreground">Outlook.com & Hotmail</div>
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="justify-start h-auto p-4 hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                onClick={() => initiateOAuthConnection('OFFICE365')}
+                disabled={isConnecting}
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M21.53 4.306l-10.159-4.28a1.885 1.885 0 0 0-1.442 0L3.273 2.665a1.86 1.86 0 0 0-1.263 1.77v14.863c0 .816.509 1.566 1.262 1.858l6.657 2.587a1.843 1.843 0 0 0 1.442 0l10.16-4.279a1.86 1.86 0 0 0 1.262-1.77V6.165a1.86 1.86 0 0 0-1.263-1.859zM12 16.351l-7-2.625V5.774l7 2.625v7.952z"/>
+                    </svg>
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold">Microsoft 365</div>
+                    <div className="text-xs text-muted-foreground">Business & enterprise</div>
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="justify-start h-auto p-4 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                onClick={() => setShowConnectionDialog(true)}
+                disabled={isConnecting}
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Mail className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold">IMAP/SMTP</div>
+                    <div className="text-xs text-muted-foreground">Other email providers</div>
+                  </div>
+                </div>
               </Button>
             </div>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       {/* Integration Status */}
       <Card>
