@@ -45,7 +45,6 @@ import { LinkedInAccountConnection } from "@/components/settings/LinkedInAccount
 import { EmailAccountConnection } from "@/components/settings/EmailAccountConnection";
 import { CalendarIntegration } from "@/components/settings/CalendarIntegration";
 import { AutoProvisioningStatus } from "@/components/settings/AutoProvisioningStatus";
-import { LinkedInOAuthExplainer } from "@/components/settings/LinkedInOAuthExplainer";
 import { WorkspaceTwoFactorManagement } from "@/components/security/WorkspaceTwoFactorManagement";
 
 export default function WorkspaceSettings() {
@@ -228,17 +227,19 @@ export default function WorkspaceSettings() {
         <div className="max-w-7xl mx-auto">
               <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-blue-50">
-                    <Settings className="h-8 w-8 text-blue-600" />
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100">
+                    <Settings className="h-7 w-7 text-blue-600" />
                   </div>
-                  <h1 className="text-3xl font-bold text-gray-900">Workspace Settings</h1>
+                  <div>
+                    <h1 className="text-3xl font-light text-gray-900">Workspace Settings</h1>
+                    <p className="text-sm text-gray-500 mt-1">Manage your workspace configuration and integrations</p>
+                  </div>
                 </div>
-                <p className="text-gray-600">Manage your workspace configuration and integrations</p>
               </div>
               
               <div className="space-y-6">
                 <Tabs defaultValue="provisioning" className="w-full">
-                  <TabsList className="grid w-full grid-cols-10 bg-gray-100/50 p-1">
+                  <TabsList className="grid w-full grid-cols-10 bg-gray-50 border border-gray-200 rounded-lg p-1">
                     <TabsTrigger value="provisioning">Auto Setup</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="llm">AI Models</TabsTrigger>
@@ -458,9 +459,8 @@ export default function WorkspaceSettings() {
                     <TeamAccountsSettings />
                   </TabsContent>
 
-                  {/* LinkedIn Tab - Now using our new component */}
+                  {/* LinkedIn Tab - Clean design with just connection */}
                   <TabsContent value="linkedin" className="space-y-6">
-                    <LinkedInOAuthExplainer />
                     <LinkedInAccountConnection />
                   </TabsContent>
 
