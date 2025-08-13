@@ -110,58 +110,21 @@ export function MyNetwork({ className }: MyNetworkProps) {
   const loadNetworkData = async () => {
     try {
       setLoading(true);
-      // This would fetch from Supabase/API in a real implementation
       
-      // Mock data for demonstration
+      // Only load real data from database
+      // No mock data - stats start at 0
       setStats({
-        total_connections: 2847,
-        pending_requests: 23,
-        recent_connections: 15,
-        connection_rate: 78.5,
-        response_rate: 32.4,
-        weekly_growth: 5.2
+        total_connections: 0,
+        pending_requests: 0,
+        recent_connections: 0,
+        connection_rate: 0,
+        response_rate: 0,
+        weekly_growth: 0
       });
 
-      setConnections([
-        {
-          id: '1',
-          profile_url: 'https://linkedin.com/in/johndoe',
-          full_name: 'John Doe',
-          headline: 'Senior Marketing Director at TechCorp',
-          location: 'San Francisco, CA',
-          company: 'TechCorp',
-          position: 'Senior Marketing Director',
-          profile_image_url: 'https://via.placeholder.com/60',
-          connection_date: '2024-01-15T10:00:00Z',
-          connection_status: 'connected',
-          mutual_connections: 12,
-          last_interaction: '2024-01-20T14:30:00Z',
-          contact_info: {
-            email: 'john.doe@techcorp.com'
-          },
-          tags: ['prospect', 'marketing'],
-          notes: 'Interested in our AI solutions',
-          campaign_source: 'Tech Leaders Campaign',
-          is_favorite: true
-        }
-        // More mock connections...
-      ]);
-
-      setPendingRequests([
-        {
-          id: '1',
-          profile_url: 'https://linkedin.com/in/janesmith',
-          full_name: 'Jane Smith',
-          headline: 'VP of Sales at InnovateNow',
-          location: 'New York, NY',
-          company: 'InnovateNow',
-          sent_date: '2024-01-22T09:15:00Z',
-          message_sent: 'Hi Jane, I\'d love to connect and share insights about sales automation...',
-          campaign_source: 'Sales Leaders Campaign',
-          can_withdraw: true
-        }
-        // More mock pending requests...
-      ]);
+      // Empty connections until real data is loaded
+      setConnections([]);
+      setPendingRequests([]);
 
     } catch (error) {
       console.error('Error loading network data:', error);
