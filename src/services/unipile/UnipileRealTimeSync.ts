@@ -218,14 +218,15 @@ export class UnipileRealTimeSync {
    * Perform complete sync of all data
    */
   async syncAll(): Promise<void> {
-    // Get accounts first (hardcoded ones)
-    const accounts = await this.getConnectedAccounts();
+    console.log('🏁 Starting syncAll...');
     
     if (!this.isConfigured()) {
-      // Show that we have accounts but can't sync without API key
-      toast.warning(`Found ${accounts.length} LinkedIn accounts but API key needed for sync`);
+      console.error('❌ API not configured');
+      toast.error('Unipile API not configured');
       return;
     }
+    
+    console.log('✅ API is configured');
 
     if (this.status.isRunning) {
       console.log('Sync already in progress');
@@ -240,8 +241,10 @@ export class UnipileRealTimeSync {
       
       // Get connected accounts
       const accounts = await this.getConnectedAccounts();
+      console.log(`👥 Found ${accounts.length} accounts:`, accounts);
       
       if (accounts.length === 0) {
+        console.error('❌ No LinkedIn accounts found');
         toast.warning('No LinkedIn accounts connected');
         return;
       }
@@ -596,6 +599,8 @@ export class UnipileRealTimeSync {
       
       // Unipile uses /chats endpoint with account_id as query param
       const url = `${this.baseUrl}/chats?account_id=${accountId}&limit=50`;
+      console.log(`🌐 API URL: ${url}`);
+      console.log(`🔑 Using API Key: ${this.apiKey?.substring(0, 10)}...`);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -610,24 +615,29 @@ export class UnipileRealTimeSync {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Failed to fetch chats:', {
+        console.error('❌ Failed to fetch chats:', {
           status: response.status,
           statusText: response.statusText,
-          error: errorText
+          error: errorText,
+          url: url
         });
         return [];
       }
 
       const data = await response.json();
-      console.log(`✅ Received chats data:`, data);
+      console.log(`✅ Chats API returned:`, data);
       
       // Handle different possible response structures
       const chats = data.items || data.chats || data.conversations || data || [];
-      console.log(`📈 Found ${chats.length} chats`);
+      console.log(`📈 Total chats found: ${chats.length}`);
+      
+      if (chats.length > 0) {
+        console.log('📧 First chat example:', chats[0]);
+      }
       
       return chats;
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      console.error('❌ Error fetching conversations:', error);
       return [];
     }
   }
