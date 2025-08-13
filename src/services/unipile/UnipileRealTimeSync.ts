@@ -255,14 +255,15 @@ export class UnipileRealTimeSync {
       for (const account of accounts) {
         console.log(`📧 Syncing account: ${account.name}`);
         
-        // Sync conversations and messages
+        // Sync ALL conversations and complete message history
         const messageCount = await this.syncAccountMessages(account);
         totalMessages += messageCount;
         console.log(`✅ Synced ${messageCount} conversations from ${account.name}`);
 
-        // Skip contacts sync since endpoints don't exist
-        // const contactCount = await this.syncAccountContacts(account);
-        // totalContacts += contactCount;
+        // Sync ALL LinkedIn connections
+        const contactCount = await this.syncAccountContacts(account);
+        totalContacts += contactCount;
+        console.log(`✅ Synced ${contactCount} contacts from ${account.name}`);
       }
 
       this.status.messagessynced = totalMessages;
@@ -663,97 +664,120 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Fetch conversations/chats from Unipile
+   * Fetch ALL conversations/chats from Unipile with pagination
    */
   private async fetchConversations(accountId: string): Promise<UnipileConversation[]> {
+    const allChats: any[] = [];
+    let cursor: string | null = null;
+    let page = 1;
+    
     try {
-      console.log(`🔍 Fetching chats for account: ${accountId}`);
+      console.log(`🔍 Fetching ALL chats for account: ${accountId}`);
       
-      // Unipile uses /chats endpoint with account_id as query param
-      const url = `${this.baseUrl}/chats?account_id=${accountId}&limit=50`;
-      console.log(`🌐 API URL: ${url}`);
-      console.log(`🔑 Using API Key: ${this.apiKey?.substring(0, 10)}...`);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'X-API-KEY': this.apiKey!,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log(`📊 Response status: ${response.status}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Failed to fetch chats:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText,
-          url: url
+      do {
+        // Fetch chats with pagination
+        const url = cursor
+          ? `${this.baseUrl}/chats?account_id=${accountId}&limit=100&cursor=${cursor}`
+          : `${this.baseUrl}/chats?account_id=${accountId}&limit=100`;
+        
+        console.log(`📝 Fetching page ${page}...`);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'X-API-KEY': this.apiKey!,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
         });
-        return [];
-      }
 
-      const data = await response.json();
-      console.log(`✅ Chats API returned:`, data);
+        if (!response.ok) {
+          console.error(`❌ Failed to fetch page ${page}`);
+          break;
+        }
+
+        const data = await response.json();
+        const chats = data.items || [];
+        allChats.push(...chats);
+        
+        cursor = data.cursor || null;
+        console.log(`✅ Page ${page}: Got ${chats.length} chats (total: ${allChats.length})`);
+        page++;
+        
+        // Safety limit - adjust as needed
+        if (page > 10) break; // Max 1000 chats
+        
+      } while (cursor);
       
-      // Handle different possible response structures
-      const chats = data.items || data.chats || data.conversations || data || [];
-      console.log(`📈 Total chats found: ${chats.length}`);
+      console.log(`🎯 Total chats fetched: ${allChats.length}`);
+      return allChats;
       
-      if (chats.length > 0) {
-        console.log('📧 First chat example:', chats[0]);
-      }
-      
-      return chats;
     } catch (error) {
       console.error('❌ Error fetching conversations:', error);
-      return [];
+      return allChats; // Return what we got
     }
   }
 
   /**
-   * Fetch messages for a conversation/chat
+   * Fetch ALL messages for a conversation/chat with pagination
    */
   private async fetchMessages(accountId: string, chatId: string): Promise<any[]> {
+    const allMessages: any[] = [];
+    let cursor: string | null = null;
+    let page = 1;
+    
     try {
-      // Unipile uses /messages endpoint with chat_id as query param
-      const url = `${this.baseUrl}/messages?chat_id=${chatId}&limit=100`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'X-API-KEY': this.apiKey!,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+      do {
+        // Fetch messages with pagination
+        const url = cursor 
+          ? `${this.baseUrl}/messages?chat_id=${chatId}&limit=100&cursor=${cursor}`
+          : `${this.baseUrl}/messages?chat_id=${chatId}&limit=100`;
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'X-API-KEY': this.apiKey!,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          break;
         }
-      });
-      
-      if (!response.ok) {
-        return [];
-      }
 
-      const data = await response.json();
-      const messages = data.items || [];
+        const data = await response.json();
+        const messages = data.items || [];
+        allMessages.push(...messages);
+        
+        cursor = data.cursor || null;
+        page++;
+        
+        // Safety limit
+        if (page > 20) break; // Max 2000 messages per chat
+        
+      } while (cursor);
       
-      return messages;
+      console.log(`📨 Fetched ${allMessages.length} messages for chat ${chatId}`);
+      return allMessages;
+      
     } catch (error) {
       console.error('Error fetching messages:', error);
-      return [];
+      return allMessages; // Return what we got
     }
   }
 
   /**
-   * Sync contacts for a specific account
+   * Sync ALL LinkedIn connections/contacts
    */
   private async syncAccountContacts(account: any): Promise<number> {
     try {
-      console.log(`Syncing contacts for account: ${account.name || account.id}`);
+      console.log(`👥 Syncing ALL contacts for account: ${account.name || account.id}`);
       
-      // Fetch contacts
-      const contacts = await this.fetchContacts(account.id);
+      // Fetch all connections using the connections endpoint
+      const contacts = await this.fetchAllConnections(account.id);
+      
+      console.log(`📊 Found ${contacts.length} total connections`);
       
       if (contacts.length === 0) {
         return 0;
@@ -819,7 +843,56 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Fetch contacts from Unipile
+   * Fetch ALL LinkedIn connections with pagination
+   */
+  private async fetchAllConnections(accountId: string): Promise<any[]> {
+    const allConnections: any[] = [];
+    let cursor: string | null = null;
+    let page = 1;
+    
+    try {
+      do {
+        const url = cursor 
+          ? `${this.baseUrl}/users?account_id=${accountId}&limit=100&cursor=${cursor}`
+          : `${this.baseUrl}/users?account_id=${accountId}&limit=100`;
+        
+        console.log(`📝 Fetching connections page ${page}...`);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'X-API-KEY': this.apiKey!,
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const connections = data.items || [];
+          allConnections.push(...connections);
+          
+          cursor = data.cursor || null;
+          console.log(`✅ Page ${page}: Got ${connections.length} connections (total: ${allConnections.length})`);
+          page++;
+          
+          // Safety limit to prevent infinite loops
+          if (page > 100) break;
+        } else {
+          console.log(`❌ Failed to fetch connections page ${page}`);
+          break;
+        }
+      } while (cursor);
+      
+    } catch (error) {
+      console.error('❌ Error fetching connections:', error);
+    }
+    
+    console.log(`🎯 Total connections fetched: ${allConnections.length}`);
+    return allConnections;
+  }
+  
+  /**
+   * Legacy fetch contacts method
    */
   private async fetchContacts(accountId: string): Promise<UnipileContact[]> {
     try {

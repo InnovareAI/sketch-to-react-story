@@ -58,6 +58,7 @@ import {
 
 export default function GlobalInbox() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("all");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -541,7 +542,26 @@ export default function GlobalInbox() {
                       className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
                         selectedMessage?.id === message.id ? "bg-muted" : ""
                       } ${!message.read ? "bg-blue-50" : ""}`}
-                      onClick={() => setSelectedMessage(message)}
+                      onClick={async () => {
+                        setSelectedMessage(message);
+                        // Load full conversation thread
+                        const { data: conv } = await supabase
+                          .from('inbox_conversations')
+                          .select(`
+                            *,
+                            inbox_messages (
+                              *
+                            )
+                          `)
+                          .eq('id', message.id)
+                          .single();
+                        
+                        if (conv?.inbox_messages) {
+                          setSelectedConversation(conv.inbox_messages.sort((a: any, b: any) => 
+                            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                          ));
+                        }
+                      }}
                     >
                       <div className="flex items-start gap-3">
                         <Avatar className="h-10 w-10">
@@ -642,7 +662,7 @@ export default function GlobalInbox() {
               <CardTitle>Select a message to view details</CardTitle>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[600px] overflow-y-auto">
             {selectedMessage ? (
               <div className="space-y-6">
                 <div>
@@ -650,14 +670,53 @@ export default function GlobalInbox() {
                   <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                     <Clock className="h-4 w-4" />
                     {selectedMessage.time}
-                    <Badge className={getPriorityColor(selectedMessage.priority)}>
-                      {selectedMessage.priority} priority
-                    </Badge>
+                    {selectedMessage.priority && (
+                      <Badge className={getPriorityColor(selectedMessage.priority)}>
+                        {selectedMessage.priority} priority
+                      </Badge>
+                    )}
                   </div>
-                  <div className="prose max-w-none">
-                    <p className="text-gray-900 leading-relaxed">
-                      {selectedMessage.preview}
-                    </p>
+                  
+                  {/* Full conversation thread */}
+                  <div className="space-y-4">
+                    {selectedConversation.length > 0 ? (
+                      selectedConversation.map((msg: any, idx: number) => (
+                        <div key={idx} className={`p-4 rounded-lg ${
+                          msg.role === 'user' ? 'bg-blue-50 ml-8' : 'bg-gray-50 mr-8'
+                        }`}>
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage 
+                                src={msg.role === 'user' ? '' : selectedMessage.avatar} 
+                                alt="Avatar" 
+                              />
+                              <AvatarFallback className="text-xs">
+                                {msg.role === 'user' ? 'You' : selectedMessage.from.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-sm">
+                                  {msg.role === 'user' ? 'You' : msg.metadata?.sender_name || selectedMessage.from}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(msg.created_at || msg.metadata?.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                                {msg.content}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="prose max-w-none">
+                        <p className="text-gray-900 leading-relaxed">
+                          {selectedMessage.preview}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
