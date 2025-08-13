@@ -253,13 +253,16 @@ export class UnipileRealTimeSync {
       let totalContacts = 0;
 
       for (const account of accounts) {
+        console.log(`📧 Syncing account: ${account.name}`);
+        
         // Sync conversations and messages
         const messageCount = await this.syncAccountMessages(account);
         totalMessages += messageCount;
+        console.log(`✅ Synced ${messageCount} conversations from ${account.name}`);
 
-        // Sync contacts
-        const contactCount = await this.syncAccountContacts(account);
-        totalContacts += contactCount;
+        // Skip contacts sync since endpoints don't exist
+        // const contactCount = await this.syncAccountContacts(account);
+        // totalContacts += contactCount;
       }
 
       this.status.messagessynced = totalMessages;
@@ -514,24 +517,53 @@ export class UnipileRealTimeSync {
 
       for (const chat of chats) {
         try {
-          // Fetch messages first to get participant info
+          // Get participant name from chat data
+          let participantName = chat.name || chat.subject || '';
+          let participantCompany = '';
+          let participantAvatar = '';
+          
+          // Always try to get attendee info if we have the ID
+          if (chat.attendee_provider_id) {
+            try {
+              const attendeeUrl = `${this.baseUrl}/users/${chat.attendee_provider_id}?account_id=${account.id}`;
+              const attendeeResponse = await fetch(attendeeUrl, {
+                method: 'GET',
+                headers: {
+                  'X-API-KEY': this.apiKey!,
+                  'Accept': 'application/json'
+                }
+              });
+              
+              if (attendeeResponse.ok) {
+                const attendee = await attendeeResponse.json();
+                const firstName = attendee.first_name || '';
+                const lastName = attendee.last_name || '';
+                participantName = `${firstName} ${lastName}`.trim() || attendee.name || participantName;
+                participantCompany = attendee.headline || attendee.company || '';
+                participantAvatar = attendee.profile_picture_url || '';
+              }
+            } catch (e) {
+              console.log(`Could not fetch attendee info for ${chat.attendee_provider_id}`);
+            }
+          }
+          
+          // Fetch messages to check if we have any
           const messages = await this.fetchMessages(account.id, chat.id);
           
-          if (messages.length === 0) {
-            continue;
+          // Use first message sender as fallback name
+          if (!participantName && messages.length > 0) {
+            const firstInbound = messages.find(m => !m.is_sender);
+            if (firstInbound && firstInbound.sender_name) {
+              participantName = firstInbound.sender_name;
+            }
           }
           
-          // Get participant name from first message or chat subject
-          const firstMessage = messages[0];
-          let participantName = chat.name || chat.subject || 'LinkedIn User';
-          
-          // Try to get attendee info if available
-          if (chat.attendee_provider_id) {
-            // For now, use the chat name or extract from message
-            participantName = chat.name || chat.subject || participantName;
+          // Final fallback
+          if (!participantName) {
+            participantName = 'LinkedIn Contact';
           }
           
-          // Save conversation
+          // Save conversation with real participant info
           const { data: savedConv, error: convError } = await supabase
             .from('inbox_conversations')
             .upsert({
@@ -539,43 +571,48 @@ export class UnipileRealTimeSync {
               platform: 'linkedin',
               platform_conversation_id: chat.id,
               participant_name: participantName,
-              participant_company: '',
-              participant_avatar_url: '',
+              participant_company: participantCompany,
+              participant_avatar_url: participantAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${participantName}`,
               status: chat.unread_count > 0 ? 'unread' : 'active',
               last_message_at: chat.timestamp || new Date().toISOString(),
               metadata: {
                 account_id: account.id,
                 account_name: account.name,
-                chat_type: chat.content_type,
-                unread_count: chat.unread_count,
-                attendee_id: chat.attendee_provider_id
+                chat_type: chat.content_type || chat.folder?.[0] || 'message',
+                unread_count: chat.unread_count || 0,
+                attendee_id: chat.attendee_provider_id,
+                chat_subject: chat.subject || chat.name || ''
               }
             })
             .select()
             .single();
 
           if (!convError && savedConv) {
-            // Save messages
+            // Save messages with better content
             for (const msg of messages) {
+              const messageContent = msg.text || msg.subject || 'No content';
+              
               await supabase
                 .from('inbox_messages')
                 .upsert({
                   conversation_id: savedConv.id,
                   platform_message_id: msg.id,
                   role: msg.is_sender ? 'user' : 'assistant',
-                  content: msg.text || '',
+                  content: messageContent,
                   metadata: {
                     sender_id: msg.sender_id,
-                    message_type: msg.message_type,
-                    subject: msg.subject,
+                    sender_name: msg.sender_name || participantName,
+                    message_type: msg.message_type || 'message',
+                    subject: msg.subject || '',
                     timestamp: msg.timestamp,
-                    attachments: msg.attachments
+                    seen: msg.seen || false,
+                    attachments: msg.attachments || []
                   }
                 });
             }
             
             syncedCount++;
-            console.log(`✅ Synced chat: ${participantName}`);
+            console.log(`✅ Synced chat: ${participantName} (${messages.length} messages, ${chat.unread_count || 0} unread)`);
           }
         } catch (chatError) {
           console.error(`Error syncing chat ${chat.id}:`, chatError);
