@@ -179,7 +179,7 @@ export default function GlobalInbox() {
             minute: '2-digit',
             hour12: true 
           }),
-          read: false,
+          read: conv.metadata?.read === true || conv.status === 'active',
           priority: 'normal',
           tags,
           conversationData: conv, // Store the full conversation data
@@ -196,6 +196,90 @@ export default function GlobalInbox() {
     }
   };
 
+
+  // Mark all messages as read
+  const markAllAsRead = async () => {
+    try {
+      // Update local state first for immediate UI feedback
+      setMessages(prevMessages => 
+        prevMessages.map(msg => ({ ...msg, read: true }))
+      );
+      
+      // Get workspace ID
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('id')
+        .limit(1)
+        .single();
+        
+      if (!workspace) {
+        toast.error('No workspace found');
+        return;
+      }
+      
+      // Update all conversations in database to mark as read
+      const { error } = await supabase
+        .from('inbox_conversations')
+        .update({ 
+          status: 'active',
+          metadata: supabase.sql`
+            CASE 
+              WHEN metadata IS NULL THEN '{"read": true}'::jsonb
+              ELSE metadata || '{"read": true}'::jsonb
+            END
+          `
+        })
+        .eq('workspace_id', workspace.id)
+        .in('status', ['unread', 'active']);
+      
+      if (error) {
+        console.error('Error marking messages as read:', error);
+        toast.error('Failed to mark all as read');
+        // Revert local state on error
+        await loadMessages();
+      } else {
+        toast.success('All messages marked as read');
+      }
+    } catch (error) {
+      console.error('Error in markAllAsRead:', error);
+      toast.error('Failed to mark messages as read');
+      await loadMessages();
+    }
+  };
+
+  // Mark single message as read
+  const markAsRead = async (messageId: string) => {
+    try {
+      // Update local state
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.id === messageId ? { ...msg, read: true } : msg
+        )
+      );
+      
+      // Update in database
+      const { error } = await supabase
+        .from('inbox_conversations')
+        .update({ 
+          status: 'active',
+          metadata: supabase.sql`
+            CASE 
+              WHEN metadata IS NULL THEN '{"read": true}'::jsonb
+              ELSE metadata || '{"read": true}'::jsonb
+            END
+          `
+        })
+        .eq('id', messageId);
+      
+      if (error) {
+        console.error('Error marking message as read:', error);
+        // Revert on error
+        await loadMessages();
+      }
+    } catch (error) {
+      console.error('Error in markAsRead:', error);
+    }
+  };
 
   // Load conversation messages (helper function)
   const loadConversationMessages = async (message: Message) => {
@@ -514,6 +598,15 @@ export default function GlobalInbox() {
               </>
             )}
           </Button>
+          <Button 
+            variant="outline"
+            onClick={markAllAsRead}
+            disabled={messages.length === 0 || messages.every(m => m.read)}
+            title="Mark all messages as read"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Mark All Read
+          </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
             Filter
@@ -565,6 +658,11 @@ export default function GlobalInbox() {
               <div>
                 <div className="text-2xl font-bold text-gray-900">{messages.length}</div>
                 <div className="text-sm text-gray-600">Total Messages</div>
+                {messages.filter(m => !m.read).length > 0 && (
+                  <Badge className="mt-1 bg-blue-100 text-blue-800">
+                    {messages.filter(m => !m.read).length} unread
+                  </Badge>
+                )}
               </div>
               <Inbox className="h-8 w-8 text-premium-purple" />
             </div>
@@ -663,6 +761,11 @@ export default function GlobalInbox() {
                       } ${!message.read ? "bg-blue-50" : ""}`}
                       onClick={async () => {
                         setSelectedMessage(message);
+                        
+                        // Mark as read when selected
+                        if (!message.read) {
+                          await markAsRead(message.id);
+                        }
                         
                         // Use the conversation data we already have or reload it
                         if (message.conversationData?.inbox_messages) {
