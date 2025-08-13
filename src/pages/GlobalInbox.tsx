@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { syncLinkedInInbox } from '@/services/linkedin/SimplestSync';
+import { realLinkedInSync } from '@/services/linkedin/RealLinkedInSync';
 import { toast } from 'sonner';
 
 interface Message {
@@ -179,7 +179,12 @@ export default function GlobalInbox() {
       toast.info('Syncing LinkedIn messages...');
       
       // Use simple sync that works
-      await syncLinkedInInbox();
+      // Check if API is configured
+      if (!realLinkedInSync.isConfigured()) {
+        toast.error('Unipile API not configured');
+        return;
+      }
+      await realLinkedInSync.syncInboxMessages();
       
       // Wait a moment for database to update
       await new Promise(resolve => setTimeout(resolve, 1000));
