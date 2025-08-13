@@ -44,26 +44,48 @@ export default function TestInbox() {
 
   const syncMessage = async () => {
     setLoading(true);
-    addLog('Adding test message...');
-    
-    // Update sync times
-    const now = new Date();
-    setLastSync(now);
-    setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
+    addLog('Starting sync...');
     
     try {
-      const testId = 'test_' + Date.now();
+      // Generate unique IDs for each message
+      const timestamp = Date.now();
+      const randomNum = Math.floor(Math.random() * 1000);
+      
+      // Sample LinkedIn messages to sync
+      const sampleMessages = [
+        {
+          name: 'Emma Wilson',
+          company: 'TechStart Inc',
+          message: 'Hi! I noticed your work in AI development. Would love to connect and discuss potential collaborations.'
+        },
+        {
+          name: 'James Chen',
+          company: 'Innovation Labs',
+          message: 'Thanks for accepting my connection! Our team is looking for solutions like yours.'
+        },
+        {
+          name: 'Sofia Rodriguez',
+          company: 'Digital Ventures',
+          message: 'Great presentation at the conference! Let\'s schedule a follow-up call to explore synergies.'
+        }
+      ];
+      
+      // Pick a random message
+      const sample = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
+      const conversationId = `linkedin_${timestamp}_${randomNum}`;
       
       // Create conversation
       const { data: conv, error: convError } = await supabase
         .from('inbox_conversations')
-        .insert({
+        .upsert({
           workspace_id: 'a0000000-0000-0000-0000-000000000000',
           platform: 'linkedin',
-          platform_conversation_id: testId,
-          participant_name: 'Test User ' + new Date().toLocaleTimeString(),
-          participant_company: 'Test Company',
-          status: 'active'
+          platform_conversation_id: conversationId,
+          participant_name: sample.name,
+          participant_company: sample.company,
+          participant_avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sample.name}`,
+          status: 'active',
+          last_message_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -79,16 +101,28 @@ export default function TestInbox() {
       // Create message
       const { error: msgError } = await supabase
         .from('inbox_messages')
-        .insert({
+        .upsert({
           conversation_id: conv.id,
+          platform_message_id: `msg_${conversationId}`,
           role: 'assistant',
-          content: 'Test message created at ' + new Date().toLocaleString()
+          content: sample.message,
+          metadata: {
+            sender_name: sample.name,
+            sender_company: sample.company,
+            type: 'inbound'
+          }
         });
         
       if (msgError) {
         addLog(`❌ Message error: ${JSON.stringify(msgError)}`);
       } else {
-        addLog('✅ Message created successfully');
+        addLog(`✅ Synced message from ${sample.name}`);
+        
+        // Update sync times on success
+        const now = new Date();
+        setLastSync(now);
+        setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
+        
         await loadMessages();
       }
     } catch (err: any) {
