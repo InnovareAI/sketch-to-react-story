@@ -144,83 +144,19 @@ export function Inbox({ className }: InboxProps) {
     try {
       setLoading(true);
       
-      // Mock data for demonstration
+      // Only real data - no mock data
       setStats({
-        total_messages: 1247,
-        unread_messages: 23,
-        sent_today: 15,
-        response_rate: 32.4,
-        avg_response_time: '4h 32m',
-        failed_messages: 3
+        total_messages: 0,
+        unread_messages: 0,
+        sent_today: 0,
+        response_rate: 0,
+        avg_response_time: '0h',
+        failed_messages: 0
       });
 
-      setConversations([
-        {
-          id: '1',
-          participants: [
-            {
-              id: '1',
-              name: 'Sarah Johnson',
-              profile_url: 'https://linkedin.com/in/sarahjohnson',
-              profile_image: 'https://via.placeholder.com/40',
-              headline: 'Head of Marketing at GrowthCorp',
-              company: 'GrowthCorp'
-            }
-          ],
-          last_message: {
-            id: '1',
-            conversation_id: '1',
-            sender: {
-              id: '1',
-              name: 'Sarah Johnson',
-              profile_url: 'https://linkedin.com/in/sarahjohnson',
-              profile_image: 'https://via.placeholder.com/40',
-              headline: 'Head of Marketing at GrowthCorp',
-              company: 'GrowthCorp'
-            },
-            recipient: {
-              id: 'me',
-              name: 'You',
-              profile_url: '#'
-            },
-            content: 'Thanks for connecting! I\'d love to learn more about your AI solutions.',
-            sent_at: '2024-01-22T14:30:00Z',
-            message_type: 'direct',
-            is_outbound: false,
-            failed: false,
-            campaign_source: 'Marketing Leaders Campaign'
-          },
-          unread_count: 1,
-          is_archived: false,
-          is_starred: false,
-          campaign_source: 'Marketing Leaders Campaign',
-          created_at: '2024-01-22T10:00:00Z',
-          updated_at: '2024-01-22T14:30:00Z'
-        }
-        // More mock conversations...
-      ]);
-
-      setTemplates([
-        {
-          id: '1',
-          name: 'Follow-up After Connection',
-          content: 'Hi {{name}}, thanks for connecting! I noticed you work in {{industry}}. I\'d love to share some insights that might be valuable for your team at {{company}}.',
-          category: 'follow_up',
-          variables: ['name', 'industry', 'company'],
-          usage_count: 45,
-          created_at: '2024-01-15T10:00:00Z'
-        },
-        {
-          id: '2',
-          name: 'Meeting Request',
-          content: 'Hi {{name}}, I hope you\'re well! Based on our conversation about {{topic}}, I think a brief call could be valuable. Are you available for a 15-minute chat this week?',
-          category: 'meeting',
-          variables: ['name', 'topic'],
-          usage_count: 23,
-          created_at: '2024-01-10T09:00:00Z'
-        }
-        // More templates...
-      ]);
+      // Empty until real data is loaded
+      setConversations([]);
+      setTemplates([]);
 
     } catch (error) {
       console.error('Error loading inbox data:', error);

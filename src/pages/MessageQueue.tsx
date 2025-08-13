@@ -58,75 +58,8 @@ export default function MessageQueue() {
     );
   }
 
-  // Sample message queue data
-  const queuedMessages = [
-    {
-      id: 1,
-      recipient: "Sarah Johnson",
-      company: "TechFlow Inc.",
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b829?w=400&h=400&fit=crop&crop=face",
-      template: "Cold Outreach Template",
-      scheduledFor: "Today, 2:00 PM",
-      status: "scheduled",
-      platform: "LinkedIn",
-      campaign: "Q1 Outreach",
-      message: "Hi Sarah, I noticed your work at TechFlow and would love to connect...",
-      priority: "high"
-    },
-    {
-      id: 2,
-      recipient: "Michael Chen",
-      company: "DataCorp",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-      template: "Follow-up Template",
-      scheduledFor: "Tomorrow, 10:00 AM",
-      status: "scheduled",
-      platform: "Email",
-      campaign: "Follow-up Campaign",
-      message: "Following up on our previous conversation about data analytics...",
-      priority: "medium"
-    },
-    {
-      id: 3,
-      recipient: "Emily Rodriguez",
-      company: "InnovateHub",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
-      template: "Partnership Proposal",
-      scheduledFor: "In 2 hours",
-      status: "sending",
-      platform: "LinkedIn",
-      campaign: "Partnership Outreach",
-      message: "Hi Emily, I'd like to discuss a potential partnership opportunity...",
-      priority: "high"
-    },
-    {
-      id: 4,
-      recipient: "David Wilson",
-      company: "ScaleUp Solutions",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-      template: "Product Demo",
-      scheduledFor: "Sent 1 hour ago",
-      status: "sent",
-      platform: "Email",
-      campaign: "Demo Campaign",
-      message: "Hi David, I'd love to show you how our platform can help...",
-      priority: "medium"
-    },
-    {
-      id: 5,
-      recipient: "Lisa Thompson",
-      company: "FinancePlus",
-      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&crop=face",
-      template: "Cold Outreach Template",
-      scheduledFor: "Failed - 30 min ago",
-      status: "failed",
-      platform: "LinkedIn",
-      campaign: "Q1 Outreach",
-      message: "Hi Lisa, I came across your profile and was impressed...",
-      priority: "low",
-      error: "LinkedIn connection limit reached"
-    }
-  ];
+  // No demo data - only real messages from database
+  const queuedMessages: any[] = [];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
