@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SAMBranding } from '@/components/branding/SAMBranding';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
 // Main Navigation Items
 const mainNavItems = [
@@ -30,7 +31,6 @@ const mainNavItems = [
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Inbox", url: "/inbox", icon: Mail },
   { title: "Templates", url: "/templates", icon: FileText },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
 ];
 
 // Team Navigation Items  
@@ -102,23 +102,9 @@ export function WorkspaceSidebar({
         {/* SAM Branding Header */}
         <div className="p-4 border-b border-gray-200">
           <SAMBranding variant="default" showTagline={true} className="mb-4" />
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-3 w-full">
-              <div className={cn(
-                "flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0",
-                isConversational ? "bg-gray-800 text-gray-300" : "bg-gradient-to-br from-blue-400 to-purple-400 text-white shadow-md"
-              )}>
-                <Building2 className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1 text-center">
-                <h2 className={cn(
-                  "text-sm truncate",
-                  isConversational ? "text-white font-semibold" : "text-gray-900 font-light"
-                )}>
-                  {workspaceName}
-                </h2>
-              </div>
-            </div>
+          <div className="flex flex-col gap-3">
+            {/* Workspace Switcher */}
+            <WorkspaceSwitcher />
             
             {/* Mode Switch Button */}
             <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg w-full border border-gray-200">

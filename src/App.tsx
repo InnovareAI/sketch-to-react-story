@@ -8,7 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
-import Accounts from "./pages/Accounts";
+import ManagedAccounts from "./pages/ManagedAccounts";
 import Campaigns from "./pages/Campaigns";
 import Contacts from "./pages/Contacts";
 import ContactsView from "./pages/ContactsView";
@@ -35,7 +35,7 @@ import UserLogin from "./pages/auth/UserLogin";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import Integrations from "./pages/Integrations";
 import TeamSettings from "./pages/TeamSettings";
-import Analytics from "./pages/Analytics";
+// Analytics merged with Dashboard - no longer needed as separate page
 import ProspectSearch from "./pages/ProspectSearch";
 import SearchResults from "./pages/SearchResults";
 import Profile from "./pages/Profile";
@@ -78,7 +78,7 @@ const App: React.FC = () => {
               >
                 <Route index element={<Dashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="accounts" element={<Accounts />} />
+                <Route path="accounts" element={<ManagedAccounts />} />
                 
                 {/* Core Navigation Routes - These should never 404 */}
                 <Route path="campaigns" element={<Campaigns />} />
@@ -87,7 +87,7 @@ const App: React.FC = () => {
                 <Route path="test-sync" element={<ContactSyncTest />} />
                 <Route path="inbox" element={<GlobalInbox />} />
                 <Route path="templates" element={<Templates />} />
-                <Route path="analytics" element={<Analytics />} />
+                <Route path="analytics" element={<Dashboard />} /> {/* Analytics redirects to Dashboard */}
                 
                 {/* Team Routes */}
                 <Route path="global-inbox" element={<GlobalInbox />} />

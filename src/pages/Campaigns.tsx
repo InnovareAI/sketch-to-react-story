@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { Badge } from "@/components/ui/badge";
@@ -42,12 +42,29 @@ import CampaignOverviewCard from "@/components/campaigns/CampaignOverviewCard";
 
 export default function Campaigns() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { campaigns, loading, error, refetch, createCampaign } = useCampaigns();
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<'cards' | 'overview'>('overview');
+  
+  // Check if we're managing for someone else
+  const [managingFor, setManagingFor] = useState<any>(null);
+  
+  useEffect(() => {
+    // Check if we're managing campaigns for another user
+    const managingData = localStorage.getItem('managing_as_user');
+    if (managingData) {
+      setManagingFor(JSON.parse(managingData));
+    }
+    
+    // Also check if passed via navigation state
+    if (location.state?.managingFor) {
+      setManagingFor(location.state.managingFor);
+    }
+  }, [location]);
   
   const handleQuickCreateCampaign = async () => {
     try {
@@ -111,7 +128,30 @@ export default function Campaigns() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
-                  <p className="text-gray-600 mt-1">Manage your outreach campaigns across channels</p>
+                  <p className="text-gray-600 mt-1">
+                    {managingFor 
+                      ? `Managing campaigns for ${managingFor.full_name}` 
+                      : 'Manage your outreach campaigns across channels'}
+                  </p>
+                  {managingFor && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge className="bg-blue-100 text-blue-800">
+                        <Users className="h-3 w-3 mr-1" />
+                        Managing as: {managingFor.full_name}
+                      </Badge>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          localStorage.removeItem('managing_as_user');
+                          setManagingFor(null);
+                          navigate('/accounts');
+                        }}
+                      >
+                        Switch User
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button 
