@@ -524,6 +524,7 @@ export class UnipileRealTimeSync {
           
           // Always try to get attendee info if we have the ID
           if (chat.attendee_provider_id) {
+            console.log(`🔍 Fetching attendee: ${chat.attendee_provider_id}`);
             try {
               const attendeeUrl = `${this.baseUrl}/users/${chat.attendee_provider_id}?account_id=${account.id}`;
               const attendeeResponse = await fetch(attendeeUrl, {
@@ -534,17 +535,26 @@ export class UnipileRealTimeSync {
                 }
               });
               
+              console.log(`👤 Attendee response status: ${attendeeResponse.status}`);
+              
               if (attendeeResponse.ok) {
                 const attendee = await attendeeResponse.json();
+                console.log(`✅ Got attendee data:`, attendee);
                 const firstName = attendee.first_name || '';
                 const lastName = attendee.last_name || '';
                 participantName = `${firstName} ${lastName}`.trim() || attendee.name || participantName;
                 participantCompany = attendee.headline || attendee.company || '';
                 participantAvatar = attendee.profile_picture_url || '';
+                console.log(`📝 Set participant name: ${participantName}`);
+              } else {
+                const errorText = await attendeeResponse.text();
+                console.log(`❌ Failed to fetch attendee:`, errorText);
               }
             } catch (e) {
-              console.log(`Could not fetch attendee info for ${chat.attendee_provider_id}`);
+              console.error(`❌ Error fetching attendee for ${chat.attendee_provider_id}:`, e);
             }
+          } else {
+            console.log(`⚠️ No attendee_provider_id for chat: ${chat.id}`);
           }
           
           // Fetch messages to check if we have any
@@ -564,26 +574,32 @@ export class UnipileRealTimeSync {
           }
           
           // Save conversation with real participant info
+          console.log(`💾 Saving conversation: ${participantName} (${chat.id})`);
+          
+          const conversationData = {
+            workspace_id: workspace.id,
+            platform: 'linkedin',
+            platform_conversation_id: chat.id,
+            participant_name: participantName,
+            participant_company: participantCompany,
+            participant_avatar_url: participantAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${participantName}`,
+            status: chat.unread_count > 0 ? 'unread' : 'active',
+            last_message_at: chat.timestamp || new Date().toISOString(),
+            metadata: {
+              account_id: account.id,
+              account_name: account.name,
+              chat_type: chat.content_type || chat.folder?.[0] || 'message',
+              unread_count: chat.unread_count || 0,
+              attendee_id: chat.attendee_provider_id,
+              chat_subject: chat.subject || chat.name || ''
+            }
+          };
+          
+          console.log(`📝 Conversation data:`, conversationData);
+          
           const { data: savedConv, error: convError } = await supabase
             .from('inbox_conversations')
-            .upsert({
-              workspace_id: workspace.id,
-              platform: 'linkedin',
-              platform_conversation_id: chat.id,
-              participant_name: participantName,
-              participant_company: participantCompany,
-              participant_avatar_url: participantAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${participantName}`,
-              status: chat.unread_count > 0 ? 'unread' : 'active',
-              last_message_at: chat.timestamp || new Date().toISOString(),
-              metadata: {
-                account_id: account.id,
-                account_name: account.name,
-                chat_type: chat.content_type || chat.folder?.[0] || 'message',
-                unread_count: chat.unread_count || 0,
-                attendee_id: chat.attendee_provider_id,
-                chat_subject: chat.subject || chat.name || ''
-              }
-            })
+            .upsert(conversationData)
             .select()
             .single();
 
