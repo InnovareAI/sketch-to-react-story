@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Test LinkedIn Accounts</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 600px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        .danger { background: #dc3545; color: white; border: none; }
+        .info { background: #007bff; color: white; border: none; }
+        .success { background: #28a745; color: white; border: none; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Clear Test LinkedIn Accounts</h1>
+    <p>Use this to remove the manually created test account and let the real LinkedIn sync work properly.</p>
+    
+    <div>
+        <button class="info" onclick="checkAccounts()">Check Current Accounts</button>
+        <button class="danger" onclick="clearAccounts()">Clear Test Accounts</button>
+        <button class="success" onclick="window.location.href='/test-inbox'">Go to Test Inbox</button>
+    </div>
+    
+    <div id="log"></div>
+    
+    <script>
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log';
+            entry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            log.appendChild(entry);
+        }
+        
+        function checkAccounts() {
+            const linkedinAccounts = localStorage.getItem('linkedin_accounts');
+            const workspaceSettings = localStorage.getItem('workspace_settings');
+            
+            addLog('Checking stored accounts...');
+            
+            if (linkedinAccounts) {
+                try {
+                    const accounts = JSON.parse(linkedinAccounts);
+                    addLog(`Found ${accounts.length} LinkedIn account(s): ${JSON.stringify(accounts, null, 2)}`);
+                } catch (e) {
+                    addLog('Error parsing linkedin_accounts: ' + e.message, 'error');
+                }
+            } else {
+                addLog('No linkedin_accounts in localStorage');
+            }
+            
+            if (workspaceSettings) {
+                try {
+                    const settings = JSON.parse(workspaceSettings);
+                    addLog(`Found workspace settings: ${JSON.stringify(settings, null, 2)}`);
+                } catch (e) {
+                    addLog('Error parsing workspace_settings: ' + e.message, 'error');
+                }
+            } else {
+                addLog('No workspace_settings in localStorage');
+            }
+        }
+        
+        function clearAccounts() {
+            addLog('Clearing test accounts...', 'warning');
+            
+            // Remove test account data
+            localStorage.removeItem('linkedin_accounts');
+            localStorage.removeItem('workspace_settings');
+            
+            // Also clear any default/fallback accounts
+            const keysToCheck = Object.keys(localStorage);
+            keysToCheck.forEach(key => {
+                if (key.includes('linkedin') || key.includes('unipile')) {
+                    addLog(`Removing ${key}`);
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            addLog('✅ All test accounts cleared!', 'success');
+            addLog('The system will now use the API to detect real LinkedIn accounts.');
+            addLog('Next steps:');
+            addLog('1. Go to /test-inbox');
+            addLog('2. Click "Sync LinkedIn Inbox"');
+            addLog('3. It should now detect your real connected account');
+        }
+        
+        // Check on load
+        window.onload = () => {
+            addLog('Page loaded. Click "Check Current Accounts" to see what\'s stored.');
+        };
+    </script>
+</body>
+</html>

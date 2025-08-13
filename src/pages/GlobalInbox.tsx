@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { realLinkedInSync } from '@/services/linkedin/RealLinkedInSync';
+import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { toast } from 'sonner';
 
 interface Message {
@@ -96,7 +96,6 @@ export default function GlobalInbox() {
   const loadMessages = async () => {
     try {
       setLoading(true);
-      console.log('📂 Loading messages from database...');
       
       // Get first workspace
       const { data: workspace } = await supabase
@@ -106,7 +105,6 @@ export default function GlobalInbox() {
         .single();
         
       if (!workspace) {
-        console.log('❌ No workspace found');
         setMessages([]);
         setLoading(false);
         return;
@@ -127,15 +125,11 @@ export default function GlobalInbox() {
         .order('last_message_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Database error:', error);
         throw error;
       }
 
-      console.log(`📊 Found ${conversations?.length || 0} conversations`);
-
-      // If no conversations, show helpful message
+      // If no conversations, show empty state
       if (!conversations || conversations.length === 0) {
-        console.log('📭 No conversations in database');
         setMessages([]);
         setLoading(false);
         return;
@@ -165,7 +159,6 @@ export default function GlobalInbox() {
       
       setMessages(inboxMessages);
     } catch (error) {
-      console.error('Error loading messages:', error);
       setMessages([]);
     } finally {
       setLoading(false);
@@ -175,27 +168,32 @@ export default function GlobalInbox() {
   const handleSyncMessages = async () => {
     try {
       setLoading(true);
-      console.log('🚀 Starting sync from button click');
       toast.info('Syncing LinkedIn messages...');
       
-      // Use simple sync that works
       // Check if API is configured
-      if (!realLinkedInSync.isConfigured()) {
-        toast.error('Unipile API not configured');
+      if (!unipileRealTimeSync.isConfigured()) {
+        toast.error('LinkedIn sync not configured. Please check settings.');
         return;
       }
-      await realLinkedInSync.syncInboxMessages();
+      
+      // Perform sync
+      await unipileRealTimeSync.syncAll();
+      const status = unipileRealTimeSync.getStatus();
+      
+      if (status.messagessynced > 0) {
+        toast.success(`Synced ${status.messagessynced} new messages`);
+      } else {
+        toast.info('No new messages to sync');
+      }
       
       // Wait a moment for database to update
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Reload messages after sync
-      console.log('📥 Reloading messages from database');
+      // Reload messages
       await loadMessages();
       
     } catch (error) {
-      console.error('❌ Sync error:', error);
-      toast.error('Sync failed - check console for details');
+      toast.error('Sync failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -424,6 +422,15 @@ export default function GlobalInbox() {
           </select>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleSyncMessages}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Sync LinkedIn
+          </Button>
           <Button variant="outline" size="sm">
             More Filters
           </Button>

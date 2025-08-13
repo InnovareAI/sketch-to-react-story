@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reconnect LinkedIn Account</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        input, select { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; border-radius: 4px; border: none; }
+        .primary { background: #0077B5; color: white; }
+        .success { background: #28a745; color: white; }
+        .danger { background: #dc3545; color: white; }
+        .warning { background: #ffc107; color: black; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
+        .status { padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🔗 Reconnect LinkedIn Account</h1>
+    
+    <div class="card">
+        <h2>Option 1: Quick Reconnect (Temporary)</h2>
+        <p>This will create a placeholder account to allow syncing while you properly reconnect via Unipile.</p>
+        
+        <input type="email" id="email" placeholder="Your LinkedIn email (optional)">
+        <input type="text" id="name" placeholder="Your name (optional)">
+        <input type="text" id="profileUrl" placeholder="LinkedIn profile URL (optional)">
+        
+        <div>
+            <button class="primary" onclick="createPlaceholderAccount()">Create Placeholder Account</button>
+            <button class="warning" onclick="createDefaultAccount()">Use Default Account</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Option 2: Proper Reconnection (Recommended)</h2>
+        <p>Connect your real LinkedIn account through the proper OAuth flow:</p>
+        
+        <div>
+            <button class="success" onclick="window.open('https://app.unipile.com', '_blank')">
+                Open Unipile Dashboard →
+            </button>
+            <button class="primary" onclick="window.location.href='/workspace-settings'">
+                Workspace Settings →
+            </button>
+            <button class="primary" onclick="window.location.href='/linkedin-integration'">
+                LinkedIn Integration →
+            </button>
+        </div>
+        
+        <h3>Steps:</h3>
+        <ol>
+            <li>Go to Unipile Dashboard</li>
+            <li>Click "Accounts" → "Add Account"</li>
+            <li>Select LinkedIn</li>
+            <li>Complete OAuth authorization</li>
+            <li>Return here and click "Verify Connection"</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>Option 3: Use Unipile Account ID</h2>
+        <p>If you have your Unipile account ID, enter it here:</p>
+        
+        <input type="text" id="unipileId" placeholder="Unipile Account ID (e.g., acc_xxxxx)">
+        <button class="success" onclick="setUnipileAccount()">Set Unipile Account</button>
+    </div>
+
+    <div class="card">
+        <h2>Status & Actions</h2>
+        <div>
+            <button onclick="checkStatus()">Check Current Status</button>
+            <button onclick="testSync()">Test Sync</button>
+            <button class="danger" onclick="clearAll()">Clear All Accounts</button>
+        </div>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = type === 'error' ? 'status error' : type === 'success' ? 'status success' : 'log';
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+        }
+
+        function createPlaceholderAccount() {
+            const email = document.getElementById('email').value || 'user@linkedin.com';
+            const name = document.getElementById('name').value || 'LinkedIn User';
+            const profileUrl = document.getElementById('profileUrl').value || 'https://linkedin.com/in/user';
+            
+            const account = {
+                id: 'reconnected-' + Date.now(),
+                name: name,
+                email: email,
+                provider: 'LINKEDIN',
+                status: 'CONNECTED',
+                profile_url: profileUrl,
+                unipile_account_id: 'placeholder-' + Date.now(),
+                connected_at: new Date().toISOString()
+            };
+
+            // Store in multiple places for redundancy
+            localStorage.setItem('linkedin_accounts', JSON.stringify([account]));
+            localStorage.setItem('workspace_settings', JSON.stringify({
+                linkedinAccount: account
+            }));
+
+            addLog('✅ Placeholder account created!', 'success');
+            addLog('Account details: ' + JSON.stringify(account, null, 2));
+            addLog('You can now try syncing. For permanent fix, reconnect via Unipile.');
+        }
+
+        function createDefaultAccount() {
+            const account = {
+                id: 'default-linkedin',
+                name: 'LinkedIn Account',
+                provider: 'LINKEDIN',
+                status: 'CONNECTED',
+                email: 'default@linkedin.com',
+                unipile_account_id: 'default'
+            };
+
+            localStorage.setItem('linkedin_accounts', JSON.stringify([account]));
+            addLog('✅ Default account set!', 'success');
+            addLog('This will allow the API to attempt syncing.');
+        }
+
+        function setUnipileAccount() {
+            const unipileId = document.getElementById('unipileId').value;
+            if (!unipileId) {
+                addLog('Please enter a Unipile Account ID', 'error');
+                return;
+            }
+
+            const account = {
+                id: unipileId,
+                name: 'LinkedIn Account (Unipile)',
+                provider: 'LINKEDIN',
+                status: 'CONNECTED',
+                unipile_account_id: unipileId,
+                connected_at: new Date().toISOString()
+            };
+
+            localStorage.setItem('linkedin_accounts', JSON.stringify([account]));
+            addLog('✅ Unipile account configured!', 'success');
+            addLog('Account ID: ' + unipileId);
+        }
+
+        function checkStatus() {
+            addLog('Checking account status...');
+            
+            const linkedinAccounts = localStorage.getItem('linkedin_accounts');
+            const workspaceSettings = localStorage.getItem('workspace_settings');
+            const unipileKey = localStorage.getItem('VITE_UNIPILE_API_KEY');
+            
+            if (linkedinAccounts) {
+                const accounts = JSON.parse(linkedinAccounts);
+                addLog('LinkedIn Accounts: ' + JSON.stringify(accounts, null, 2));
+            } else {
+                addLog('No LinkedIn accounts found', 'error');
+            }
+            
+            if (workspaceSettings) {
+                const settings = JSON.parse(workspaceSettings);
+                addLog('Workspace Settings: ' + JSON.stringify(settings.linkedinAccount || {}, null, 2));
+            }
+            
+            addLog('Unipile API Key: ' + (unipileKey ? 'Configured' : 'Not configured'));
+        }
+
+        async function testSync() {
+            addLog('Testing sync...');
+            
+            // Check if we have an account
+            const accounts = localStorage.getItem('linkedin_accounts');
+            if (!accounts) {
+                addLog('No account configured. Please create one first.', 'error');
+                return;
+            }
+            
+            addLog('Account found. Redirecting to Test Inbox...');
+            setTimeout(() => {
+                window.location.href = '/test-inbox';
+            }, 2000);
+        }
+
+        function clearAll() {
+            if (confirm('This will remove all LinkedIn account data. Are you sure?')) {
+                localStorage.removeItem('linkedin_accounts');
+                localStorage.removeItem('workspace_settings');
+                addLog('All accounts cleared', 'success');
+            }
+        }
+
+        // Check status on load
+        window.onload = () => {
+            checkStatus();
+        };
+    </script>
+</body>
+</html>
