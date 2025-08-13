@@ -19,6 +19,19 @@ export default function TestInbox() {
     addLog('Loading messages...');
     
     try {
+      // First try simple query
+      const { data: simpleData, error: simpleError } = await supabase
+        .from('inbox_conversations')
+        .select('*')
+        .order('last_message_at', { ascending: false });
+      
+      if (simpleError) {
+        addLog(`❌ Simple query error: ${simpleError.message}`);
+      } else {
+        addLog(`✅ Simple query found ${simpleData?.length || 0} conversations`);
+      }
+      
+      // Then try with join
       const { data, error } = await supabase
         .from('inbox_conversations')
         .select(`
