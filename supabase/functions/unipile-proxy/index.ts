@@ -23,18 +23,25 @@ serve(async (req) => {
     console.log(`Proxying ${method} request to: ${path}`)
 
     // Make the request to Unipile API
-    const unipileResponse = await fetch(
-      `${UNIPILE_BASE_URL}${path}`,
-      {
-        method,
-        headers: {
-          'Authorization': `Bearer ${UNIPILE_API_KEY}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      }
-    )
+    // Note: Using full URL with proper headers
+    const fullUrl = `${UNIPILE_BASE_URL}${path}`
+    console.log(`Making request to: ${fullUrl}`)
+    
+    const requestOptions: RequestInit = {
+      method,
+      headers: {
+        'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'Supabase Edge Function',
+      },
+    }
+    
+    if (body && method !== 'GET') {
+      requestOptions.body = JSON.stringify(body)
+    }
+    
+    const unipileResponse = await fetch(fullUrl, requestOptions)
 
     // Get the response
     const responseText = await unipileResponse.text()
