@@ -196,15 +196,6 @@ export default function GlobalInbox() {
     }
   };
 
-  const handleSyncMessages = async () => {
-    setLoading(true);
-    await performManualSync();
-    // Wait a moment for database to update
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // Reload messages
-    await loadMessages();
-    setLoading(false);
-  };
 
   // Load conversation messages (helper function)
   const loadConversationMessages = async (message: Message) => {
@@ -505,15 +496,6 @@ export default function GlobalInbox() {
             <Mail className="h-4 w-4 mr-2" />
             New Message
           </Button>
-          <Button 
-            variant="outline"
-            onClick={handleSyncMessages}
-            disabled={syncState.isSyncing || loading}
-            title="Manually sync LinkedIn messages"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${(syncState.isSyncing || loading) ? 'animate-spin' : ''}`} />
-            {syncState.isSyncing ? 'Syncing...' : 'Sync LinkedIn'}
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -569,15 +551,6 @@ export default function GlobalInbox() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleSyncMessages}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Sync LinkedIn
-          </Button>
           <Button variant="outline" size="sm">
             More Filters
           </Button>
@@ -678,7 +651,7 @@ export default function GlobalInbox() {
                       <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">No messages yet</p>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Click "Sync Messages" to import from LinkedIn
+                        Messages will appear here once synced from LinkedIn
                       </p>
                     </div>
                   ) : (

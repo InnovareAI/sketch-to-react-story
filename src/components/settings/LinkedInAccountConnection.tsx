@@ -37,6 +37,15 @@ import { linkedInOAuth } from '@/services/linkedin/LinkedInOAuth';
 import { TeamAccountsSupabaseService } from '@/services/accounts/TeamAccountsSupabaseService';
 import { useAuth } from '@/contexts/AuthContext';
 import { linkedInDataSync } from '@/services/linkedin/LinkedInDataSync';
+import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
+import { previewSync } from '@/services/unipile/PreviewSync';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 
 interface ProxyLocation {
   code: string;
@@ -65,6 +74,8 @@ export function LinkedInAccountConnection() {
   const [selectedProxy, setSelectedProxy] = useState<string>('US');
   const [updatingProxy, setUpdatingProxy] = useState<string | null>(null);
   const [showProxyUpdate, setShowProxyUpdate] = useState<string | null>(null);
+  const [manualSyncType, setManualSyncType] = useState<'standard' | 'preview' | 'smart'>('standard');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     loadConnectedAccounts();
@@ -557,6 +568,52 @@ export function LinkedInAccountConnection() {
     }
   };
 
+  // Manual sync function
+  const performManualSync = async () => {
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    
+    try {
+      // Get workspace ID
+      const workspaceId = user?.workspace_id;
+      if (!workspaceId) {
+        throw new Error('No workspace found');
+      }
+      
+      // Get connected accounts
+      const connectedAccounts = await unipileRealTimeSync.testConnection();
+      if (!connectedAccounts.success || connectedAccounts.accounts.length === 0) {
+        throw new Error('No LinkedIn account connected');
+      }
+      
+      const account = connectedAccounts.accounts[0];
+      
+      // Perform sync based on selected type
+      if (manualSyncType === 'preview') {
+        toast.info('Starting preview sync (500 full + 2000 preview)...');
+        const results = await previewSync.syncWithPreviews(account.id, workspaceId);
+        toast.success(`Preview sync complete! ${results.fullSync} full + ${results.previewOnly} preview conversations`);
+      } else if (manualSyncType === 'smart') {
+        toast.info('Starting smart sync (optimized for large inboxes)...');
+        const { smartSync } = await import('@/services/unipile/SmartSync');
+        const results = await smartSync.syncLargeInbox(account.id, workspaceId);
+        toast.success(`Smart sync complete! Strategy: ${results.strategy}`);
+      } else {
+        // Standard sync
+        toast.info('Starting standard sync...');
+        await unipileRealTimeSync.syncAll();
+        toast.success('Standard sync complete!');
+      }
+      
+    } catch (error) {
+      console.error('Manual sync error:', error);
+      toast.error(`Sync failed: ${(error as Error).message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Card */}
@@ -984,6 +1041,86 @@ export function LinkedInAccountConnection() {
               </CardContent>
             </Card>
           ))}
+          
+          {/* Manual Sync Card */}
+          <Card className="mt-4">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Manual Sync</CardTitle>
+                  <CardDescription>
+                    Manually sync your LinkedIn messages and conversations
+                  </CardDescription>
+                </div>
+                <Badge variant="outline">
+                  <Activity className="h-3 w-3 mr-1" />
+                  Manual Control
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="sync-type" className="text-sm mb-2">Sync Type</Label>
+                  <Select 
+                    value={manualSyncType} 
+                    onValueChange={(value: 'standard' | 'preview' | 'smart') => setManualSyncType(value)}
+                    disabled={isSyncing}
+                  >
+                    <SelectTrigger id="sync-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">
+                        <div className="flex flex-col">
+                          <span>Standard Sync</span>
+                          <span className="text-xs text-muted-foreground">500 recent conversations with full messages</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="preview">
+                        <div className="flex flex-col">
+                          <span>Preview Sync</span>
+                          <span className="text-xs text-muted-foreground">500 full + 2000 preview (saves storage)</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="smart">
+                        <div className="flex flex-col">
+                          <span>Smart Sync</span>
+                          <span className="text-xs text-muted-foreground">Optimized for large inboxes (10K+ messages)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button 
+                  onClick={performManualSync}
+                  disabled={isSyncing}
+                  className="mt-6"
+                >
+                  {isSyncing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Start Sync
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Manual sync will fetch messages from LinkedIn based on your selected sync type. 
+                  This may take a few minutes depending on your inbox size.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
         </div>
       ) : (
         <Card>
