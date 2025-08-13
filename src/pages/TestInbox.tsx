@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
+import { syncLinkedInContacts, getContactsCount } from '@/services/linkedin/ContactSync';
 
 export default function TestInbox() {
   const [log, setLog] = useState<string[]>([]);
@@ -8,6 +9,7 @@ export default function TestInbox() {
   const [showDebug, setShowDebug] = useState(false); // Hide debug by default for cleaner UI
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [nextSync, setNextSync] = useState<Date | null>(null);
+  const [contactCount, setContactCount] = useState<number>(0);
 
   const addLog = (msg: string) => {
     console.log(msg);
@@ -154,9 +156,36 @@ export default function TestInbox() {
     }
   };
 
+  const syncContacts = async () => {
+    setLoading(true);
+    addLog('🔄 Syncing LinkedIn contacts...');
+    
+    try {
+      const count = await syncLinkedInContacts();
+      if (count > 0) {
+        addLog(`✅ Synced ${count} new contacts`);
+        // Update contact count
+        const totalCount = await getContactsCount();
+        setContactCount(totalCount);
+      } else {
+        addLog('❌ No contacts synced');
+      }
+    } catch (error: any) {
+      addLog(`❌ Contact sync error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadContactCount = async () => {
+    const count = await getContactsCount();
+    setContactCount(count);
+  };
+
   // Auto-load messages on mount and set up auto-sync
   useEffect(() => {
     loadMessages();
+    loadContactCount();
     
     // Auto-sync every 30 minutes (1800000 ms)
     const interval = setInterval(() => {
@@ -205,6 +234,23 @@ export default function TestInbox() {
             </>
           ) : (
             'Sync LinkedIn Inbox'
+          )}
+        </button>
+        <button 
+          onClick={syncContacts}
+          disabled={loading}
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center"
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Syncing...
+            </>
+          ) : (
+            `Sync Contacts (${contactCount})`
           )}
         </button>
         <button 
