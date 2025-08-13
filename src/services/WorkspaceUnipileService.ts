@@ -214,32 +214,64 @@ class WorkspaceUnipileService {
       throw new Error('LinkedIn not connected. Please complete onboarding.');
     }
 
-    const response = await this.request(`/users/${config.account_id}/contacts?limit=${limit}`);
+    // Get LinkedIn chats to find contacts
+    const chatsResponse = await this.request(`/chats?account_id=${config.account_id}&limit=${limit}`);
     
-    if (!response.ok) {
-      throw new Error('Failed to sync contacts');
+    if (!chatsResponse.ok) {
+      throw new Error('Failed to fetch LinkedIn chats');
     }
 
-    const data = await response.json();
-    const contacts = data.items || [];
+    const chatsData = await chatsResponse.json();
+    const chats = chatsData.items || [];
     
-    // Store contacts in database with shared account_id
-    for (const contact of contacts) {
+    const contacts = [];
+    const processedIds = new Set();
+    
+    // Get attendees from each chat (these are LinkedIn contacts)
+    for (const chat of chats.slice(0, 20)) { // Limit to prevent too many API calls
       try {
-        await supabase.from('contacts').upsert({
-          workspace_id: this.workspaceId,
-          account_id: config.account_id, // Always use workspace's account
-          email: contact.email || `${contact.id}@linkedin.com`,
-          first_name: contact.first_name || contact.name?.split(' ')[0],
-          last_name: contact.last_name || contact.name?.split(' ').slice(1).join(' '),
-          title: contact.headline || contact.title,
-          linkedin_url: contact.linkedin_url || contact.profile_url,
-          metadata: contact
-        }, { 
-          onConflict: 'workspace_id,email' 
-        });
+        const attendeesResponse = await this.request(`/chats/${chat.id}/attendees`);
+        
+        if (attendeesResponse.ok) {
+          const attendeesData = await attendeesResponse.json();
+          const attendees = attendeesData.items || [];
+          
+          for (const attendee of attendees) {
+            // Skip self and duplicates
+            if (attendee.is_self || processedIds.has(attendee.provider_id)) continue;
+            processedIds.add(attendee.provider_id);
+            
+            // Store contact in database
+            try {
+              const nameParts = (attendee.name || '').split(' ');
+              const first_name = nameParts[0] || '';
+              const last_name = nameParts.slice(1).join(' ') || '';
+              
+              await supabase.from('contacts').upsert({
+                workspace_id: this.workspaceId,
+                email: `${attendee.provider_id}@linkedin.com`, // Use LinkedIn ID as email
+                first_name,
+                last_name,
+                title: attendee.specifics?.occupation || '',
+                linkedin_url: attendee.profile_url || '',
+                metadata: {
+                  ...attendee,
+                  source: 'linkedin_chat',
+                  unipile_account_id: config.account_id,
+                  chat_id: chat.id
+                }
+              }, { 
+                onConflict: 'workspace_id,email' 
+              });
+              
+              contacts.push(attendee);
+            } catch (err) {
+              console.error('Error storing contact:', attendee.name, err);
+            }
+          }
+        }
       } catch (err) {
-        console.error('Error storing contact:', err);
+        console.error('Error processing chat:', chat.id, err);
       }
     }
     
