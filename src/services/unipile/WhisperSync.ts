@@ -1,268 +1,283 @@
 /**
- * WhisperSync - Background sync service for LinkedIn messages
- * Quietly keeps your 500 most recent conversations up to date
+ * WhisperSync Service
+ * Automatically syncs LinkedIn data in the background at regular intervals
+ * Handles rate limiting and progressive sync strategies
  */
 
+import { contactMessageSync } from './ContactMessageSync';
 import { supabase } from '@/integrations/supabase/client';
-import { unipileRealTimeSync } from './UnipileRealTimeSync';
 
-export class WhisperSync {
-  private isRunning = false;
+interface WhisperSyncConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+  contactsOnly?: boolean;
+  messagesOnly?: boolean;
+  onlyFirstDegree?: boolean;
+  maxContactsPerSync?: number;
+  maxMessagesPerSync?: number;
+}
+
+class WhisperSyncService {
   private syncInterval: NodeJS.Timeout | null = null;
+  private isSyncing: boolean = false;
   private lastSyncTime: Date | null = null;
-  private syncStats = {
-    conversationsChecked: 0,
-    messagesUpdated: 0,
-    newConversations: 0,
-    errors: 0
+  private config: WhisperSyncConfig = {
+    enabled: true,
+    intervalMinutes: 30, // Default 30 minutes
+    contactsOnly: false,
+    messagesOnly: false,
+    onlyFirstDegree: false,
+    maxContactsPerSync: 500,
+    maxMessagesPerSync: 200
   };
 
   /**
-   * Start the whisper sync service
+   * Start automatic background syncing
    */
-  start(intervalMinutes: number = 5) {
-    if (this.isRunning) {
-      console.log('🔇 WhisperSync already running');
+  async start(workspaceId?: string, accountId?: string) {
+    console.log('WhisperSync: Starting background sync service...');
+    
+    // Load config from localStorage or database
+    this.loadConfig();
+    
+    if (!this.config.enabled) {
+      console.log('WhisperSync: Service is disabled');
       return;
     }
 
-    console.log(`🔇 WhisperSync starting (every ${intervalMinutes} minutes)`);
-    this.isRunning = true;
+    // Clear any existing interval
+    this.stop();
 
-    // Run initial sync
-    this.performWhisperSync();
+    // Get workspace and account if not provided
+    const wsId = workspaceId || this.getWorkspaceId();
+    const accId = accountId || await this.getLinkedInAccountId();
 
-    // Set up interval for background syncing
-    this.syncInterval = setInterval(() => {
-      this.performWhisperSync();
-    }, intervalMinutes * 60 * 1000);
+    if (!wsId || !accId) {
+      console.warn('WhisperSync: Missing workspace or account ID, cannot start');
+      return;
+    }
+
+    // Perform initial sync
+    await this.performSync(wsId, accId);
+
+    // Set up recurring sync
+    this.syncInterval = setInterval(async () => {
+      await this.performSync(wsId, accId);
+    }, this.config.intervalMinutes * 60 * 1000);
+
+    console.log(`WhisperSync: Running every ${this.config.intervalMinutes} minutes`);
   }
 
   /**
-   * Stop the whisper sync service
+   * Stop automatic syncing
    */
   stop() {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
+      console.log('WhisperSync: Stopped');
     }
-    this.isRunning = false;
-    console.log('🔇 WhisperSync stopped');
   }
 
   /**
-   * Perform a quiet background sync
+   * Perform a single sync operation
    */
-  private async performWhisperSync() {
+  private async performSync(workspaceId: string, accountId: string) {
+    if (this.isSyncing) {
+      console.log('WhisperSync: Sync already in progress, skipping...');
+      return;
+    }
+
+    this.isSyncing = true;
+    const startTime = Date.now();
+
     try {
-      // Don't show loading indicators or toasts - this is a background operation
-      console.log('🔇 WhisperSync: Starting quiet update...');
-      
-      // Reset stats
-      this.syncStats = {
-        conversationsChecked: 0,
-        messagesUpdated: 0,
-        newConversations: 0,
-        errors: 0
-      };
+      console.log('WhisperSync: Starting background sync...');
 
-      // Check if API is configured
-      if (!unipileRealTimeSync.isConfigured()) {
-        console.log('🔇 WhisperSync: API not configured, skipping');
-        return;
-      }
-
-      // Get connected accounts
-      const result = await unipileRealTimeSync.testConnection();
-      if (!result.success || result.accounts.length === 0) {
-        console.log('🔇 WhisperSync: No accounts connected');
-        return;
-      }
-
-      const account = result.accounts[0];
-      
-      // Fetch only the most recent conversations
-      const response = await fetch(
-        `https://api6.unipile.com:13670/api/v1/chats?account_id=${account.id}&limit=50`,
+      const result = await contactMessageSync.syncContactsAndMessages(
+        accountId,
+        workspaceId,
         {
-          headers: {
-            'X-API-KEY': 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=',
-            'Accept': 'application/json'
-          }
+          syncContacts: !this.config.messagesOnly,
+          syncMessages: !this.config.contactsOnly,
+          contactLimit: this.config.maxContactsPerSync,
+          messageLimit: this.config.maxMessagesPerSync,
+          onlyFirstDegree: this.config.onlyFirstDegree
         }
       );
 
-      if (!response.ok) {
-        this.syncStats.errors++;
-        return;
-      }
-
-      const data = await response.json();
-      const recentChats = data.items || [];
-      
-      // Get workspace
-      const { data: workspace } = await supabase
-        .from('workspaces')
-        .select('id')
-        .limit(1)
-        .single();
-      
-      if (!workspace) return;
-
-      // Process only new or updated conversations
-      for (const chat of recentChats.slice(0, 20)) { // Check top 20 most recent
-        this.syncStats.conversationsChecked++;
-        
-        // Check if this conversation needs updating
-        const { data: existingConv } = await supabase
-          .from('inbox_conversations')
-          .select('id, last_message_at')
-          .eq('platform_conversation_id', chat.id)
-          .eq('workspace_id', workspace.id)
-          .single();
-        
-        // Only update if new or has new messages
-        if (!existingConv || 
-            (chat.timestamp && new Date(chat.timestamp) > new Date(existingConv.last_message_at))) {
-          
-          if (!existingConv) {
-            this.syncStats.newConversations++;
-          }
-          
-          // Fetch and update messages for this conversation
-          await this.updateConversation(account.id, chat, workspace.id);
-          this.syncStats.messagesUpdated++;
-        }
-      }
-
+      const duration = Date.now() - startTime;
       this.lastSyncTime = new Date();
-      
-      // Log stats quietly
-      if (this.syncStats.messagesUpdated > 0 || this.syncStats.newConversations > 0) {
-        console.log(`🔇 WhisperSync complete: ${this.syncStats.newConversations} new, ${this.syncStats.messagesUpdated} updated`);
-      }
-      
-      // Store sync status in localStorage for UI to pick up
-      localStorage.setItem('whisper_sync_status', JSON.stringify({
-        lastSync: this.lastSyncTime,
-        stats: this.syncStats,
-        isRunning: this.isRunning
-      }));
 
-    } catch (error) {
-      console.error('🔇 WhisperSync error:', error);
-      this.syncStats.errors++;
+      // Log sync results
+      console.log(`WhisperSync: Completed in ${(duration / 1000).toFixed(1)}s`, {
+        contacts: result.contactsSynced,
+        messages: result.messagesSynced,
+        errors: result.errors.length
+      });
+
+      // Store sync history
+      await this.logSyncHistory(workspaceId, result, duration);
+
+      // Check if we should adjust sync frequency based on activity
+      await this.adjustSyncFrequency(result);
+
+    } catch (error: any) {
+      console.error('WhisperSync: Error during sync:', error);
+      
+      // If rate limited, increase interval
+      if (error.message?.includes('rate limit')) {
+        this.config.intervalMinutes = Math.min(120, this.config.intervalMinutes * 2);
+        console.log(`WhisperSync: Rate limited, increasing interval to ${this.config.intervalMinutes} minutes`);
+        this.saveConfig();
+        
+        // Restart with new interval
+        this.start(workspaceId, accountId);
+      }
+    } finally {
+      this.isSyncing = false;
     }
   }
 
   /**
-   * Update a single conversation quietly
+   * Adjust sync frequency based on activity levels
    */
-  private async updateConversation(accountId: string, chat: any, workspaceId: string) {
+  private async adjustSyncFrequency(result: any) {
+    // If we're getting a lot of new data, sync more frequently
+    if (result.contactsSynced > 100 || result.messagesSynced > 50) {
+      this.config.intervalMinutes = Math.max(15, this.config.intervalMinutes - 5);
+    } 
+    // If getting little data, sync less frequently
+    else if (result.contactsSynced < 10 && result.messagesSynced < 5) {
+      this.config.intervalMinutes = Math.min(60, this.config.intervalMinutes + 5);
+    }
+  }
+
+  /**
+   * Log sync history to database
+   */
+  private async logSyncHistory(workspaceId: string, result: any, duration: number) {
     try {
-      // Fetch recent messages
-      const messagesResponse = await fetch(
-        `https://api6.unipile.com:13670/api/v1/messages?account_id=${accountId}&chat_id=${chat.id}&limit=10`,
-        {
-          headers: {
-            'X-API-KEY': 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=',
-            'Accept': 'application/json'
-          }
-        }
-      );
-
-      if (!messagesResponse.ok) return;
-
-      const messagesData = await messagesResponse.json();
-      const messages = messagesData.items || [];
-
-      // Get participant info
-      let participantName = chat.name || 'LinkedIn User';
-      if (chat.attendee_provider_id) {
-        try {
-          const userResponse = await fetch(
-            `https://api6.unipile.com:13670/api/v1/users/${chat.attendee_provider_id}?account_id=${accountId}`,
-            {
-              headers: {
-                'X-API-KEY': 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=',
-                'Accept': 'application/json'
-              }
-            }
-          );
-          
-          if (userResponse.ok) {
-            const attendee = await userResponse.json();
-            participantName = `${attendee.first_name || ''} ${attendee.last_name || ''}`.trim() || 
-                            attendee.name || participantName;
-          }
-        } catch (e) {
-          // Ignore errors - use fallback name
-        }
-      }
-
-      // Update conversation
-      const { data: savedConv } = await supabase
-        .from('inbox_conversations')
-        .upsert({
-          workspace_id: workspaceId,
-          platform: 'linkedin',
-          platform_conversation_id: chat.id,
-          participant_name: participantName,
-          participant_company: '',
-          status: chat.unread_count > 0 ? 'unread' : 'active',
-          last_message_at: chat.timestamp || new Date().toISOString(),
-          metadata: {
-            unread_count: chat.unread_count || 0,
-            whisper_synced: true,
-            whisper_sync_time: new Date().toISOString()
-          }
-        }, {
-          onConflict: 'platform_conversation_id,workspace_id'
-        })
-        .select()
-        .single();
-
-      if (savedConv && messages.length > 0) {
-        // Clear and re-insert messages
-        await supabase
-          .from('inbox_messages')
-          .delete()
-          .eq('conversation_id', savedConv.id);
-
-        const messagesToInsert = messages.map((msg: any, i: number) => ({
-          conversation_id: savedConv.id,
-          platform_message_id: msg.id || `${chat.id}_msg_${i}`,
-          role: msg.is_sender ? 'user' : 'assistant',
-          content: msg.text || msg.body || 'No content',
-          created_at: msg.timestamp || new Date().toISOString(),
-          metadata: {
-            sender_name: msg.is_sender ? 'You' : participantName,
-            whisper_synced: true
-          }
-        }));
-
-        await supabase
-          .from('inbox_messages')
-          .insert(messagesToInsert);
-      }
-
+      await supabase.from('sync_history').insert({
+        workspace_id: workspaceId,
+        sync_type: 'whisper',
+        contacts_synced: result.contactsSynced,
+        messages_synced: result.messagesSynced,
+        errors: result.errors,
+        duration_ms: duration,
+        created_at: new Date().toISOString()
+      });
     } catch (error) {
-      console.error('🔇 WhisperSync: Error updating conversation:', error);
-      this.syncStats.errors++;
+      console.error('WhisperSync: Failed to log history:', error);
     }
   }
 
   /**
-   * Get current sync status
+   * Get workspace ID from localStorage or auth
    */
-  getStatus() {
-    return {
-      isRunning: this.isRunning,
-      lastSyncTime: this.lastSyncTime,
-      stats: this.syncStats
-    };
+  private getWorkspaceId(): string | null {
+    try {
+      const userProfile = localStorage.getItem('user_auth_profile');
+      if (userProfile) {
+        const profile = JSON.parse(userProfile);
+        return profile.workspace_id;
+      }
+      return localStorage.getItem('workspace_id');
+    } catch (error) {
+      console.error('WhisperSync: Error getting workspace ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get LinkedIn account ID from localStorage
+   */
+  private async getLinkedInAccountId(): Promise<string | null> {
+    try {
+      const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+      if (accounts.length > 0) {
+        return accounts[0].unipileAccountId || accounts[0].id;
+      }
+      return null;
+    } catch (error) {
+      console.error('WhisperSync: Error getting LinkedIn account:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Load configuration from localStorage
+   */
+  private loadConfig() {
+    try {
+      const saved = localStorage.getItem('whisper_sync_config');
+      if (saved) {
+        this.config = { ...this.config, ...JSON.parse(saved) };
+      }
+    } catch (error) {
+      console.error('WhisperSync: Error loading config:', error);
+    }
+  }
+
+  /**
+   * Save configuration to localStorage
+   */
+  private saveConfig() {
+    try {
+      localStorage.setItem('whisper_sync_config', JSON.stringify(this.config));
+    } catch (error) {
+      console.error('WhisperSync: Error saving config:', error);
+    }
+  }
+
+  /**
+   * Update configuration
+   */
+  updateConfig(config: Partial<WhisperSyncConfig>) {
+    this.config = { ...this.config, ...config };
+    this.saveConfig();
+    
+    // Restart if enabled state changed
+    if (config.enabled !== undefined) {
+      if (config.enabled) {
+        this.start();
+      } else {
+        this.stop();
+      }
+    }
+  }
+
+  /**
+   * Get current configuration
+   */
+  getConfig(): WhisperSyncConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Get last sync time
+   */
+  getLastSyncTime(): Date | null {
+    return this.lastSyncTime;
+  }
+
+  /**
+   * Check if currently syncing
+   */
+  isSyncInProgress(): boolean {
+    return this.isSyncing;
   }
 }
 
 // Export singleton instance
-export const whisperSync = new WhisperSync();
+export const whisperSync = new WhisperSyncService();
+
+// Auto-start on page load if enabled
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    // Delay start to allow auth to complete
+    setTimeout(() => {
+      whisperSync.start();
+    }, 5000);
+  });
+}

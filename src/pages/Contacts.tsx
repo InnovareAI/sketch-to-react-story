@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/integrations/supabase/client';
 import { ContactsListView } from "@/components/contacts/ContactsListView";
+import { contactMessageSync } from '@/services/unipile/ContactMessageSync';
+import { toast } from 'sonner';
 import { 
   Mail, 
   Phone, 
@@ -36,7 +38,9 @@ import {
   Download,
   Upload,
   Grid3X3,
-  List
+  List,
+  RefreshCw,
+  Linkedin
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,6 +61,7 @@ export default function Contacts() {
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
   const [filterEngagement, setFilterEngagement] = useState<string>("all");
   const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
   const { contacts, stats, loading, error, refreshData, createContact, updateContact, deleteContact } = useRealContacts();
 
   // Filter contacts based on search and filters
@@ -181,6 +186,58 @@ export default function Contacts() {
     }
   };
 
+  const handleLinkedInSync = async () => {
+    setIsSyncing(true);
+    try {
+      // Get workspace ID
+      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+      const workspaceId = userProfile.workspace_id || localStorage.getItem('workspace_id');
+      
+      if (!workspaceId) {
+        toast.error('No workspace found. Please ensure you are logged in.');
+        return;
+      }
+
+      // Get LinkedIn account
+      const linkedInAccounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+      if (linkedInAccounts.length === 0) {
+        toast.error('No LinkedIn account connected. Please connect your LinkedIn account in Settings.');
+        return;
+      }
+
+      const account = linkedInAccounts[0];
+      const accountId = account.unipileAccountId || account.id;
+
+      toast.info('Starting LinkedIn contacts sync...');
+      
+      // Sync contacts from LinkedIn
+      const result = await contactMessageSync.syncContactsAndMessages(
+        accountId,
+        workspaceId,
+        {
+          syncContacts: true,
+          syncMessages: false, // Only sync contacts for this page
+          contactLimit: 1000,
+          onlyFirstDegree: false
+        }
+      );
+
+      if (result.errors.length > 0) {
+        toast.warning(`Synced ${result.contactsSynced} contacts with ${result.errors.length} errors`);
+      } else {
+        toast.success(`Successfully synced ${result.contactsSynced} LinkedIn contacts (${result.firstDegreeContacts} are 1st degree connections)`);
+      }
+
+      // Refresh the contacts list
+      await refreshData();
+    } catch (error) {
+      console.error('LinkedIn sync error:', error);
+      toast.error('Failed to sync LinkedIn contacts');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const processImport = async () => {
     if (!csvFile) return;
     
@@ -253,6 +310,24 @@ export default function Contacts() {
                 <p className="text-gray-600 mt-1">Manage your LinkedIn contacts and prospects</p>
               </div>
               <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleLinkedInSync} 
+                  disabled={isSyncing}
+                  className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                >
+                  {isSyncing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <Linkedin className="h-4 w-4 mr-2" />
+                      Sync LinkedIn
+                    </>
+                  )}
+                </Button>
                 <Button variant="outline" onClick={handleExport} disabled={exporting || contacts.length === 0}>
                   <Download className="h-4 w-4 mr-2" />
                   {exporting ? 'Exporting...' : 'Export'}
