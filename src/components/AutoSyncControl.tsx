@@ -5,10 +5,12 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Clock, CheckCircle, AlertCircle, RefreshCw, Zap } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Clock, CheckCircle, AlertCircle, RefreshCw, Zap, Mail, Calendar, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
+import { emailCalendarSync } from '@/services/unipile/EmailCalendarSync';
 
 interface AutoSyncControlProps {
   workspaceId: string;
@@ -22,6 +24,12 @@ export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [nextSync, setNextSync] = useState<Date | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [syncOptions, setSyncOptions] = useState({
+    contacts: true,
+    messages: true,
+    emails: false,
+    calendar: false
+  });
 
   // Check current sync status
   useEffect(() => {
@@ -97,16 +105,41 @@ export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps
   const handleManualSync = async () => {
     setSyncStatus('syncing');
     try {
-      const result = await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
-      if (result.success) {
-        setSyncStatus('success');
-        toast.success('Manual sync completed successfully!');
-        setLastSync(new Date());
-        if (isEnabled) {
-          setNextSync(new Date(Date.now() + interval * 60000));
+      // Sync LinkedIn data
+      if (syncOptions.contacts || syncOptions.messages) {
+        const result = await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
+        if (!result.success) {
+          throw new Error('LinkedIn sync failed');
         }
-      } else {
-        throw new Error('Sync failed');
+      }
+      
+      // Sync Email and Calendar
+      if (syncOptions.emails || syncOptions.calendar) {
+        const emailCalResult = await emailCalendarSync.syncAll(accountId, workspaceId, {
+          syncEmails: syncOptions.emails,
+          syncCalendar: syncOptions.calendar,
+          emailLimit: 50,
+          calendarLimit: 50
+        });
+        
+        if (emailCalResult.errors.length > 0) {
+          console.warn('Some items failed to sync:', emailCalResult.errors);
+        }
+        
+        const message = [];
+        if (emailCalResult.emailsSynced > 0) message.push(`${emailCalResult.emailsSynced} emails`);
+        if (emailCalResult.eventsSynced > 0) message.push(`${emailCalResult.eventsSynced} events`);
+        
+        if (message.length > 0) {
+          toast.success(`Synced: ${message.join(', ')}`);
+        }
+      }
+      
+      setSyncStatus('success');
+      toast.success('Manual sync completed successfully!');
+      setLastSync(new Date());
+      if (isEnabled) {
+        setNextSync(new Date(Date.now() + interval * 60000));
       }
     } catch (error) {
       console.error('Error during manual sync:', error);
@@ -123,7 +156,7 @@ export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps
           Background Auto-Sync
         </CardTitle>
         <CardDescription>
-          Automatically sync LinkedIn contacts and messages even when you're not on the page
+          Automatically sync LinkedIn, Email, and Calendar data even when you're not on the page
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -141,6 +174,77 @@ export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps
             onCheckedChange={handleToggleSync}
             disabled={isLoading}
           />
+        </div>
+
+        {/* Sync Options */}
+        <div className="space-y-2">
+          <Label>Sync Options</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="sync-contacts"
+                checked={syncOptions.contacts}
+                onCheckedChange={(checked) => 
+                  setSyncOptions(prev => ({ ...prev, contacts: checked as boolean }))
+                }
+              />
+              <label 
+                htmlFor="sync-contacts" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
+              >
+                <Users className="h-3 w-3" />
+                LinkedIn Contacts
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="sync-messages"
+                checked={syncOptions.messages}
+                onCheckedChange={(checked) => 
+                  setSyncOptions(prev => ({ ...prev, messages: checked as boolean }))
+                }
+              />
+              <label 
+                htmlFor="sync-messages" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
+              >
+                <Users className="h-3 w-3" />
+                LinkedIn Messages
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="sync-emails"
+                checked={syncOptions.emails}
+                onCheckedChange={(checked) => 
+                  setSyncOptions(prev => ({ ...prev, emails: checked as boolean }))
+                }
+              />
+              <label 
+                htmlFor="sync-emails" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
+              >
+                <Mail className="h-3 w-3" />
+                Emails
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="sync-calendar"
+                checked={syncOptions.calendar}
+                onCheckedChange={(checked) => 
+                  setSyncOptions(prev => ({ ...prev, calendar: checked as boolean }))
+                }
+              />
+              <label 
+                htmlFor="sync-calendar" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
+              >
+                <Calendar className="h-3 w-3" />
+                Calendar
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Sync Interval */}

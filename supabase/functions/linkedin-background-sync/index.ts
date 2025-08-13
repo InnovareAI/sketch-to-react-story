@@ -7,7 +7,9 @@ const UNIPILE_BASE_URL = 'https://api6.unipile.com:13443/api/v1'
 interface SyncRequest {
   workspace_id: string
   account_id: string
-  sync_type?: 'contacts' | 'messages' | 'both'
+  sync_type?: 'contacts' | 'messages' | 'both' | 'emails' | 'calendar' | 'all'
+  sync_emails?: boolean
+  sync_calendar?: boolean
   limit?: number
 }
 
@@ -27,7 +29,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { workspace_id, account_id, sync_type = 'both', limit = 500 } = await req.json()
+    const { workspace_id, account_id, sync_type = 'both', sync_emails = false, sync_calendar = false, limit = 500 } = await req.json()
 
     console.log(`Starting background sync for workspace ${workspace_id}`)
 
@@ -258,13 +260,129 @@ serve(async (req) => {
       }
     }
 
+    // Sync Emails if requested
+    let emailsSynced = 0
+    let eventsSynced = 0
+    
+    if (sync_emails || sync_type === 'emails' || sync_type === 'all') {
+      try {
+        const emailParams = new URLSearchParams({
+          limit: limit.toString()
+        })
+        
+        const emailResponse = await fetch(
+          `${UNIPILE_BASE_URL}/users/${account_id}/messages?${emailParams}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'Accept': 'application/json'
+            }
+          }
+        )
+        
+        if (emailResponse.ok) {
+          const emailData = await emailResponse.json()
+          const emails = emailData.items || []
+          
+          // Get or create email account
+          const { data: emailAccount } = await supabase
+            .from('email_accounts')
+            .select('id')
+            .eq('workspace_id', workspace_id)
+            .eq('unipile_account_id', account_id)
+            .single()
+          
+          if (emailAccount) {
+            for (const email of emails) {
+              try {
+                await supabase.from('emails').upsert({
+                  workspace_id,
+                  email_account_id: emailAccount.id,
+                  unipile_message_id: email.id,
+                  subject: email.subject,
+                  from_email: email.from?.email,
+                  to_emails: email.to?.map((t: any) => t.email) || [],
+                  date_received: email.date,
+                  body_text: email.body?.text,
+                  body_html: email.body?.html
+                }, { onConflict: 'unipile_message_id' })
+                
+                emailsSynced++
+              } catch (err) {
+                console.error('Error storing email:', err)
+              }
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('Error syncing emails:', error)
+        syncResult.errors.push(`Email sync: ${error.message}`)
+      }
+    }
+    
+    // Sync Calendar if requested
+    if (sync_calendar || sync_type === 'calendar' || sync_type === 'all') {
+      try {
+        const calendarParams = new URLSearchParams({
+          limit: limit.toString()
+        })
+        
+        const calResponse = await fetch(
+          `${UNIPILE_BASE_URL}/users/${account_id}/events?${calendarParams}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'Accept': 'application/json'
+            }
+          }
+        )
+        
+        if (calResponse.ok) {
+          const calData = await calResponse.json()
+          const events = calData.items || []
+          
+          // Get email account (calendar linked to email)
+          const { data: emailAccount } = await supabase
+            .from('email_accounts')
+            .select('id')
+            .eq('workspace_id', workspace_id)
+            .eq('unipile_account_id', account_id)
+            .single()
+          
+          if (emailAccount) {
+            for (const event of events) {
+              try {
+                await supabase.from('calendar_events').upsert({
+                  workspace_id,
+                  email_account_id: emailAccount.id,
+                  unipile_event_id: event.id,
+                  title: event.title || 'Untitled',
+                  start_time: event.start?.date_time,
+                  end_time: event.end?.date_time,
+                  location: event.location,
+                  organizer_email: event.organizer?.email
+                }, { onConflict: 'unipile_event_id' })
+                
+                eventsSynced++
+              } catch (err) {
+                console.error('Error storing event:', err)
+              }
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('Error syncing calendar:', error)
+        syncResult.errors.push(`Calendar sync: ${error.message}`)
+      }
+    }
+
     // Update sync metadata
     const duration = Date.now() - syncResult.startTime
     await supabase
       .from('sync_metadata')
       .upsert({
         workspace_id,
-        sync_type: 'background_linkedin',
+        sync_type: 'background_sync',
         last_sync_at: new Date().toISOString(),
         contacts_synced: syncResult.contactsSynced,
         messages_synced: syncResult.messagesSynced,
@@ -275,19 +393,23 @@ serve(async (req) => {
           triggered_by: 'edge_function',
           account_id,
           sync_type_requested: sync_type,
+          emails_synced: emailsSynced,
+          events_synced: eventsSynced,
           limit
         }
       }, {
         onConflict: 'workspace_id,sync_type'
       })
 
-    console.log(`Background sync completed: ${syncResult.contactsSynced} contacts, ${syncResult.messagesSynced} messages`)
+    console.log(`Background sync completed: ${syncResult.contactsSynced} contacts, ${syncResult.messagesSynced} messages, ${emailsSynced} emails, ${eventsSynced} events`)
 
     return new Response(
       JSON.stringify({
         success: true,
         contactsSynced: syncResult.contactsSynced,
         messagesSynced: syncResult.messagesSynced,
+        emailsSynced,
+        eventsSynced,
         errors: syncResult.errors,
         duration: duration
       }),
