@@ -53,6 +53,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Make test function available globally
+if (typeof window !== 'undefined') {
+  import('@/utils/testUnipileConnection').then(module => {
+    (window as any).testUnipileConnection = module.testUnipileConnection;
+    console.log('🧪 LinkedIn Sync Test Available: window.testUnipileConnection(accountId)');
+  });
+}
+
 export default function Contacts() {
   const [viewMode, setViewMode] = useState<"list" | "tile">("list");
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -379,6 +387,31 @@ export default function Contacts() {
                 <p className="text-gray-600 mt-1">Manage your LinkedIn contacts and prospects</p>
               </div>
               <div className="flex gap-2">
+                {/* Debug Button - Temporary */}
+                <Button 
+                  variant="destructive" 
+                  onClick={async () => {
+                    console.log('🔍 DEBUG: Starting LinkedIn sync debug...');
+                    const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+                    console.log('LinkedIn Accounts:', accounts);
+                    if (accounts.length > 0) {
+                      const acc = accounts[0];
+                      console.log('Using account:', acc);
+                      const id = acc.unipileAccountId || acc.id || acc.account_id;
+                      console.log('Account ID:', id);
+                      if (id && window.testUnipileConnection) {
+                        await window.testUnipileConnection(id);
+                      } else {
+                        console.error('No account ID or test function not available');
+                      }
+                    } else {
+                      console.error('No LinkedIn accounts found');
+                      toast.error('No LinkedIn account connected');
+                    }
+                  }}
+                >
+                  🔍 Debug Sync
+                </Button>
                 <Button 
                   variant="outline" 
                   onClick={handleLinkedInSync} 
