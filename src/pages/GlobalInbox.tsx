@@ -17,6 +17,7 @@ interface Message {
   read: boolean;
   priority?: string;
   tags?: string[];
+  customTags?: string[]; // User-defined tags
   conversationData?: any;
   isPreviewOnly?: boolean; // New field to indicate preview-only conversations
   totalMessages?: number;   // Total message count for preview conversations
@@ -52,7 +53,9 @@ import {
   Calendar,
   Video,
   RefreshCw,
-  X
+  X,
+  Tag,
+  Plus
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -75,6 +78,22 @@ export default function GlobalInbox() {
   const [newMessageRecipient, setNewMessageRecipient] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all');
+  const [filterTag, setFilterTag] = useState<string>('all');
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [selectedMessageForTag, setSelectedMessageForTag] = useState<Message | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  // Predefined tags
+  const predefinedTags = [
+    { value: 'important', label: 'Important', color: 'bg-red-100 text-red-800' },
+    { value: 'follow-up', label: 'Follow Up', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'prospect', label: 'Prospect', color: 'bg-green-100 text-green-800' },
+    { value: 'client', label: 'Client', color: 'bg-blue-100 text-blue-800' },
+    { value: 'partner', label: 'Partner', color: 'bg-purple-100 text-purple-800' },
+    { value: 'vendor', label: 'Vendor', color: 'bg-indigo-100 text-indigo-800' },
+    { value: 'urgent', label: 'Urgent', color: 'bg-orange-100 text-orange-800' },
+    { value: 'later', label: 'Later', color: 'bg-gray-100 text-gray-800' },
+  ];
   
   // Use the LinkedIn sync hook
   const { syncState, performManualSync, toggleAutoSync } = useLinkedInSync();
@@ -185,6 +204,7 @@ export default function GlobalInbox() {
           read: conv.metadata?.read === true || conv.status === 'active',
           priority: 'normal',
           tags,
+          customTags: conv.metadata?.custom_tags || [],
           conversationData: conv, // Store the full conversation data
           isPreviewOnly,
           totalMessages
@@ -247,6 +267,62 @@ export default function GlobalInbox() {
       console.error('Error in markAllAsRead:', error);
       toast.error('Failed to mark messages as read');
       await loadMessages();
+    }
+  };
+
+  // Add tags to message
+  const addTagsToMessage = async (messageId: string, tags: string[]) => {
+    try {
+      // Update local state
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, customTags: tags }
+            : msg
+        )
+      );
+      
+      // Update in database
+      const { error } = await supabase
+        .from('inbox_conversations')
+        .update({ 
+          metadata: supabase.sql`
+            CASE 
+              WHEN metadata IS NULL THEN jsonb_build_object('custom_tags', ${JSON.stringify(tags)}::jsonb)
+              ELSE metadata || jsonb_build_object('custom_tags', ${JSON.stringify(tags)}::jsonb)
+            END
+          `
+        })
+        .eq('id', messageId);
+      
+      if (error) {
+        console.error('Error adding tags:', error);
+        toast.error('Failed to add tags');
+        // Revert on error
+        await loadMessages();
+      } else {
+        toast.success('Tags updated');
+      }
+    } catch (error) {
+      console.error('Error in addTagsToMessage:', error);
+      toast.error('Failed to update tags');
+    }
+  };
+
+  // Open tag modal for a message
+  const openTagModal = (message: Message) => {
+    setSelectedMessageForTag(message);
+    setSelectedTags(message.customTags || []);
+    setShowTagModal(true);
+  };
+
+  // Save tags from modal
+  const saveTags = async () => {
+    if (selectedMessageForTag) {
+      await addTagsToMessage(selectedMessageForTag.id, selectedTags);
+      setShowTagModal(false);
+      setSelectedMessageForTag(null);
+      setSelectedTags([]);
     }
   };
 
@@ -543,15 +619,19 @@ export default function GlobalInbox() {
     if (filterType === 'unread' && message.read) return false;
     if (filterType === 'read' && !message.read) return false;
     
+    // Filter by tag
+    if (filterTag !== 'all' && !message.customTags?.includes(filterTag)) return false;
+    
     // Filter by search term
     if (searchFilter) {
       const searchLower = searchFilter.toLowerCase();
-      return (
+      const searchMatch = (
         message.from.toLowerCase().includes(searchLower) ||
         message.company.toLowerCase().includes(searchLower) ||
         message.preview.toLowerCase().includes(searchLower) ||
         message.subject.toLowerCase().includes(searchLower)
       );
+      if (!searchMatch) return false;
     }
     
     return true;
@@ -672,6 +752,16 @@ export default function GlobalInbox() {
             <option value="unread">Unread Only</option>
             <option value="read">Read Only</option>
           </select>
+          <select 
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            value={filterTag}
+            onChange={(e) => setFilterTag(e.target.value)}
+          >
+            <option value="all">All Tags</option>
+            {predefinedTags.map(tag => (
+              <option key={tag.value} value={tag.value}>{tag.label}</option>
+            ))}
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">
@@ -681,13 +771,14 @@ export default function GlobalInbox() {
               `${filteredMessages.length} of ${messages.length}`
             )}
           </span>
-          {(searchFilter || filterType !== 'all') && (
+          {(searchFilter || filterType !== 'all' || filterTag !== 'all') && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
                 setSearchFilter('');
                 setFilterType('all');
+                setFilterTag('all');
               }}
             >
               Clear Filters
@@ -888,7 +979,21 @@ export default function GlobalInbox() {
                                 {message.from}
                               </span>
                             </div>
-                            <span className="text-xs text-gray-500">{formatTime(message.time)}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">{formatTime(message.time)}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openTagModal(message);
+                                }}
+                                title="Add tags"
+                              >
+                                <Tag className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="text-xs text-gray-600 mb-1">{message.company}</div>
                           <div className={`text-sm text-gray-900 truncate ${!message.read ? "font-medium" : ""}`}>
@@ -908,6 +1013,17 @@ export default function GlobalInbox() {
                                 {tag}
                               </Badge>
                             ))}
+                            {message.customTags?.map((tagValue, index) => {
+                              const tag = predefinedTags.find(t => t.value === tagValue);
+                              return (
+                                <Badge 
+                                  key={`custom-${index}`} 
+                                  className={`text-xs ${tag?.color || 'bg-gray-100 text-gray-800'}`}
+                                >
+                                  {tag?.label || tagValue}
+                                </Badge>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
@@ -1329,6 +1445,67 @@ export default function GlobalInbox() {
               }
             }}>
               Send Message
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tag Modal */}
+      <Dialog open={showTagModal} onOpenChange={setShowTagModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage Tags</DialogTitle>
+            <DialogDescription>
+              Add or remove tags for this conversation
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Tags</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {predefinedTags.map((tag) => (
+                  <Button
+                    key={tag.value}
+                    variant={selectedTags.includes(tag.value) ? "default" : "outline"}
+                    size="sm"
+                    className={`justify-start ${
+                      selectedTags.includes(tag.value) ? '' : tag.color
+                    }`}
+                    onClick={() => {
+                      if (selectedTags.includes(tag.value)) {
+                        setSelectedTags(selectedTags.filter(t => t !== tag.value));
+                      } else {
+                        setSelectedTags([...selectedTags, tag.value]);
+                      }
+                    }}
+                  >
+                    {selectedTags.includes(tag.value) && (
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                    )}
+                    {tag.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            {selectedMessageForTag && (
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium">Message from:</span> {selectedMessageForTag.from}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTagModal(false);
+                setSelectedMessageForTag(null);
+                setSelectedTags([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveTags}>
+              Save Tags
             </Button>
           </DialogFooter>
         </DialogContent>
