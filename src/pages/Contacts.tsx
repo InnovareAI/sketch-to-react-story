@@ -13,8 +13,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/integrations/supabase/client';
 import { ContactsListView } from "@/components/contacts/ContactsListView";
+import { DebugLinkedInSync } from "@/components/DebugLinkedInSync";
 import { contactMessageSync } from '@/services/unipile/ContactMessageSync';
 import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
+import { testUnipileConnection } from '@/utils/testUnipileConnection';
 import { toast } from 'sonner';
 import { 
   Mail, 
@@ -210,6 +212,16 @@ export default function Contacts() {
       const account = linkedInAccounts[0];
       const accountId = account.unipileAccountId || account.id;
 
+      // Debug: Test the connection first
+      console.log('Testing Unipile connection with account:', account);
+      const testResult = await testUnipileConnection(accountId);
+      
+      if (testResult.errors.length > 0) {
+        console.error('Unipile API test failed:', testResult);
+        toast.error('LinkedIn API connection issue. Check console for details.');
+        return;
+      }
+
       toast.info('Starting LinkedIn contacts sync...');
       
       // Check if background sync is enabled
@@ -357,6 +369,9 @@ export default function Contacts() {
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="p-6 space-y-6">
+            {/* Debug Component - Remove this after testing */}
+            <DebugLinkedInSync />
+            
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
