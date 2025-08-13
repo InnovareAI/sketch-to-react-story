@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { realLinkedInSync } from '@/services/linkedin/RealLinkedInSync';
+import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 
 export default function TestInbox() {
   const [log, setLog] = useState<string[]>([]);
@@ -62,8 +62,8 @@ export default function TestInbox() {
     addLog('Starting LinkedIn inbox sync...');
     
     try {
-      // Only use real Unipile API
-      if (!realLinkedInSync.isConfigured()) {
+      // Check if API is configured
+      if (!unipileRealTimeSync.isConfigured()) {
         addLog('❌ Unipile API not configured. Please configure API key in Netlify.');
         setLoading(false);
         return;
@@ -71,11 +71,13 @@ export default function TestInbox() {
       
       addLog('🔄 Connecting to Unipile API...');
       
-      // Sync real LinkedIn messages
-      const messageCount = await realLinkedInSync.syncInboxMessages();
+      // Perform comprehensive sync
+      await unipileRealTimeSync.syncAll();
       
-      if (messageCount > 0) {
-        addLog(`✅ Synced ${messageCount} LinkedIn messages`);
+      const status = unipileRealTimeSync.getStatus();
+      
+      if (status.messagessynced > 0) {
+        addLog(`✅ Synced ${status.messagessynced} conversations`);
         
         // Update sync times on success
         const now = new Date();
@@ -85,6 +87,10 @@ export default function TestInbox() {
         await loadMessages();
       } else {
         addLog('📭 No new messages found in LinkedIn inbox');
+      }
+      
+      if (status.errors.length > 0) {
+        status.errors.forEach(error => addLog(`⚠️ ${error}`));
       }
     } catch (err: any) {
       addLog(`❌ Sync error: ${err.message}`);
@@ -98,18 +104,21 @@ export default function TestInbox() {
     addLog('Starting LinkedIn contacts sync...');
     
     try {
-      // Only use real Unipile API
-      if (!realLinkedInSync.isConfigured()) {
+      // Use UnipileRealTimeSync for contacts
+      if (!unipileRealTimeSync.isConfigured()) {
         addLog('❌ Unipile API not configured. Please configure API key in Netlify.');
         setLoading(false);
         return;
       }
       
       addLog('🔄 Fetching LinkedIn contacts from Unipile...');
-      const count = await realLinkedInSync.syncContacts();
       
-      if (count > 0) {
-        addLog(`✅ Synced ${count} LinkedIn contacts`);
+      // Sync all data including contacts
+      await unipileRealTimeSync.syncAll();
+      const status = unipileRealTimeSync.getStatus();
+      
+      if (status.contactsSynced > 0) {
+        addLog(`✅ Synced ${status.contactsSynced} LinkedIn contacts`);
         // Update contact count
         await loadContactCount();
       } else {
@@ -152,7 +161,7 @@ export default function TestInbox() {
     
     // Auto-sync every 30 minutes only if API is configured
     const interval = setInterval(() => {
-      if (realLinkedInSync.isConfigured()) {
+      if (unipileRealTimeSync.isConfigured()) {
         addLog('⏰ Auto-sync triggered (every 30 minutes)');
         syncMessage();
       }

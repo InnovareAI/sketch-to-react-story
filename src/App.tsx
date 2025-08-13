@@ -39,6 +39,8 @@ import Analytics from "./pages/Analytics";
 import ProspectSearch from "./pages/ProspectSearch";
 import SearchResults from "./pages/SearchResults";
 import Profile from "./pages/Profile";
+import LinkedInAccountSetup from "./pages/LinkedInAccountSetup";
+import LinkedInAccountManager from "./pages/LinkedInAccountManager";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -61,6 +63,8 @@ const App: React.FC = () => {
               <Route path="/test-inbox" element={<TestInbox />} />
               <Route path="/inbox-direct" element={<InboxDirect />} />
               <Route path="/simple-inbox" element={<TestInbox />} />
+              <Route path="/linkedin-setup" element={<LinkedInAccountSetup />} />
+              <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
               
               {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
               <Route 
