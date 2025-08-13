@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
 import Campaigns from "./pages/Campaigns";
 import Contacts from "./pages/Contacts";
+import ContactsView from "./pages/ContactsView";
 import Search from "./pages/Search";
 import GlobalInbox from "./pages/GlobalInbox";
 import GlobalInboxSimple from "./pages/GlobalInboxSimple";
@@ -72,7 +73,8 @@ const App: React.FC = () => {
                 
                 {/* Core Navigation Routes - These should never 404 */}
                 <Route path="campaigns" element={<Campaigns />} />
-                <Route path="contacts" element={<Contacts />} />
+                <Route path="contacts" element={<ContactsView />} />
+                <Route path="contacts-old" element={<Contacts />} />
                 <Route path="inbox" element={<GlobalInbox />} />
                 <Route path="templates" element={<Templates />} />
                 <Route path="analytics" element={<Analytics />} />
