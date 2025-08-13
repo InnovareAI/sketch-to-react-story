@@ -59,6 +59,7 @@ const App: React.FC = () => {
               <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
               <Route path="/test-inbox" element={<TestInbox />} />
               <Route path="/inbox-direct" element={<InboxDirect />} />
+              <Route path="/simple-inbox" element={<TestInbox />} />
               
               {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
               <Route 
