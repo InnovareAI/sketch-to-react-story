@@ -493,7 +493,7 @@ export class UnipileRealTimeSync {
       }
 
       // Get workspace
-      const { data: workspace } = await supabase
+      let { data: workspace } = await supabase
         .from('workspaces')
         .select('id')
         .limit(1)
@@ -512,6 +512,14 @@ export class UnipileRealTimeSync {
         }
         workspace = newWorkspace;
       }
+      
+      // Clear old conversations for a fresh sync
+      console.log('🧹 Clearing old conversations...');
+      await supabase
+        .from('inbox_conversations')
+        .delete()
+        .eq('workspace_id', workspace.id)
+        .eq('platform', 'linkedin');
 
       let syncedCount = 0;
 
@@ -526,7 +534,9 @@ export class UnipileRealTimeSync {
           if (chat.attendee_provider_id) {
             console.log(`🔍 Fetching attendee: ${chat.attendee_provider_id}`);
             try {
-              const attendeeUrl = `${this.baseUrl}/users/${chat.attendee_provider_id}?account_id=${account.id}`;
+              // Some attendee IDs need encoding or different format
+              const attendeeId = encodeURIComponent(chat.attendee_provider_id);
+              const attendeeUrl = `${this.baseUrl}/users/${attendeeId}?account_id=${account.id}`;
               const attendeeResponse = await fetch(attendeeUrl, {
                 method: 'GET',
                 headers: {
@@ -544,11 +554,18 @@ export class UnipileRealTimeSync {
                 const lastName = attendee.last_name || '';
                 participantName = `${firstName} ${lastName}`.trim() || attendee.name || participantName;
                 participantCompany = attendee.headline || attendee.company || '';
-                participantAvatar = attendee.profile_picture_url || '';
+                participantAvatar = attendee.profile_picture_url || attendee.profile_picture_url_large || '';
                 console.log(`📝 Set participant name: ${participantName}`);
+              } else if (attendeeResponse.status === 422) {
+                // 422 means the user might be deleted or inaccessible
+                console.log(`⚠️ User ${chat.attendee_provider_id} not accessible (422)`);
+                // Try to extract name from chat subject if available
+                if (chat.subject) {
+                  participantName = chat.subject.replace(/^(Hi |Hello |Hey )/, '').split(',')[0].trim();
+                }
               } else {
                 const errorText = await attendeeResponse.text();
-                console.log(`❌ Failed to fetch attendee:`, errorText);
+                console.log(`❌ Failed to fetch attendee (${attendeeResponse.status}):`, errorText);
               }
             } catch (e) {
               console.error(`❌ Error fetching attendee for ${chat.attendee_provider_id}:`, e);
@@ -599,7 +616,9 @@ export class UnipileRealTimeSync {
           
           const { data: savedConv, error: convError } = await supabase
             .from('inbox_conversations')
-            .upsert(conversationData)
+            .upsert(conversationData, { 
+              onConflict: 'platform_conversation_id,workspace_id' 
+            })
             .select()
             .single();
 
