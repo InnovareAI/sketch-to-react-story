@@ -3,7 +3,7 @@ const https = require('https');
 
 const UNIPILE_API_KEY = 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ';
 const UNIPILE_BASE_URL = 'api6.unipile.com';
-const UNIPILE_PORT = 13443;
+const UNIPILE_PORT = 13670;
 
 exports.handler = async (event, context) => {
   // Enable CORS
