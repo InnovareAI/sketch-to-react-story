@@ -6,6 +6,45 @@ export default function ContactSyncTest() {
   const [results, setResults] = useState<any>(null);
   const [testing, setTesting] = useState(false);
 
+  const testAlternativeEndpoints = async (accountId: string) => {
+    const endpoints = [
+      { name: 'Connections', url: `/users/${accountId}/connections?limit=5` },
+      { name: 'Chats', url: `/users/${accountId}/chats?limit=5&provider=LINKEDIN` },
+      { name: 'User Info', url: `/users/${accountId}` },
+      { name: 'Accounts List', url: `/accounts` },
+    ];
+    
+    const results: any[] = [];
+    
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(
+          `https://api6.unipile.com:13443/api/v1${endpoint.url}`,
+          {
+            headers: {
+              'Authorization': 'Bearer TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
+              'Accept': 'application/json'
+            }
+          }
+        );
+        
+        results.push({
+          endpoint: endpoint.name,
+          status: response.status,
+          ok: response.ok
+        });
+      } catch (error: any) {
+        results.push({
+          endpoint: endpoint.name,
+          status: 0,
+          error: error.message
+        });
+      }
+    }
+    
+    return results;
+  };
+
   const runTest = async () => {
     setTesting(true);
     const testResults: any = {};
@@ -46,6 +85,11 @@ export default function ContactSyncTest() {
 
             testResults.apiStatus = response.status;
             testResults.apiOk = response.ok;
+            console.log('API Response:', {
+              status: response.status,
+              ok: response.ok,
+              headers: Object.fromEntries(response.headers.entries())
+            });
 
             if (response.ok) {
               const data = await response.json();
@@ -55,9 +99,15 @@ export default function ContactSyncTest() {
               testResults.sampleContacts = contacts.slice(0, 3);
             } else {
               testResults.apiError = await response.text();
+              
+              // Test alternative endpoints
+              console.log('Testing alternative endpoints...');
+              testResults.alternativeEndpoints = await testAlternativeEndpoints(accountId);
             }
           } catch (error: any) {
+            testResults.apiStatus = 0;
             testResults.apiException = error.message;
+            console.error('API Request Failed:', error);
           }
         }
       }
@@ -107,14 +157,29 @@ export default function ContactSyncTest() {
                 <div>
                   <h3 className="font-semibold">API Test:</h3>
                   <p className={results.apiOk ? 'text-green-600' : 'text-red-600'}>
-                    Status: {results.apiStatus} {results.apiOk ? '✅' : '❌'}
+                    Status: {results.apiStatus || 'No response'} {results.apiOk ? '✅' : '❌'}
                   </p>
+                  {results.apiStatus && (
+                    <div className="text-sm text-gray-600 mt-1">
+                      {results.apiStatus === 401 && '401 Unauthorized - API key may be invalid'}
+                      {results.apiStatus === 403 && '403 Forbidden - Access denied to this account'}
+                      {results.apiStatus === 404 && '404 Not Found - Account ID may be incorrect or API endpoint changed'}
+                      {results.apiStatus === 500 && '500 Server Error - Unipile API is having issues'}
+                      {results.apiStatus === 0 && 'Network error - Could not reach API'}
+                    </div>
+                  )}
                   {results.contactCount !== undefined && (
                     <p>Contacts Found: {results.contactCount}</p>
                   )}
                   {results.apiError && (
                     <div className="mt-2 p-2 bg-red-50 text-red-600 text-sm rounded">
-                      Error: {results.apiError}
+                      <strong>Error Details:</strong>
+                      <pre className="mt-1 text-xs overflow-auto">{results.apiError}</pre>
+                    </div>
+                  )}
+                  {results.apiException && (
+                    <div className="mt-2 p-2 bg-red-50 text-red-600 text-sm rounded">
+                      <strong>Exception:</strong> {results.apiException}
                     </div>
                   )}
                 </div>
@@ -128,6 +193,19 @@ export default function ContactSyncTest() {
                       <li key={i}>{contact.name || 'Unknown'} - {contact.company || 'No company'}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+              
+              {results.alternativeEndpoints && (
+                <div>
+                  <h3 className="font-semibold">Alternative Endpoints Test:</h3>
+                  <div className="text-sm space-y-1">
+                    {results.alternativeEndpoints.map((test: any, i: number) => (
+                      <div key={i} className={test.ok ? 'text-green-600' : 'text-red-600'}>
+                        {test.endpoint}: {test.status} {test.ok ? '✅' : '❌'}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
