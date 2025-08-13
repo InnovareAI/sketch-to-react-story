@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import InboxTest from '@/components/InboxTest';
 
 export default function TestInbox() {
   const [log, setLog] = useState<string[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showDebug, setShowDebug] = useState(true); // Show debug by default to see what's happening
+  const [showDebug, setShowDebug] = useState(false); // Hide debug by default for cleaner UI
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [nextSync, setNextSync] = useState<Date | null>(null);
 
@@ -88,11 +87,20 @@ export default function TestInbox() {
       const sample = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
       const conversationId = `linkedin_${timestamp}_${randomNum}`;
       
+      // Get a valid workspace first
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('id')
+        .limit(1)
+        .single();
+      
+      const workspaceId = workspace?.id || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+      
       // Create conversation
       const { data: conv, error: convError } = await supabase
         .from('inbox_conversations')
         .upsert({
-          workspace_id: 'a0000000-0000-0000-0000-000000000000',
+          workspace_id: workspaceId,
           platform: 'linkedin',
           platform_conversation_id: conversationId,
           participant_name: sample.name,
@@ -162,10 +170,7 @@ export default function TestInbox() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      {/* Add test component at the top */}
-      <InboxTest />
-      
-      <div className="flex justify-between items-center mb-6 mt-6">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Global Inbox</h1>
         <div className="text-sm text-gray-600">
           {lastSync && (
