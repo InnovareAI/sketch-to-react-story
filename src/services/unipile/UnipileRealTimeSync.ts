@@ -526,8 +526,8 @@ export class UnipileRealTimeSync {
     try {
       console.log(`🔍 Fetching chats for account: ${accountId}`);
       
-      // Use the correct /chats endpoint
-      const url = `${this.baseUrl}/chats?account_id=${accountId}&limit=50`;
+      // Try different endpoint formats
+      const url = `${this.baseUrl}/accounts/${accountId}/chats?limit=50`;
       console.log(`📡 API URL: ${url}`);
       
       const response = await fetch(url, {
