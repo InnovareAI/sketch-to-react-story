@@ -213,6 +213,33 @@ export default function ContactsView() {
             Sync LinkedIn
           </button>
           <button
+            onClick={async () => {
+              console.log('🔄 Starting detailed sync test...');
+              setSyncing(true);
+              try {
+                // Test the sync with detailed logging
+                const testScript = document.createElement('script');
+                testScript.src = '/test-unipile-sync-now.js';
+                document.body.appendChild(testScript);
+                testScript.onload = async () => {
+                  if (window.testUnipileContactSync) {
+                    await window.testUnipileContactSync();
+                    await loadContacts(); // Reload contacts after sync
+                  }
+                };
+              } catch (error) {
+                console.error('Test failed:', error);
+              } finally {
+                setSyncing(false);
+              }
+            }}
+            disabled={syncing}
+            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            Test Sync (Console)
+          </button>
+          <button
             onClick={handleExport}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
           >

@@ -35,8 +35,8 @@ interface SyncResult {
 }
 
 class ContactMessageSyncService {
-  private readonly UNIPILE_API_KEY = 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ';
-  private readonly UNIPILE_BASE_URL = 'https://api6.unipile.com:13443/api/v1';
+  private readonly UNIPILE_API_KEY = import.meta.env.VITE_UNIPILE_API_KEY || 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
+  private readonly UNIPILE_BASE_URL = 'https://api6.unipile.com:13670/api/v1';
   
   /**
    * Main sync function that coordinates both contact and message syncing
@@ -116,7 +116,7 @@ class ContactMessageSyncService {
   }
 
   /**
-   * Sync LinkedIn contacts, prioritizing 1st degree connections
+   * Sync LinkedIn contacts by extracting from chat participants
    */
   private async syncLinkedInContacts(
     accountId: string,
@@ -127,55 +127,71 @@ class ContactMessageSyncService {
     const result = { synced: 0, firstDegree: 0, errors: [] };
     
     try {
-      // Fetch connections via proxy to avoid CORS
-      console.log('Fetching connections via proxy...');
-      const response = await unipileProxy.getConnections(accountId, limit);
+      console.log('Extracting contacts from chat participants...');
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch connections: Status ${response.status}`);
-      }
-
-      const data = response.data;
-      const connections = data.connections || data.items || data.data || [];
+      // Get unique contact IDs from chats
+      const contactIds = await this.extractContactIdsFromChats(accountId, Math.min(limit, 500));
       
-      console.log(`Fetched ${connections.length} connections from LinkedIn`);
+      console.log(`Found ${contactIds.length} unique contacts from chats`);
 
-      // Process each connection
-      for (const connection of connections) {
+      // Process each contact ID to get full profile
+      for (const contactId of contactIds) {
         try {
-          // Parse connection data
-          const contact = this.parseLinkedInConnection(connection);
+          console.log(`Fetching profile for: ${contactId}`);
           
-          // Skip if not 1st degree and onlyFirstDegree is true
-          if (onlyFirstDegree && contact.connectionDegree !== '1st') {
+          const profileResponse = await fetch(`${this.UNIPILE_BASE_URL}/users/${encodeURIComponent(contactId)}?account_id=${accountId}`, {
+            method: 'GET',
+            headers: {
+              'X-API-KEY': this.UNIPILE_API_KEY,
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (!profileResponse.ok) {
+            console.log(`Failed to fetch profile for ${contactId}: ${profileResponse.status}`);
             continue;
           }
+          
+          const profile = await profileResponse.json();
+          
+          // Skip if not 1st degree and onlyFirstDegree is true
+          const isFirstDegree = profile.network_distance === 'FIRST_DEGREE';
+          if (onlyFirstDegree && !isFirstDegree) {
+            continue;
+          }
+          
+          // Parse profile data
+          const contact = this.parseLinkedInProfile(profile);
 
           // Upsert contact to database
           const { error } = await supabase
             .from('contacts')
             .upsert({
               workspace_id: workspaceId,
-              email: contact.email || `${contact.id}@linkedin.local`,
-              first_name: contact.firstName || contact.name?.split(' ')[0] || '',
-              last_name: contact.lastName || contact.name?.split(' ').slice(1).join(' ') || '',
+              email: contact.email || `${contactId}@linkedin.com`,
+              first_name: contact.firstName || '',
+              last_name: contact.lastName || '',
               full_name: contact.name,
-              title: contact.title || contact.headline,
-              company: contact.company,
+              title: contact.headline,
+              company: '', // Not directly available in profile API
               linkedin_url: contact.linkedinUrl,
               profile_picture_url: contact.profilePictureUrl,
-              department: this.extractDepartment(contact.title),
-              phone: contact.phone,
+              department: this.extractDepartment(contact.headline),
               location: contact.location,
               connection_degree: contact.connectionDegree,
               engagement_score: this.calculateEngagementScore(contact),
               tags: this.generateTags(contact),
               metadata: {
-                linkedin_id: contact.id,
-                is_premium: contact.isPremium,
-                is_influencer: contact.isInfluencer,
-                synced_at: new Date().toISOString(),
-                ...contact.metadata
+                linkedin_id: profile.provider_id,
+                public_identifier: profile.public_identifier,
+                member_urn: profile.member_urn,
+                is_premium: profile.is_premium,
+                is_influencer: profile.is_influencer,
+                is_creator: profile.is_creator,
+                follower_count: profile.follower_count,
+                connections_count: profile.connections_count,
+                shared_connections_count: profile.shared_connections_count,
+                synced_at: new Date().toISOString()
               },
               source: 'linkedin',
               status: 'active',
@@ -190,13 +206,18 @@ class ContactMessageSyncService {
             result.errors.push(`Contact ${contact.name}: ${error.message}`);
           } else {
             result.synced++;
-            if (contact.connectionDegree === '1st') {
+            if (isFirstDegree) {
               result.firstDegree++;
             }
+            console.log(`✅ Synced: ${contact.name} (${contact.connectionDegree})`);
           }
+          
+          // Rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
         } catch (err) {
-          console.error('Error processing connection:', err);
-          result.errors.push(err.message);
+          console.error(`Error processing contact ${contactId}:`, err);
+          result.errors.push(`Contact ${contactId}: ${err.message}`);
         }
       }
 
@@ -390,26 +411,87 @@ class ContactMessageSyncService {
   }
 
   /**
-   * Parse LinkedIn connection data
+   * Extract contact IDs from chat participants
    */
-  private parseLinkedInConnection(connection: any): LinkedInContact {
+  private async extractContactIdsFromChats(accountId: string, limit: number): Promise<string[]> {
+    const contactIds = new Set<string>();
+    let cursor: string | null = null;
+    let page = 1;
+    const MAX_PAGES = 10;
+    
+    try {
+      do {
+        const url = cursor 
+          ? `${this.UNIPILE_BASE_URL}/chats?account_id=${accountId}&limit=100&cursor=${cursor}`
+          : `${this.UNIPILE_BASE_URL}/chats?account_id=${accountId}&limit=100`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'X-API-KEY': this.UNIPILE_API_KEY,
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const chats = data.items || [];
+          
+          for (const chat of chats) {
+            if (chat.attendee_provider_id && !contactIds.has(chat.attendee_provider_id)) {
+              contactIds.add(chat.attendee_provider_id);
+            }
+          }
+          
+          cursor = data.cursor || null;
+          console.log(`Page ${page}: Processed ${chats.length} chats, found ${contactIds.size} contacts`);
+          page++;
+          
+          if (page > MAX_PAGES || contactIds.size >= limit) break;
+        } else {
+          break;
+        }
+      } while (cursor && page <= MAX_PAGES);
+      
+    } catch (error) {
+      console.error('Error extracting contact IDs:', error);
+    }
+    
+    return Array.from(contactIds).slice(0, limit);
+  }
+  
+  /**
+   * Parse LinkedIn profile data from Unipile API
+   */
+  private parseLinkedInProfile(profile: any): LinkedInContact {
+    const firstName = profile.first_name || '';
+    const lastName = profile.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || 'Unknown';
+    
     return {
-      id: connection.id || connection.linkedin_id || '',
-      name: connection.name || `${connection.first_name || ''} ${connection.last_name || ''}`.trim(),
-      firstName: connection.first_name || connection.firstName,
-      lastName: connection.last_name || connection.lastName,
-      headline: connection.headline || connection.description,
-      company: connection.company || connection.current_company,
-      title: connection.title || connection.position,
-      linkedinUrl: connection.linkedin_url || connection.profile_url || `https://linkedin.com/in/${connection.id}`,
-      profilePictureUrl: connection.profile_picture || connection.avatar_url,
-      connectionDegree: connection.degree || connection.connection_degree || '2nd',
-      email: connection.email,
-      phone: connection.phone,
-      location: connection.location,
-      isPremium: connection.is_premium || false,
-      isInfluencer: connection.is_influencer || false,
-      metadata: connection.metadata || {}
+      id: profile.provider_id || '',
+      name: fullName,
+      firstName: firstName,
+      lastName: lastName,
+      headline: profile.headline || '',
+      company: '', // Not available in profile endpoint
+      title: profile.headline || '',
+      linkedinUrl: `https://linkedin.com/in/${profile.public_identifier || profile.provider_id}`,
+      profilePictureUrl: profile.profile_picture_url,
+      connectionDegree: profile.network_distance === 'FIRST_DEGREE' ? '1st' : 
+                       profile.network_distance === 'SECOND_DEGREE' ? '2nd' : '3rd',
+      email: profile.contact_info?.emails?.[0] || '',
+      phone: '', // Not available in profile endpoint
+      location: profile.location || '',
+      isPremium: profile.is_premium || false,
+      isInfluencer: profile.is_influencer || false,
+      metadata: {
+        public_identifier: profile.public_identifier,
+        member_urn: profile.member_urn,
+        is_creator: profile.is_creator,
+        follower_count: profile.follower_count,
+        connections_count: profile.connections_count,
+        shared_connections_count: profile.shared_connections_count
+      }
     };
   }
 
@@ -487,6 +569,12 @@ class ContactMessageSyncService {
     if (contact.phone) score += 5;
     if (contact.company) score += 5;
     if (contact.title) score += 5;
+    
+    // Network metrics from metadata
+    if (contact.metadata?.follower_count > 1000) score += 5;
+    if (contact.metadata?.follower_count > 10000) score += 10;
+    if (contact.metadata?.connections_count > 500) score += 5;
+    if (contact.metadata?.shared_connections_count > 5) score += 5;
     
     return Math.min(100, score);
   }

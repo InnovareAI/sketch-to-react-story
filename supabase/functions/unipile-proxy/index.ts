@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const UNIPILE_API_KEY = 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ'
-const UNIPILE_BASE_URL = 'https://api6.unipile.com:13443/api/v1'
+const UNIPILE_API_KEY = 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU='
+const UNIPILE_BASE_URL = 'https://api6.unipile.com:13670/api/v1'
 
 serve(async (req) => {
   // CORS headers
@@ -30,7 +30,7 @@ serve(async (req) => {
     const requestOptions: RequestInit = {
       method,
       headers: {
-        'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+        'X-API-KEY': UNIPILE_API_KEY,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'User-Agent': 'Supabase Edge Function',

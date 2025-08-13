@@ -83,9 +83,9 @@ export class UnipileRealTimeSync {
   };
 
   constructor() {
-    // Hardcoded configuration - customers don't need API keys
+    // Use environment variables for configuration
     this.baseUrl = 'https://api6.unipile.com:13670/api/v1';
-    this.apiKey = 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
+    this.apiKey = import.meta.env.VITE_UNIPILE_API_KEY || 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
   }
 
   /**
@@ -945,18 +945,18 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Sync ALL LinkedIn connections/contacts
+   * Sync contacts by extracting them from chat participants
    */
   private async syncAccountContacts(account: any): Promise<number> {
     try {
-      console.log(`👥 Syncing ALL contacts for account: ${account.name || account.id}`);
+      console.log(`👥 Syncing contacts from chat participants for account: ${account.name || account.id}`);
       
-      // Fetch all connections using the connections endpoint
-      const contacts = await this.fetchAllConnections(account.id);
+      // Get unique contact IDs from all chats
+      const contactIds = await this.extractUniqueContactIds(account.id);
       
-      console.log(`📊 Found ${contacts.length} total connections`);
+      console.log(`📊 Found ${contactIds.length} unique contacts from chats`);
       
-      if (contacts.length === 0) {
+      if (contactIds.length === 0) {
         return 0;
       }
 
@@ -973,41 +973,81 @@ export class UnipileRealTimeSync {
 
       let syncedCount = 0;
 
-      for (const contact of contacts) {
-        const firstName = contact.first_name || contact.name?.split(' ')[0] || '';
-        const lastName = contact.last_name || contact.name?.split(' ').slice(1).join(' ') || '';
-        
-        const { error } = await supabase
-          .from('contacts')
-          .upsert({
-            workspace_id: workspace.id,
-            email: contact.email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@linkedin.com`,
-            first_name: firstName,
-            last_name: lastName,
-            title: contact.title || contact.headline || '',
-            department: '',
-            linkedin_url: contact.profile_url || '',
-            engagement_score: Math.floor(Math.random() * 30) + 70,
-            tags: this.generateContactTags(contact),
-            metadata: {
-              company: contact.company,
-              location: contact.location,
-              connection_degree: contact.connection_degree,
-              mutual_connections: contact.mutual_connections,
-              synced_from: account.name,
-              synced_at: new Date().toISOString()
-            },
-            scraped_data: {
-              profile_picture: contact.profile_picture,
-              headline: contact.headline,
-              skills: contact.skills,
-              experience: contact.experience,
-              education: contact.education
+      // Process each contact ID to get full profile data
+      for (const contactId of contactIds) {
+        try {
+          console.log(`👤 Fetching profile for contact: ${contactId}`);
+          
+          const profileResponse = await fetch(`${this.baseUrl}/users/${encodeURIComponent(contactId)}?account_id=${account.id}`, {
+            method: 'GET',
+            headers: {
+              'X-API-KEY': this.apiKey!,
+              'Accept': 'application/json'
             }
           });
+          
+          if (!profileResponse.ok) {
+            console.log(`⚠️ Failed to fetch profile for ${contactId}: ${profileResponse.status}`);
+            continue;
+          }
+          
+          const profile = await profileResponse.json();
+          
+          // Extract contact information
+          const firstName = profile.first_name || '';
+          const lastName = profile.last_name || '';
+          const fullName = `${firstName} ${lastName}`.trim() || 'Unknown';
+          const email = profile.contact_info?.emails?.[0] || `${contactId}@linkedin.com`;
+          
+          const { error } = await supabase
+            .from('contacts')
+            .upsert({
+              workspace_id: workspace.id,
+              email: email,
+              first_name: firstName,
+              last_name: lastName,
+              full_name: fullName,
+              title: profile.headline || '',
+              company: '', // Not directly available in profile
+              linkedin_url: `https://linkedin.com/in/${profile.public_identifier || profile.provider_id}`,
+              profile_picture_url: profile.profile_picture_url,
+              location: profile.location || '',
+              connection_degree: profile.network_distance === 'FIRST_DEGREE' ? '1st' : 
+                                profile.network_distance === 'SECOND_DEGREE' ? '2nd' : '3rd',
+              engagement_score: this.calculateEngagementScore(profile),
+              tags: this.generateProfileTags(profile),
+              metadata: {
+                linkedin_id: profile.provider_id,
+                public_identifier: profile.public_identifier,
+                member_urn: profile.member_urn,
+                is_premium: profile.is_premium,
+                is_influencer: profile.is_influencer,
+                is_creator: profile.is_creator,
+                follower_count: profile.follower_count,
+                connections_count: profile.connections_count,
+                shared_connections_count: profile.shared_connections_count,
+                synced_from: account.name,
+                synced_at: new Date().toISOString()
+              },
+              source: 'linkedin',
+              status: 'active',
+              last_synced_at: new Date().toISOString()
+            }, {
+              onConflict: 'workspace_id,email'
+            });
 
-        if (!error) {
-          syncedCount++;
+          if (!error) {
+            syncedCount++;
+            console.log(`✅ Synced contact: ${fullName}`);
+          } else {
+            console.error(`❌ Error syncing contact ${fullName}:`, error);
+          }
+          
+          // Rate limiting - wait between requests
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+        } catch (contactError) {
+          console.error(`Error processing contact ${contactId}:`, contactError);
         }
       }
 
@@ -1020,20 +1060,23 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Fetch ALL LinkedIn connections with pagination
+   * Extract unique contact IDs from all chat participants
    */
-  private async fetchAllConnections(accountId: string): Promise<any[]> {
-    const allConnections: any[] = [];
+  private async extractUniqueContactIds(accountId: string): Promise<string[]> {
+    const contactIds = new Set<string>();
     let cursor: string | null = null;
     let page = 1;
+    const MAX_PAGES = 10; // Limit to prevent excessive API calls
     
     try {
+      console.log(`🔍 Extracting contact IDs from chats for account: ${accountId}`);
+      
       do {
         const url = cursor 
-          ? `${this.baseUrl}/users?account_id=${accountId}&limit=100&cursor=${cursor}`
-          : `${this.baseUrl}/users?account_id=${accountId}&limit=100`;
+          ? `${this.baseUrl}/chats?account_id=${accountId}&limit=100&cursor=${cursor}`
+          : `${this.baseUrl}/chats?account_id=${accountId}&limit=100`;
         
-        console.log(`📝 Fetching connections page ${page}...`);
+        console.log(`📝 Fetching chats page ${page}...`);
         
         const response = await fetch(url, {
           method: 'GET',
@@ -1045,27 +1088,34 @@ export class UnipileRealTimeSync {
         
         if (response.ok) {
           const data = await response.json();
-          const connections = data.items || [];
-          allConnections.push(...connections);
+          const chats = data.items || [];
+          
+          // Extract attendee_provider_id from each chat
+          for (const chat of chats) {
+            if (chat.attendee_provider_id && !contactIds.has(chat.attendee_provider_id)) {
+              contactIds.add(chat.attendee_provider_id);
+            }
+          }
           
           cursor = data.cursor || null;
-          console.log(`✅ Page ${page}: Got ${connections.length} connections (total: ${allConnections.length})`);
+          console.log(`✅ Page ${page}: Processed ${chats.length} chats, found ${contactIds.size} unique contacts so far`);
           page++;
           
-          // Safety limit to prevent infinite loops
-          if (page > 100) break;
+          // Safety limits
+          if (page > MAX_PAGES || contactIds.size > 500) break;
         } else {
-          console.log(`❌ Failed to fetch connections page ${page}`);
+          console.log(`❌ Failed to fetch chats page ${page}`);
           break;
         }
-      } while (cursor);
+      } while (cursor && page <= MAX_PAGES);
       
     } catch (error) {
-      console.error('❌ Error fetching connections:', error);
+      console.error('❌ Error extracting contact IDs:', error);
     }
     
-    console.log(`🎯 Total connections fetched: ${allConnections.length}`);
-    return allConnections;
+    const uniqueIds = Array.from(contactIds);
+    console.log(`🎯 Total unique contact IDs extracted: ${uniqueIds.length}`);
+    return uniqueIds;
   }
   
   /**
@@ -1125,32 +1175,77 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Generate tags for a contact based on their data
+   * Generate tags for a contact based on their profile data
    */
-  private generateContactTags(contact: UnipileContact): string[] {
+  private generateProfileTags(profile: any): string[] {
     const tags: string[] = [];
     
-    if (contact.title?.toLowerCase().includes('ceo') || 
-        contact.title?.toLowerCase().includes('founder') ||
-        contact.title?.toLowerCase().includes('president')) {
+    // Connection degree
+    if (profile.network_distance === 'FIRST_DEGREE') {
+      tags.push('1st-degree');
+    } else if (profile.network_distance === 'SECOND_DEGREE') {
+      tags.push('2nd-degree');
+    } else {
+      tags.push('3rd-degree');
+    }
+    
+    // LinkedIn status
+    if (profile.is_premium) tags.push('premium');
+    if (profile.is_influencer) tags.push('influencer');
+    if (profile.is_creator) tags.push('creator');
+    
+    // Engagement level based on followers
+    if (profile.follower_count > 10000) tags.push('high-engagement');
+    else if (profile.follower_count > 1000) tags.push('medium-engagement');
+    
+    // Network size
+    if (profile.connections_count > 500) tags.push('well-connected');
+    
+    // Title-based tags
+    const headline = profile.headline?.toLowerCase() || '';
+    if (headline.includes('ceo') || headline.includes('founder') || headline.includes('president')) {
       tags.push('c-suite');
     }
-    
-    if (contact.title?.toLowerCase().includes('director') ||
-        contact.title?.toLowerCase().includes('vp') ||
-        contact.title?.toLowerCase().includes('head')) {
+    if (headline.includes('director') || headline.includes('vp') || headline.includes('head')) {
       tags.push('decision-maker');
     }
-    
-    if (contact.mutual_connections && contact.mutual_connections > 50) {
-      tags.push('influencer');
-    }
-    
-    if (contact.company) {
-      tags.push('b2b');
-    }
+    if (headline.includes('sales')) tags.push('sales');
+    if (headline.includes('marketing')) tags.push('marketing');
+    if (headline.includes('engineer') || headline.includes('developer')) tags.push('technical');
     
     return tags;
+  }
+  
+  /**
+   * Calculate engagement score based on profile data
+   */
+  private calculateEngagementScore(profile: any): number {
+    let score = 50; // Base score
+    
+    // Connection degree bonus
+    if (profile.network_distance === 'FIRST_DEGREE') score += 30;
+    else if (profile.network_distance === 'SECOND_DEGREE') score += 15;
+    
+    // Premium/status bonus
+    if (profile.is_premium) score += 10;
+    if (profile.is_influencer) score += 15;
+    if (profile.is_creator) score += 10;
+    
+    // Network size bonus
+    if (profile.connections_count > 500) score += 10;
+    if (profile.follower_count > 1000) score += 5;
+    if (profile.follower_count > 10000) score += 10;
+    
+    // Shared connections bonus
+    if (profile.shared_connections_count > 5) score += 5;
+    if (profile.shared_connections_count > 20) score += 10;
+    
+    // Profile completeness
+    if (profile.contact_info?.emails?.length > 0) score += 5;
+    if (profile.location) score += 3;
+    if (profile.headline) score += 2;
+    
+    return Math.min(100, score);
   }
 
   /**
