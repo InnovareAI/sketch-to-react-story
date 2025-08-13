@@ -117,6 +117,7 @@ export default function GlobalInbox() {
   const [meetingDate, setMeetingDate] = useState("");
   const [meetingTime, setMeetingTime] = useState("");
   const [meetingDescription, setMeetingDescription] = useState("");
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
 
   useEffect(() => {
     loadMessages();
@@ -713,12 +714,97 @@ export default function GlobalInbox() {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Manual Sync Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                setIsManualSyncing(true);
+                console.log('🔄 Starting manual sync...');
+                toast.info('Starting LinkedIn sync...');
+                
+                // Import and run syncAll
+                const { unipileRealTimeSync } = await import('@/services/unipile/UnipileRealTimeSync');
+                
+                // Check if configured
+                if (!unipileRealTimeSync.isConfigured()) {
+                  console.log('📝 Configuring Unipile...');
+                  const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+                  if (accounts.length > 0) {
+                    const account = accounts[0];
+                    const accountId = account.unipileAccountId || account.id || account.account_id;
+                    console.log('Using account ID:', accountId);
+                    if (accountId) {
+                      unipileRealTimeSync.configure({
+                        apiKey: 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
+                        accountId: accountId
+                      });
+                    } else {
+                      throw new Error('No valid account ID found');
+                    }
+                  } else {
+                    throw new Error('No LinkedIn account connected');
+                  }
+                }
+                
+                // Run the sync
+                console.log('Running syncAll...');
+                await unipileRealTimeSync.syncAll();
+                
+                // Update sync time
+                setSyncState(prev => ({
+                  ...prev,
+                  lastSyncTime: new Date()
+                }));
+                
+                // Save to localStorage
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                  localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify({
+                    lastSyncTime: new Date().toISOString(),
+                    initialSyncComplete: true
+                  }));
+                }
+                
+                toast.success('Sync completed! Refreshing inbox...');
+                
+                // Refresh the inbox data after a short delay
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1500);
+                
+              } catch (error: any) {
+                console.error('Manual sync error:', error);
+                toast.error(`Sync failed: ${error.message || 'Unknown error'}`);
+              } finally {
+                setIsManualSyncing(false);
+              }
+            }}
+            disabled={isManualSyncing}
+            className={isManualSyncing ? "bg-yellow-50 border-yellow-200" : "bg-blue-50 hover:bg-blue-100 border-blue-200"}
+            title="Manually sync LinkedIn messages and contacts"
+          >
+            {isManualSyncing ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Sync Now
+              </>
+            )}
+          </Button>
+          
           <Button
             onClick={() => setShowNewMessageModal(true)}
           >
             <Mail className="h-4 w-4 mr-2" />
             New Message
           </Button>
+          
           <Button
             variant="outline"
             size="sm"
