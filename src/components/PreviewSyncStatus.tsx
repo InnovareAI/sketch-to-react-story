@@ -129,21 +129,6 @@ export default function PreviewSyncStatus() {
           </Badge>
         </div>
 
-        {/* Info Alert */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-            <div className="text-xs text-blue-800">
-              <p className="font-medium mb-1">How Preview Sync Works:</p>
-              <ul className="space-y-0.5 ml-2">
-                <li>• First 500 conversations: Full message history</li>
-                <li>• Next 2000 conversations: Preview only (last message)</li>
-                <li>• Click "Load Full Conversation" on any preview to fetch all messages</li>
-                <li>• Saves ~90% storage compared to full sync</li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
