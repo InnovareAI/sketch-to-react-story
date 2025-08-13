@@ -128,11 +128,11 @@ export class UnipileRealTimeSync {
         apiKeyPreview: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'NOT SET'
       });
 
-      // Unipile uses Bearer token authentication
+      // Unipile uses X-API-KEY authentication
       const response = await fetch(`${this.baseUrl}/accounts`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'X-API-KEY': this.apiKey!,
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         }
@@ -283,69 +283,38 @@ export class UnipileRealTimeSync {
    */
   private async getConnectedAccounts(): Promise<any[]> {
     try {
-      // HARDCODED: Your 8+ LinkedIn accounts that are already connected in Unipile
-      // These are the accounts you mentioned: Thorsten Linz, Charissa Saniel, Irish Cita De Ade, etc.
-      const knownAccounts = [
-        {
-          id: 'thorsten-linz',
-          name: 'Thorsten Linz',
-          provider: 'LINKEDIN',
-          status: 'CONNECTED',
-          email: 'thorsten@example.com'
-        },
-        {
-          id: 'charissa-saniel',
-          name: 'Charissa Saniel', 
-          provider: 'LINKEDIN',
-          status: 'CONNECTED',
-          email: 'charissa@example.com'
-        },
-        {
-          id: 'irish-cita',
-          name: 'Irish Cita De Ade',
-          provider: 'LINKEDIN',
-          status: 'CONNECTED',
-          email: 'irish@example.com'
-        },
-        {
-          id: 'account-4',
-          name: 'LinkedIn Account 4',
-          provider: 'LINKEDIN',
-          status: 'CONNECTED',
-          email: 'account4@example.com'
-        },
-        {
-          id: 'account-5',
-          name: 'LinkedIn Account 5',
-          provider: 'LINKEDIN',
-          status: 'CONNECTED',
-          email: 'account5@example.com'
-        },
-        {
-          id: 'account-6',
-          name: 'LinkedIn Account 6',
-          provider: 'LINKEDIN',
-          status: 'CONNECTED',
-          email: 'account6@example.com'
-        },
-        {
-          id: 'account-7',
-          name: 'LinkedIn Account 7',
-          provider: 'LINKEDIN',
-          status: 'CONNECTED',
-          email: 'account7@example.com'
-        },
-        {
-          id: 'account-8',
-          name: 'LinkedIn Account 8',
-          provider: 'LINKEDIN',
-          status: 'CONNECTED',
-          email: 'account8@example.com'
+      // Try to fetch real accounts from API first
+      if (this.isConfigured()) {
+        try {
+          const response = await fetch(`${this.baseUrl}/accounts`, {
+            method: 'GET',
+            headers: {
+              'X-API-KEY': this.apiKey,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const accounts = data.items || [];
+            
+            // Filter for LinkedIn accounts with OK status
+            const linkedInAccounts = accounts.filter((acc: any) => 
+              acc.type === 'LINKEDIN' && 
+              acc.sources?.some((s: any) => s.status === 'OK')
+            );
+
+            if (linkedInAccounts.length > 0) {
+              // Store for next time
+              localStorage.setItem('linkedin_accounts', JSON.stringify(linkedInAccounts));
+              return linkedInAccounts;
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching accounts:', error);
         }
-      ];
-      
-      // Return the hardcoded accounts immediately since we know they exist
-      return knownAccounts;
+      }
       
       // 1. Check workspace settings stored data
       const workspaceSettings = localStorage.getItem('workspace_settings');
@@ -411,7 +380,7 @@ export class UnipileRealTimeSync {
           const response = await fetch(`${this.baseUrl}/accounts`, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
+              'X-API-KEY': this.apiKey,
               'Accept': 'application/json',
               'Content-Type': 'application/json'
             }
@@ -596,7 +565,7 @@ export class UnipileRealTimeSync {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'X-API-KEY': this.apiKey!,
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         }
@@ -641,7 +610,7 @@ export class UnipileRealTimeSync {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'X-API-KEY': this.apiKey!,
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         }
@@ -767,7 +736,7 @@ export class UnipileRealTimeSync {
           const response = await fetch(url, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
+              'X-API-KEY': this.apiKey!,
               'Accept': 'application/json',
               'Content-Type': 'application/json'
             }
@@ -840,7 +809,7 @@ export class UnipileRealTimeSync {
       const response = await fetch(`${this.baseUrl}/chats`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'X-API-KEY': this.apiKey!,
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
