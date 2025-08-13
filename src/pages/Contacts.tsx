@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from '@/integrations/supabase/client';
 import { ContactsListView } from "@/components/contacts/ContactsListView";
 import { AutoSyncControl } from "@/components/AutoSyncControl";
+import { LinkedInConnect } from "@/components/LinkedInConnect";
 import { contactMessageSync } from '@/services/unipile/ContactMessageSync';
 import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { testUnipileConnection } from '@/utils/testUnipileConnection';
@@ -381,11 +382,20 @@ export default function Contacts() {
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="p-6 space-y-6">
-            {/* Auto-Sync Control - Run sync in background */}
-            <AutoSyncControl 
-              workspaceId={userProfile.workspace_id || localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID}
-              accountId={linkedInAccounts[0]?.unipileAccountId || linkedInAccounts[0]?.id || linkedInAccounts[0]?.account_id || DEFAULT_ACCOUNT_ID}
-            />
+            {/* LinkedIn Connection or Auto-Sync */}
+            {linkedInAccounts.length === 0 ? (
+              <LinkedInConnect 
+                onConnect={(accountId) => {
+                  // Trigger immediate sync after connection
+                  window.location.reload();
+                }}
+              />
+            ) : (
+              <AutoSyncControl 
+                workspaceId={userProfile.workspace_id || localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID}
+                accountId={linkedInAccounts[0]?.unipileAccountId || linkedInAccounts[0]?.id || linkedInAccounts[0]?.account_id || DEFAULT_ACCOUNT_ID}
+              />
+            )}
             
             {/* Header */}
             <div className="flex items-center justify-between">

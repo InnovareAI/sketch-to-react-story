@@ -104,12 +104,49 @@ export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps
 
   const handleManualSync = async () => {
     setSyncStatus('syncing');
+    toast.info('Starting sync with Unipile LinkedIn API...');
     try {
-      // Sync LinkedIn data
+      // Sync LinkedIn data via Unipile API
       if (syncOptions.contacts || syncOptions.messages) {
-        const result = await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
-        if (!result.success) {
-          throw new Error('LinkedIn sync failed');
+        // Call Unipile API directly to get real LinkedIn data
+        const unipileResponse = await fetch('/.netlify/functions/unipile-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            path: `/users/${accountId}/contacts`,
+            method: 'GET',
+            body: { limit: 100 }
+          })
+        });
+        
+        if (unipileResponse.ok) {
+          const data = await unipileResponse.json();
+          const contacts = data.items || [];
+          
+          // Store real LinkedIn contacts in database
+          for (const contact of contacts) {
+            try {
+              await supabase.from('contacts').upsert({
+                workspace_id: workspaceId,
+                email: contact.email || `${contact.id}@linkedin.com`,
+                first_name: contact.first_name || contact.name?.split(' ')[0],
+                last_name: contact.last_name || contact.name?.split(' ').slice(1).join(' '),
+                title: contact.headline || contact.title,
+                linkedin_url: contact.linkedin_url || contact.profile_url,
+                metadata: contact
+              }, { onConflict: 'workspace_id,email' });
+            } catch (err) {
+              console.error('Error storing contact:', err);
+            }
+          }
+          
+          toast.success(`Synced ${contacts.length} real LinkedIn contacts!`);
+        } else {
+          // Fallback to background sync
+          const result = await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
+          if (!result.success) {
+            throw new Error('LinkedIn sync failed');
+          }
         }
       }
       
