@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
+import InboxTest from '@/components/InboxTest';
 
 export default function TestInbox() {
   const [log, setLog] = useState<string[]>([]);
@@ -161,7 +162,10 @@ export default function TestInbox() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+      {/* Add test component at the top */}
+      <InboxTest />
+      
+      <div className="flex justify-between items-center mb-6 mt-6">
         <h1 className="text-3xl font-bold">Global Inbox</h1>
         <div className="text-sm text-gray-600">
           {lastSync && (
