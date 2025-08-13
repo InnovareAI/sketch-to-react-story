@@ -51,7 +51,8 @@ import {
   Users,
   Calendar,
   Video,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -72,6 +73,8 @@ export default function GlobalInbox() {
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [newMessageContent, setNewMessageContent] = useState('');
   const [newMessageRecipient, setNewMessageRecipient] = useState('');
+  const [searchFilter, setSearchFilter] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all');
   
   // Use the LinkedIn sync hook
   const { syncState, performManualSync, toggleAutoSync } = useLinkedInSync();
@@ -534,6 +537,26 @@ export default function GlobalInbox() {
     }
   };
 
+  // Filter messages based on search and filter type
+  const filteredMessages = messages.filter(message => {
+    // Filter by read/unread status
+    if (filterType === 'unread' && message.read) return false;
+    if (filterType === 'read' && !message.read) return false;
+    
+    // Filter by search term
+    if (searchFilter) {
+      const searchLower = searchFilter.toLowerCase();
+      return (
+        message.from.toLowerCase().includes(searchLower) ||
+        message.company.toLowerCase().includes(searchLower) ||
+        message.preview.toLowerCase().includes(searchLower) ||
+        message.subject.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return true;
+  });
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high": return "bg-red-100 text-red-800";
@@ -619,34 +642,57 @@ export default function GlobalInbox() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
         <div className="flex items-center gap-3 flex-1">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Search conversations..."
+              placeholder="Search by name, company, or message..."
               className="pl-10"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
             />
+            {searchFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                onClick={() => setSearchFilter('')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-            <option>All Channels</option>
-            <option>Email</option>
-            <option>LinkedIn</option>
-            <option>WhatsApp</option>
-            <option>SMS</option>
-          </select>
-          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-            <option>All Intents</option>
-            <option>Meeting Request</option>
-            <option>Follow-up</option>
-            <option>Question</option>
-            <option>Not Interested</option>
+          <select 
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as 'all' | 'unread' | 'read')}
+          >
+            <option value="all">All Messages</option>
+            <option value="unread">Unread Only</option>
+            <option value="read">Read Only</option>
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            More Filters
-          </Button>
+          <span className="text-sm text-gray-600">
+            {filteredMessages.length === messages.length ? (
+              `${messages.length} messages`
+            ) : (
+              `${filteredMessages.length} of ${messages.length}`
+            )}
+          </span>
+          {(searchFilter || filterType !== 'all') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchFilter('');
+                setFilterType('all');
+              }}
+            >
+              Clear Filters
+            </Button>
+          )}
         </div>
       </div>
 
@@ -752,8 +798,27 @@ export default function GlobalInbox() {
                         Messages will appear here once synced from LinkedIn
                       </p>
                     </div>
+                  ) : filteredMessages.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No messages match your filter</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Try adjusting your search or filter criteria
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4"
+                        onClick={() => {
+                          setSearchFilter('');
+                          setFilterType('all');
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    </div>
                   ) : (
-                    messages.map((message) => (
+                    filteredMessages.map((message) => (
                     <div
                       key={message.id}
                       className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
