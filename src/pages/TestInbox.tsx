@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { syncLinkedInContacts, getContactsCount } from '@/services/linkedin/ContactSync';
 import { realLinkedInSync } from '@/services/linkedin/RealLinkedInSync';
 
 export default function TestInbox() {
@@ -60,122 +59,35 @@ export default function TestInbox() {
 
   const syncMessage = async () => {
     setLoading(true);
-    addLog('Starting sync...');
+    addLog('Starting LinkedIn inbox sync...');
     
     try {
-      // Check if real API is configured
-      if (realLinkedInSync.isConfigured()) {
-        addLog('🔄 Using real Unipile API for sync...');
+      // Only use real Unipile API
+      if (!realLinkedInSync.isConfigured()) {
+        addLog('❌ Unipile API not configured. Please configure API key in Netlify.');
+        setLoading(false);
+        return;
+      }
+      
+      addLog('🔄 Connecting to Unipile API...');
+      
+      // Sync real LinkedIn messages
+      const messageCount = await realLinkedInSync.syncInboxMessages();
+      
+      if (messageCount > 0) {
+        addLog(`✅ Synced ${messageCount} LinkedIn messages`);
         
-        // Sync real LinkedIn messages
-        const messageCount = await realLinkedInSync.syncInboxMessages();
+        // Update sync times on success
+        const now = new Date();
+        setLastSync(now);
+        setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
         
-        if (messageCount > 0) {
-          addLog(`✅ Synced ${messageCount} real LinkedIn messages`);
-          
-          // Update sync times on success
-          const now = new Date();
-          setLastSync(now);
-          setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
-          
-          await loadMessages();
-        } else {
-          addLog('❌ No new messages to sync');
-        }
+        await loadMessages();
       } else {
-        // Fallback to demo data if API not configured
-        addLog('⚠️ Unipile API not configured, using demo data');
-        
-        // Generate unique IDs for each message
-        const timestamp = Date.now();
-        const randomNum = Math.floor(Math.random() * 1000);
-        
-        // Sample LinkedIn messages to sync
-        const sampleMessages = [
-          {
-            name: 'Emma Wilson',
-            company: 'TechStart Inc',
-            message: 'Hi! I noticed your work in AI development. Would love to connect and discuss potential collaborations.'
-          },
-          {
-            name: 'James Chen',
-            company: 'Innovation Labs',
-            message: 'Thanks for accepting my connection! Our team is looking for solutions like yours.'
-          },
-          {
-            name: 'Sofia Rodriguez',
-            company: 'Digital Ventures',
-            message: 'Great presentation at the conference! Let\'s schedule a follow-up call to explore synergies.'
-          }
-        ];
-        
-        // Pick a random message
-        const sample = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
-        const conversationId = `linkedin_${timestamp}_${randomNum}`;
-        
-        // Get a valid workspace first
-        const { data: workspace } = await supabase
-          .from('workspaces')
-          .select('id')
-          .limit(1)
-          .single();
-        
-        const workspaceId = workspace?.id || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-        
-        // Create conversation
-        const { data: conv, error: convError } = await supabase
-          .from('inbox_conversations')
-          .upsert({
-            workspace_id: workspaceId,
-            platform: 'linkedin',
-            platform_conversation_id: conversationId,
-            participant_name: sample.name,
-            participant_company: sample.company,
-            participant_avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sample.name}`,
-            status: 'active',
-            last_message_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-          
-        if (convError) {
-          addLog(`❌ Conversation error: ${JSON.stringify(convError)}`);
-          setLoading(false);
-          return;
-        }
-        
-        addLog(`✅ Created demo conversation: ${conv.id}`);
-        
-        // Create message
-        const { error: msgError } = await supabase
-          .from('inbox_messages')
-          .upsert({
-            conversation_id: conv.id,
-            platform_message_id: `msg_${conversationId}`,
-            role: 'assistant',
-            content: sample.message,
-            metadata: {
-              sender_name: sample.name,
-              sender_company: sample.company,
-              type: 'inbound'
-            }
-          });
-          
-        if (msgError) {
-          addLog(`❌ Message error: ${JSON.stringify(msgError)}`);
-        } else {
-          addLog(`✅ Synced demo message from ${sample.name}`);
-          
-          // Update sync times on success
-          const now = new Date();
-          setLastSync(now);
-          setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
-          
-          await loadMessages();
-        }
+        addLog('📭 No new messages found in LinkedIn inbox');
       }
     } catch (err: any) {
-      addLog(`❌ Exception: ${err.message}`);
+      addLog(`❌ Sync error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -183,28 +95,25 @@ export default function TestInbox() {
 
   const syncContacts = async () => {
     setLoading(true);
-    addLog('🔄 Syncing LinkedIn contacts...');
+    addLog('Starting LinkedIn contacts sync...');
     
     try {
-      let count = 0;
-      
-      // Try real API first
-      if (realLinkedInSync.isConfigured()) {
-        addLog('🔄 Using real Unipile API for contacts...');
-        count = await realLinkedInSync.syncContacts();
-      } else {
-        // Fallback to demo data
-        addLog('⚠️ Using demo contacts (configure Unipile API for real data)');
-        count = await syncLinkedInContacts();
+      // Only use real Unipile API
+      if (!realLinkedInSync.isConfigured()) {
+        addLog('❌ Unipile API not configured. Please configure API key in Netlify.');
+        setLoading(false);
+        return;
       }
       
+      addLog('🔄 Fetching LinkedIn contacts from Unipile...');
+      const count = await realLinkedInSync.syncContacts();
+      
       if (count > 0) {
-        addLog(`✅ Synced ${count} new contacts`);
+        addLog(`✅ Synced ${count} LinkedIn contacts`);
         // Update contact count
-        const totalCount = await getContactsCount();
-        setContactCount(totalCount);
+        await loadContactCount();
       } else {
-        addLog('❌ No contacts synced');
+        addLog('📭 No new contacts found');
       }
     } catch (error: any) {
       addLog(`❌ Contact sync error: ${error.message}`);
@@ -214,8 +123,26 @@ export default function TestInbox() {
   };
 
   const loadContactCount = async () => {
-    const count = await getContactsCount();
-    setContactCount(count);
+    try {
+      // Get workspace
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('id')
+        .limit(1)
+        .single();
+      
+      if (!workspace) return;
+      
+      // Get contact count
+      const { count } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspace.id);
+      
+      setContactCount(count || 0);
+    } catch (error) {
+      console.error('Error getting contact count:', error);
+    }
   };
 
   // Auto-load messages on mount and set up auto-sync
@@ -223,10 +150,12 @@ export default function TestInbox() {
     loadMessages();
     loadContactCount();
     
-    // Auto-sync every 30 minutes (1800000 ms)
+    // Auto-sync every 30 minutes only if API is configured
     const interval = setInterval(() => {
-      addLog('⏰ Auto-sync triggered (every 30 minutes)');
-      syncMessage();
+      if (realLinkedInSync.isConfigured()) {
+        addLog('⏰ Auto-sync triggered (every 30 minutes)');
+        syncMessage();
+      }
     }, 1800000); // 30 minutes
     
     // Cleanup interval on unmount

@@ -12,10 +12,8 @@ export class RealLinkedInSync {
   private workspaceId: string | null = null;
   
   constructor() {
-    // Get API key from environment or localStorage
-    this.apiKey = import.meta.env.VITE_UNIPILE_API_KEY || 
-                  localStorage.getItem('unipile_api_key') || 
-                  null;
+    // Get API key from environment only (centrally managed)
+    this.apiKey = import.meta.env.VITE_UNIPILE_API_KEY || null;
   }
 
   /**
@@ -447,19 +445,10 @@ export class RealLinkedInSync {
   }
 
   /**
-   * Set API key manually
-   */
-  setApiKey(apiKey: string): void {
-    this.apiKey = apiKey;
-    localStorage.setItem('unipile_api_key', apiKey);
-    toast.success('Unipile API key saved');
-  }
-
-  /**
    * Check if API is configured
    */
   isConfigured(): boolean {
-    return !!this.apiKey;
+    return !!this.apiKey && this.apiKey !== '' && this.apiKey !== 'demo_key_not_configured';
   }
 }
 

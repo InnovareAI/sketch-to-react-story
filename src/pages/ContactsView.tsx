@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { syncLinkedInContacts } from '@/services/linkedin/ContactSync';
+import { realLinkedInSync } from '@/services/linkedin/RealLinkedInSync';
 import { toast } from 'sonner';
 import { 
   Search, 
@@ -86,15 +86,22 @@ export default function ContactsView() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const count = await syncLinkedInContacts();
+      // Check if API is configured
+      if (!realLinkedInSync.isConfigured()) {
+        toast.error('Unipile API not configured. Please configure in Netlify environment.');
+        setSyncing(false);
+        return;
+      }
+      
+      const count = await realLinkedInSync.syncContacts();
       if (count > 0) {
-        toast.success(`Synced ${count} new contacts from LinkedIn`);
+        toast.success(`Synced ${count} contacts from LinkedIn`);
         await loadContacts();
       } else {
-        toast.info('No new contacts to sync');
+        toast.info('No new contacts found in LinkedIn');
       }
     } catch (error) {
-      toast.error('Sync failed');
+      toast.error('Failed to sync LinkedIn contacts');
     } finally {
       setSyncing(false);
     }
