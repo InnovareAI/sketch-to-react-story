@@ -86,13 +86,23 @@ export class UnipileRealTimeSync {
     const dsn = import.meta.env.VITE_UNIPILE_DSN || 'api6.unipile.com:13670';
     this.baseUrl = `https://${dsn}/api/v1`;
     this.apiKey = import.meta.env.VITE_UNIPILE_API_KEY || null;
+    
+    console.log('🔧 Unipile Configuration:', {
+      dsn,
+      baseUrl: this.baseUrl,
+      hasApiKey: !!this.apiKey,
+      apiKeyPreview: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'NOT SET'
+    });
   }
 
   /**
    * Check if API is properly configured
    */
   isConfigured(): boolean {
-    return !!this.apiKey && this.apiKey !== '' && this.apiKey !== 'demo_key_not_configured';
+    return !!this.apiKey && 
+           this.apiKey !== '' && 
+           this.apiKey !== 'demo_key_not_configured' && 
+           this.apiKey !== 'your_unipile_api_key_here';
   }
 
   /**
@@ -100,6 +110,70 @@ export class UnipileRealTimeSync {
    */
   getStatus(): SyncStatus {
     return this.status;
+  }
+
+  /**
+   * Test API connectivity and account detection
+   */
+  async testConnection(): Promise<{ success: boolean; accounts: any[]; error?: string }> {
+    if (!this.isConfigured()) {
+      return {
+        success: false,
+        accounts: [],
+        error: 'Unipile API key not configured. Please set VITE_UNIPILE_API_KEY in your environment.'
+      };
+    }
+
+    try {
+      console.log('🧪 Testing Unipile API connection...');
+      console.log('🔧 Configuration:', {
+        baseUrl: this.baseUrl,
+        hasApiKey: !!this.apiKey,
+        apiKeyPreview: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'NOT SET'
+      });
+
+      const response = await fetch(`${this.baseUrl}/accounts`, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': this.apiKey!,
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log(`📊 Test response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          success: false,
+          accounts: [],
+          error: `API Error ${response.status}: ${errorText}`
+        };
+      }
+
+      const data = await response.json();
+      console.log('📦 Test response data:', data);
+
+      const accounts = data.items || data.accounts || data || [];
+      const linkedInAccounts = accounts.filter((acc: any) => 
+        acc.provider?.toUpperCase() === 'LINKEDIN' && 
+        ['CONNECTED', 'ACTIVE', 'connected', 'active'].includes(acc.status)
+      );
+
+      return {
+        success: true,
+        accounts: linkedInAccounts,
+        error: undefined
+      };
+
+    } catch (error) {
+      console.error('🚨 Test connection failed:', error);
+      return {
+        success: false,
+        accounts: [],
+        error: error instanceof Error ? error.message : 'Unknown connection error'
+      };
+    }
   }
 
   /**
@@ -270,34 +344,54 @@ export class UnipileRealTimeSync {
       // 4. Try Unipile API directly
       if (this.apiKey && this.apiKey !== 'demo_key_not_configured') {
         try {
+          console.log('🔍 Fetching accounts from Unipile API...');
           const response = await fetch(`${this.baseUrl}/accounts`, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
               'X-API-KEY': this.apiKey,
               'Accept': 'application/json'
             }
           });
 
+          console.log(`📊 Accounts API response status: ${response.status}`);
+          
           if (response.ok) {
             const data = await response.json();
-            const accounts = data.items || data.accounts || data || [];
+            console.log('📦 Raw accounts response:', data);
             
-            // Filter for LinkedIn accounts
-            const linkedInAccounts = accounts.filter((acc: any) => 
-              (acc.provider === 'LINKEDIN' || acc.provider === 'linkedin') && 
-              (acc.status === 'CONNECTED' || acc.status === 'ACTIVE' || acc.status === 'active')
-            );
+            const accounts = data.items || data.accounts || data || [];
+            console.log(`📈 Total accounts found: ${accounts.length}`);
+            
+            // Filter for LinkedIn accounts with more lenient matching
+            const linkedInAccounts = accounts.filter((acc: any) => {
+              const providerMatch = acc.provider?.toUpperCase() === 'LINKEDIN';
+              const statusMatch = ['CONNECTED', 'ACTIVE', 'connected', 'active'].includes(acc.status);
+              
+              console.log(`🔍 Account ${acc.id}: provider=${acc.provider}, status=${acc.status}, matches=${providerMatch && statusMatch}`);
+              
+              return providerMatch && statusMatch;
+            });
+
+            console.log(`✅ LinkedIn accounts found: ${linkedInAccounts.length}`);
+            linkedInAccounts.forEach((acc, i) => {
+              console.log(`  ${i + 1}. ${acc.name || acc.username || acc.id} (${acc.status})`);
+            });
 
             if (linkedInAccounts.length > 0) {
-              console.log('✅ Found LinkedIn accounts from API:', linkedInAccounts);
               // Store for next time
               localStorage.setItem('linkedin_accounts', JSON.stringify(linkedInAccounts));
               return linkedInAccounts;
             }
+          } else {
+            const errorText = await response.text();
+            console.error('❌ Failed to fetch accounts:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText
+            });
           }
         } catch (apiError) {
-          console.log('API call failed:', apiError);
+          console.error('❌ API call failed:', apiError);
         }
       }
 
@@ -426,30 +520,44 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Fetch conversations from Unipile
+   * Fetch conversations/chats from Unipile
    */
   private async fetchConversations(accountId: string): Promise<UnipileConversation[]> {
     try {
-      const response = await fetch(
-        `${this.baseUrl}/messaging/conversations?account_id=${accountId}&limit=50`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'X-API-KEY': this.apiKey!,
-            'X-ACCOUNT-ID': accountId,
-            'Accept': 'application/json'
-          }
+      console.log(`🔍 Fetching chats for account: ${accountId}`);
+      
+      // Use the correct /chats endpoint
+      const url = `${this.baseUrl}/chats?account_id=${accountId}&limit=50`;
+      console.log(`📡 API URL: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': this.apiKey!,
+          'Accept': 'application/json'
         }
-      );
+      });
 
+      console.log(`📊 Response status: ${response.status}`);
+      
       if (!response.ok) {
-        console.error('Failed to fetch conversations:', response.status);
+        const errorText = await response.text();
+        console.error('Failed to fetch chats:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
         return [];
       }
 
       const data = await response.json();
-      return data.items || data.conversations || [];
+      console.log(`✅ Received chats data:`, data);
+      
+      // Handle different possible response structures
+      const chats = data.items || data.chats || data.conversations || data || [];
+      console.log(`📈 Found ${chats.length} chats`);
+      
+      return chats;
     } catch (error) {
       console.error('Error fetching conversations:', error);
       return [];
@@ -457,30 +565,43 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Fetch messages for a conversation
+   * Fetch messages for a conversation/chat
    */
-  private async fetchMessages(accountId: string, conversationId: string): Promise<UnipileMessage[]> {
+  private async fetchMessages(accountId: string, chatId: string): Promise<UnipileMessage[]> {
     try {
-      const response = await fetch(
-        `${this.baseUrl}/messaging/messages?account_id=${accountId}&conversation_id=${conversationId}&limit=100`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'X-API-KEY': this.apiKey!,
-            'X-ACCOUNT-ID': accountId,
-            'Accept': 'application/json'
-          }
+      console.log(`🔍 Fetching messages for chat: ${chatId}`);
+      
+      // Use the correct endpoint for getting messages from a specific chat
+      const url = `${this.baseUrl}/chats/${chatId}/messages?account_id=${accountId}&limit=100`;
+      console.log(`📡 Messages API URL: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': this.apiKey!,
+          'Accept': 'application/json'
         }
-      );
+      });
 
+      console.log(`📊 Messages response status: ${response.status}`);
+      
       if (!response.ok) {
-        console.error('Failed to fetch messages:', response.status);
+        const errorText = await response.text();
+        console.error('Failed to fetch messages:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
         return [];
       }
 
       const data = await response.json();
-      return data.items || data.messages || [];
+      console.log(`✅ Received messages data for chat ${chatId}:`, data);
+      
+      const messages = data.items || data.messages || data || [];
+      console.log(`📬 Found ${messages.length} messages`);
+      
+      return messages;
     } catch (error) {
       console.error('Error fetching messages:', error);
       return [];
@@ -565,37 +686,49 @@ export class UnipileRealTimeSync {
    */
   private async fetchContacts(accountId: string): Promise<UnipileContact[]> {
     try {
-      // Try multiple endpoints
+      console.log(`🔍 Fetching contacts for account: ${accountId}`);
+      
+      // Try multiple endpoints with correct authentication
       const endpoints = [
+        `/users?account_id=${accountId}&limit=100`,
         `/contacts?account_id=${accountId}&limit=100`,
-        `/connections?account_id=${accountId}&limit=100`,
-        `/accounts/${accountId}/contacts?limit=100`
+        `/connections?account_id=${accountId}&limit=100`
       ];
 
       for (const endpoint of endpoints) {
         try {
-          const response = await fetch(`${this.baseUrl}${endpoint}`, {
+          const url = `${this.baseUrl}${endpoint}`;
+          console.log(`📡 Trying contacts endpoint: ${url}`);
+          
+          const response = await fetch(url, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
               'X-API-KEY': this.apiKey!,
-              'X-ACCOUNT-ID': accountId,
               'Accept': 'application/json'
             }
           });
 
+          console.log(`📊 Contacts response status for ${endpoint}: ${response.status}`);
+
           if (response.ok) {
             const data = await response.json();
-            const contacts = data.items || data.contacts || data.connections || [];
+            console.log(`✅ Received contacts data from ${endpoint}:`, data);
+            
+            const contacts = data.items || data.contacts || data.connections || data.users || [];
             if (contacts.length > 0) {
+              console.log(`📈 Found ${contacts.length} contacts from ${endpoint}`);
               return contacts;
             }
+          } else {
+            const errorText = await response.text();
+            console.log(`❌ Endpoint ${endpoint} failed:`, errorText);
           }
         } catch (err) {
-          console.log(`Endpoint ${endpoint} failed, trying next...`);
+          console.log(`Endpoint ${endpoint} failed, trying next...`, err);
         }
       }
 
+      console.log('⚠️ No contacts found from any endpoint');
       return [];
     } catch (error) {
       console.error('Error fetching contacts:', error);
@@ -637,25 +770,30 @@ export class UnipileRealTimeSync {
    */
   async sendMessage(accountId: string, recipientId: string, message: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/messaging/messages`, {
+      console.log(`📤 Sending message via account ${accountId} to ${recipientId}`);
+      
+      const response = await fetch(`${this.baseUrl}/chats`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
           'X-API-KEY': this.apiKey!,
-          'X-ACCOUNT-ID': accountId,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           account_id: accountId,
-          recipient_id: recipientId,
+          attendees_ids: [recipientId],
           text: message
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorText = await response.text();
+        console.error('Failed to send message:', errorText);
+        throw new Error(`Failed to send message: ${response.status} ${errorText}`);
       }
 
+      const result = await response.json();
+      console.log('✅ Message sent successfully:', result);
+      
       toast.success('Message sent successfully');
       return true;
     } catch (error) {

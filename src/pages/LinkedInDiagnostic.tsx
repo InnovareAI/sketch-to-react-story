@@ -59,17 +59,12 @@ export default function LinkedInDiagnostic() {
     // 4. Test Unipile API Connection (if configured)
     if (diagnostics.apiConfigured) {
       try {
-        const testUrl = `https://${import.meta.env.VITE_UNIPILE_DSN}/api/v1/accounts`;
-        const response = await fetch(testUrl, {
-          method: 'GET',
-          headers: {
-            'X-API-KEY': import.meta.env.VITE_UNIPILE_API_KEY,
-            'Accept': 'application/json'
-          }
-        });
+        const testResult = await unipileRealTimeSync.testConnection();
+        diagnostics.apiReachable = testResult.success;
+        diagnostics.linkedInAccountsFound = testResult.accounts;
+        diagnostics.apiError = testResult.error;
         
-        diagnostics.apiReachable = response.ok;
-        diagnostics.apiStatus = response.status;
+        console.log('📊 Diagnostic test result:', testResult);
       } catch (err) {
         diagnostics.apiReachable = false;
         diagnostics.apiError = err.message;
@@ -177,7 +172,30 @@ export default function LinkedInDiagnostic() {
                       <XCircle className="h-5 w-5 text-red-500" />
                     )}
                     <span className="font-medium">API Reachable:</span>
-                    <span>{results.apiReachable ? `Yes (${results.apiStatus})` : 'No'}</span>
+                    <span>{results.apiReachable ? 'Yes' : 'No'}</span>
+                  </div>
+                )}
+
+                {/* LinkedIn Accounts Found */}
+                {results.linkedInAccountsFound && (
+                  <div className="pl-7 text-sm">
+                    <div className="font-medium mb-1">LinkedIn Accounts Found:</div>
+                    {results.linkedInAccountsFound.length > 0 ? (
+                      results.linkedInAccountsFound.map((acc, i) => (
+                        <div key={i} className="text-green-600">
+                          • {acc.name || acc.username || acc.id} ({acc.status})
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-red-600">No LinkedIn accounts found</div>
+                    )}
+                  </div>
+                )}
+
+                {/* API Error */}
+                {results.apiError && (
+                  <div className="pl-7 text-sm text-red-600">
+                    Error: {results.apiError}
                   </div>
                 )}
 
@@ -213,15 +231,28 @@ export default function LinkedInDiagnostic() {
             <div className="space-y-2 text-sm">
               <p className="font-medium">To get real LinkedIn data:</p>
               <ol className="list-decimal list-inside space-y-1">
-                <li>Ensure VITE_UNIPILE_API_KEY is set in Netlify environment variables</li>
-                <li>Ensure VITE_UNIPILE_DSN is set (usually: api6.unipile.com:13670)</li>
-                <li>Connect your LinkedIn account through Unipile dashboard</li>
+                <li>Get your Unipile API key from the <a href="https://www.unipile.com/dashboard" target="_blank" className="text-blue-600 underline">Unipile Dashboard</a></li>
+                <li>Update VITE_UNIPILE_API_KEY in your .env.local file (currently: {import.meta.env.VITE_UNIPILE_API_KEY || 'NOT SET'})</li>
+                <li>Ensure VITE_UNIPILE_DSN is set correctly (currently: {import.meta.env.VITE_UNIPILE_DSN || 'NOT SET'})</li>
+                <li>Your LinkedIn accounts should already be connected in Unipile</li>
+                <li>Deploy to Netlify with the correct environment variables</li>
                 <li>Click "Sync LinkedIn" in the Inbox</li>
               </ol>
               
+              <div className="mt-4 p-3 bg-blue-50 rounded">
+                <p className="font-medium text-blue-800">Fixed Issues:</p>
+                <ul className="text-blue-700 list-disc list-inside">
+                  <li>✅ Updated to use correct /chats endpoint instead of /conversations</li>
+                  <li>✅ Fixed authentication to use only X-API-KEY header</li>
+                  <li>✅ Updated DSN to api6.unipile.com:13670</li>
+                  <li>✅ Added comprehensive error logging</li>
+                  <li>✅ Improved account detection for multiple LinkedIn accounts</li>
+                </ul>
+              </div>
+              
               <div className="mt-4 p-3 bg-yellow-50 rounded">
-                <p className="font-medium text-yellow-800">Note:</p>
-                <p className="text-yellow-700">Without Unipile API credentials, no real data can be synced. The system shows 0 messages until properly configured.</p>
+                <p className="font-medium text-yellow-800">Important:</p>
+                <p className="text-yellow-700">The API key must be set to pull real data. Without it, the sync will show 0 messages even if accounts are connected in Unipile.</p>
               </div>
             </div>
           </CardContent>
