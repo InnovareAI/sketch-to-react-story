@@ -1,10 +1,40 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { unipileProxy } from '@/services/unipile/UnipileProxy';
 
 export default function ContactSyncTest() {
   const [results, setResults] = useState<any>(null);
   const [testing, setTesting] = useState(false);
+
+  const testAlternativeEndpointsViaProxy = async (accountId: string) => {
+    const endpoints = [
+      { name: 'Connections', path: `/users/${accountId}/connections?limit=5` },
+      { name: 'Chats', path: `/users/${accountId}/chats?limit=5&provider=LINKEDIN` },
+      { name: 'User Info', path: `/users/${accountId}` },
+    ];
+    
+    const results: any[] = [];
+    
+    for (const endpoint of endpoints) {
+      try {
+        const response = await unipileProxy.request(endpoint.path);
+        results.push({
+          endpoint: endpoint.name,
+          status: response.status,
+          ok: response.ok
+        });
+      } catch (error: any) {
+        results.push({
+          endpoint: endpoint.name,
+          status: 0,
+          error: error.message
+        });
+      }
+    }
+    
+    return results;
+  };
 
   const testAlternativeEndpoints = async (accountId: string) => {
     const endpoints = [
@@ -71,43 +101,62 @@ export default function ContactSyncTest() {
         testResults.accountId = accountId;
 
         if (accountId) {
-          // Test API
+          // Test API using proxy
           try {
-            const response = await fetch(
-              `https://api6.unipile.com:13443/api/v1/users/${accountId}/connections?limit=5`,
-              {
-                headers: {
-                  'Authorization': 'Bearer TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
-                  'Accept': 'application/json'
-                }
-              }
-            );
-
+            console.log('Testing via Supabase proxy...');
+            const response = await unipileProxy.getConnections(accountId, 5);
+            
             testResults.apiStatus = response.status;
             testResults.apiOk = response.ok;
-            console.log('API Response:', {
-              status: response.status,
-              ok: response.ok,
-              headers: Object.fromEntries(response.headers.entries())
-            });
+            testResults.usingProxy = true;
+            console.log('Proxy Response:', response);
 
             if (response.ok) {
-              const data = await response.json();
+              const data = response.data;
               testResults.apiData = data;
               const contacts = data.connections || data.items || data.data || [];
               testResults.contactCount = contacts.length;
               testResults.sampleContacts = contacts.slice(0, 3);
             } else {
-              testResults.apiError = await response.text();
+              testResults.apiError = JSON.stringify(response.data, null, 2);
               
-              // Test alternative endpoints
-              console.log('Testing alternative endpoints...');
-              testResults.alternativeEndpoints = await testAlternativeEndpoints(accountId);
+              // Test alternative endpoints via proxy
+              console.log('Testing alternative endpoints via proxy...');
+              testResults.alternativeEndpoints = await testAlternativeEndpointsViaProxy(accountId);
             }
           } catch (error: any) {
-            testResults.apiStatus = 0;
-            testResults.apiException = error.message;
-            console.error('API Request Failed:', error);
+            console.error('Proxy request failed, trying direct...', error);
+            
+            // Fallback to direct request
+            try {
+              const response = await fetch(
+                `https://api6.unipile.com:13443/api/v1/users/${accountId}/connections?limit=5`,
+                {
+                  headers: {
+                    'Authorization': 'Bearer TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
+                    'Accept': 'application/json'
+                  }
+                }
+              );
+
+              testResults.apiStatus = response.status;
+              testResults.apiOk = response.ok;
+              testResults.usingProxy = false;
+              
+              if (response.ok) {
+                const data = await response.json();
+                testResults.apiData = data;
+                const contacts = data.connections || data.items || data.data || [];
+                testResults.contactCount = contacts.length;
+                testResults.sampleContacts = contacts.slice(0, 3);
+              } else {
+                testResults.apiError = await response.text();
+              }
+            } catch (directError: any) {
+              testResults.apiStatus = 0;
+              testResults.apiException = directError.message;
+              testResults.proxyError = error.message;
+            }
           }
         }
       }
@@ -155,7 +204,7 @@ export default function ContactSyncTest() {
 
               {results.accountId && (
                 <div>
-                  <h3 className="font-semibold">API Test:</h3>
+                  <h3 className="font-semibold">API Test {results.usingProxy ? '(via Proxy)' : '(Direct)'}:</h3>
                   <p className={results.apiOk ? 'text-green-600' : 'text-red-600'}>
                     Status: {results.apiStatus || 'No response'} {results.apiOk ? '✅' : '❌'}
                   </p>
@@ -180,6 +229,11 @@ export default function ContactSyncTest() {
                   {results.apiException && (
                     <div className="mt-2 p-2 bg-red-50 text-red-600 text-sm rounded">
                       <strong>Exception:</strong> {results.apiException}
+                      {results.proxyError && (
+                        <div className="mt-1">
+                          <strong>Proxy Error:</strong> {results.proxyError}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

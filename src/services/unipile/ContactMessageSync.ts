@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { unipileProxy } from './UnipileProxy';
 
 interface LinkedInContact {
   id: string;
@@ -126,24 +127,16 @@ class ContactMessageSyncService {
     const result = { synced: 0, firstDegree: 0, errors: [] };
     
     try {
-      // Fetch connections from Unipile API
-      const response = await fetch(
-        `${this.UNIPILE_BASE_URL}/users/${accountId}/connections?limit=${limit}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.UNIPILE_API_KEY}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }
-      );
-
+      // Fetch connections via proxy to avoid CORS
+      console.log('Fetching connections via proxy...');
+      const response = await unipileProxy.getConnections(accountId, limit);
+      
       if (!response.ok) {
-        throw new Error(`Failed to fetch connections: ${response.statusText}`);
+        throw new Error(`Failed to fetch connections: Status ${response.status}`);
       }
 
-      const data = await response.json();
-      const connections = data.connections || data.items || [];
+      const data = response.data;
+      const connections = data.connections || data.items || data.data || [];
       
       console.log(`Fetched ${connections.length} connections from LinkedIn`);
 
@@ -227,24 +220,16 @@ class ContactMessageSyncService {
     const result = { synced: 0, errors: [] };
     
     try {
-      // Fetch conversations from Unipile API
-      const response = await fetch(
-        `${this.UNIPILE_BASE_URL}/users/${accountId}/chats?limit=${limit}&provider=LINKEDIN`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.UNIPILE_API_KEY}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }
-      );
-
+      // Fetch conversations via proxy to avoid CORS
+      console.log('Fetching chats via proxy...');
+      const response = await unipileProxy.getChats(accountId, limit);
+      
       if (!response.ok) {
-        throw new Error(`Failed to fetch messages: ${response.statusText}`);
+        throw new Error(`Failed to fetch messages: Status ${response.status}`);
       }
 
-      const data = await response.json();
-      const conversations = data.items || [];
+      const data = response.data;
+      const conversations = data.items || data.chats || data.conversations || [];
       
       console.log(`Fetched ${conversations.length} conversations from LinkedIn`);
 
