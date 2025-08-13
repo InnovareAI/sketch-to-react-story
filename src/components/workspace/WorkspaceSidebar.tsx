@@ -37,14 +37,12 @@ const mainNavItems = [
 const teamNavItems = [
   { title: "Team Accounts", url: "/accounts", icon: Building2 },
   { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
-  { title: "Team Settings", url: "/team-settings", icon: Settings },
 ];
 
-// Settings Navigation
+// Settings Navigation - Streamlined
 const settingsItems = [
   { title: "Profile", url: "/profile", icon: Users },
-  { title: "Workspace Settings", url: "/workspace-settings", icon: Settings },
-  { title: "Integrations", url: "/integrations", icon: Target },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 // Agent Mode Navigation

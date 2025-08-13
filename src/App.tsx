@@ -33,8 +33,7 @@ import LinkedInCallback from "./pages/auth/LinkedInCallback";
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
 import UserLogin from "./pages/auth/UserLogin";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
-import Integrations from "./pages/Integrations";
-import TeamSettings from "./pages/TeamSettings";
+import Settings from "./pages/Settings";
 // Analytics merged with Dashboard - no longer needed as separate page
 import ProspectSearch from "./pages/ProspectSearch";
 import SearchResults from "./pages/SearchResults";
@@ -91,8 +90,12 @@ const App: React.FC = () => {
                 
                 {/* Team Routes */}
                 <Route path="global-inbox" element={<GlobalInbox />} />
-                <Route path="team-settings" element={<TeamSettings />} />
-                <Route path="integrations" element={<Integrations />} />
+                
+                {/* Settings Routes - All redirect to unified Settings page */}
+                <Route path="settings" element={<Settings />} />
+                <Route path="team-settings" element={<Settings />} />
+                <Route path="integrations" element={<Settings />} />
+                <Route path="workspace-settings" element={<Settings />} />
                 
                 {/* Campaign & Setup Routes */}
                 <Route path="campaign-setup" element={<CampaignSetup />} />

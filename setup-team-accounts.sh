@@ -1,54 +1,59 @@
 #!/bin/bash
 
-echo "Setting up Team Accounts in Supabase..."
+echo "🚀 Setting up InnovareAI team accounts..."
 
-# Database connection details
-DB_HOST="aws-0-us-east-1.pooler.supabase.com"
-DB_PORT="6543"
-DB_NAME="postgres"
-DB_USER="postgres.ktchrfgkbpaixbiwbieg"
-DB_PASS="i0EiFpjnF4DtVyOV"
+# For CL
+echo "Adding cl@innovareai.com..."
+curl -X POST https://latxadqrvrrrcvkktrog.supabase.co/auth/v1/signup \
+  -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdHhhZHFydnJycmN2a2t0cm9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY2MDEwNzUsImV4cCI6MjA1MjE3NzA3NX0.niqLT5ue9wDzJKVp8J8jZRJRQwhZGTWJysN8nU2h4ek" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "cl@innovareai.com",
+    "password": "InnovareAI2025!",
+    "data": {
+      "full_name": "CL - InnovareAI",
+      "role": "admin",
+      "department": "Leadership"
+    }
+  }'
 
-# Run migrations
-echo "Creating tables..."
-PGPASSWORD=$DB_PASS psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f supabase/migrations/create_team_accounts.sql
-
-if [ $? -eq 0 ]; then
-    echo "✅ Tables created successfully"
-else
-    echo "❌ Failed to create tables"
-    exit 1
-fi
-
-echo "Inserting team members and LinkedIn accounts..."
-PGPASSWORD=$DB_PASS psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f supabase/migrations/insert_team_data.sql
-
-if [ $? -eq 0 ]; then
-    echo "✅ Data inserted successfully"
-else
-    echo "❌ Failed to insert data"
-    exit 1
-fi
-
-echo "Verifying data..."
-PGPASSWORD=$DB_PASS psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-SELECT 'Team Members:' as info;
-SELECT id, full_name, role, department FROM team_members;
-SELECT '' as blank;
-SELECT 'LinkedIn Accounts:' as info;
-SELECT account_name, email, account_type, proxy_location FROM linkedin_accounts;
-SELECT '' as blank;
-SELECT 'Summary:' as info;
-SELECT COUNT(*) as team_members FROM team_members;
-SELECT COUNT(*) as linkedin_accounts FROM linkedin_accounts;
-"
-
-echo "✅ Team accounts setup complete!"
 echo ""
-echo "You now have:"
-echo "- 2 team members (Sarah Johnson & Michael Chen)"
-echo "- 10 LinkedIn accounts (5 for each team member)"
-echo "- Different proxy locations (US, DE, AT, PH)"
-echo "- Mix of Personal and Sales Navigator accounts"
+echo "Adding tl@innovareai.com..."
+curl -X POST https://latxadqrvrrrcvkktrog.supabase.co/auth/v1/signup \
+  -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdHhhZHFydnJycmN2a2t0cm9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY2MDEwNzUsImV4cCI6MjA1MjE3NzA3NX0.niqLT5ue9wDzJKVp8J8jZRJRQwhZGTWJysN8nU2h4ek" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "tl@innovareai.com",
+    "password": "InnovareAI2025!",
+    "data": {
+      "full_name": "TL - InnovareAI",
+      "role": "admin",
+      "department": "Technology"
+    }
+  }'
+
 echo ""
-echo "Access them in your app at: Workspace Settings > Team Accounts"
+echo "Adding cs@innovareai.com..."
+curl -X POST https://latxadqrvrrrcvkktrog.supabase.co/auth/v1/signup \
+  -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdHhhZHFydnJycmN2a2t0cm9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY2MDEwNzUsImV4cCI6MjA1MjE3NzA3NX0.niqLT5ue9wDzJKVp8J8jZRJRQwhZGTWJysN8nU2h4ek" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "cs@innovareai.com", 
+    "password": "InnovareAI2025!",
+    "data": {
+      "full_name": "CS - InnovareAI",
+      "role": "member",
+      "department": "Customer Success"
+    }
+  }'
+
+echo ""
+echo "✅ Team accounts created!"
+echo ""
+echo "📋 Login Credentials:"
+echo "  Email: cl@innovareai.com"
+echo "  Email: tl@innovareai.com"
+echo "  Email: cs@innovareai.com"
+echo "  Password: InnovareAI2025!"
+echo ""
+echo "🎯 They can now login at: https://sameaisalesassistant.netlify.app"
