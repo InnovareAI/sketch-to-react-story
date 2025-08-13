@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
+import { useLinkedInSync } from '@/hooks/useLinkedInSync';
 import { toast } from 'sonner';
 
 interface Message {
@@ -62,6 +62,9 @@ export default function GlobalInbox() {
   const [activeTab, setActiveTab] = useState("all");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Use the LinkedIn sync hook
+  const { syncState, performManualSync, toggleAutoSync } = useLinkedInSync();
   
   // Modal states
   const [replyModalOpen, setReplyModalOpen] = useState(false);
@@ -167,37 +170,13 @@ export default function GlobalInbox() {
   };
 
   const handleSyncMessages = async () => {
-    try {
-      setLoading(true);
-      toast.info('Syncing LinkedIn messages...');
-      
-      // Check if API is configured
-      if (!unipileRealTimeSync.isConfigured()) {
-        toast.error('LinkedIn sync not configured. Please check settings.');
-        return;
-      }
-      
-      // Perform sync
-      await unipileRealTimeSync.syncAll();
-      const status = unipileRealTimeSync.getStatus();
-      
-      if (status.messagessynced > 0) {
-        toast.success(`Synced ${status.messagessynced} new messages`);
-      } else {
-        toast.info('No new messages to sync');
-      }
-      
-      // Wait a moment for database to update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Reload messages
-      await loadMessages();
-      
-    } catch (error) {
-      toast.error('Sync failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    await performManualSync();
+    // Wait a moment for database to update
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Reload messages
+    await loadMessages();
+    setLoading(false);
   };
 
   // Action handlers
@@ -374,17 +353,47 @@ export default function GlobalInbox() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Inbox</h1>
-          <p className="text-gray-600 mt-1">Manage all your conversations across channels</p>
+          <p className="text-gray-600 mt-1">
+            Manage all your conversations across channels
+            {syncState.lastSyncTime && (
+              <span className="text-sm ml-2">
+                • Last sync: {syncState.lastSyncTime.toLocaleTimeString()}
+              </span>
+            )}
+            {syncState.autoSyncEnabled && syncState.nextSyncTime && (
+              <span className="text-sm ml-2">
+                • Next auto-sync: {syncState.nextSyncTime.toLocaleTimeString()}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button 
             variant="outline"
             onClick={handleSyncMessages}
-            disabled={loading}
-            title="Sync all LinkedIn messages from Unipile API"
+            disabled={syncState.isSyncing || loading}
+            title="Manually sync LinkedIn messages"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Sync LinkedIn
+            <RefreshCw className={`h-4 w-4 mr-2 ${(syncState.isSyncing || loading) ? 'animate-spin' : ''}`} />
+            {syncState.isSyncing ? 'Syncing...' : 'Sync LinkedIn'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toggleAutoSync(!syncState.autoSyncEnabled)}
+            title={syncState.autoSyncEnabled ? 'Disable auto-sync' : 'Enable hourly auto-sync'}
+          >
+            {syncState.autoSyncEnabled ? (
+              <>
+                <Clock className="h-4 w-4 mr-2" />
+                Auto-sync ON
+              </>
+            ) : (
+              <>
+                <Clock className="h-4 w-4 mr-2 opacity-50" />
+                Auto-sync OFF
+              </>
+            )}
           </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
