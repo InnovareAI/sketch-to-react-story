@@ -752,19 +752,17 @@ export default function GlobalInbox() {
                 console.log('Running syncAll...');
                 await unipileRealTimeSync.syncAll();
                 
-                // Update sync time
-                setSyncState(prev => ({
-                  ...prev,
-                  lastSyncTime: new Date()
-                }));
-                
-                // Save to localStorage
+                // Save sync status to localStorage (the hook will pick this up)
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                  localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify({
+                  const syncStatus = {
                     lastSyncTime: new Date().toISOString(),
-                    initialSyncComplete: true
-                  }));
+                    initialSyncComplete: true,
+                    messageCount: 0,
+                    contactCount: 0
+                  };
+                  localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify(syncStatus));
+                  console.log('Sync status saved:', syncStatus);
                 }
                 
                 toast.success('Sync completed! Refreshing inbox...');

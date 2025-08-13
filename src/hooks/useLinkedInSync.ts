@@ -194,27 +194,51 @@ export function useLinkedInSync() {
   }, []);
 
   const toggleAutoSync = useCallback(async (enabled: boolean) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No user found for auto-sync toggle');
+        return;
+      }
 
-    localStorage.setItem(`auto_sync_${user.id}`, String(enabled));
-    
-    if (enabled) {
-      unipileRealTimeSync.startAutoSync(60);
-      toast.success('Auto-sync enabled (every hour)');
-      setSyncState(prev => ({
-        ...prev,
-        autoSyncEnabled: true,
-        nextSyncTime: new Date(Date.now() + 60 * 60 * 1000)
-      }));
-    } else {
-      unipileRealTimeSync.stopAutoSync();
-      toast.info('Auto-sync disabled');
-      setSyncState(prev => ({
-        ...prev,
-        autoSyncEnabled: false,
-        nextSyncTime: null
-      }));
+      localStorage.setItem(`auto_sync_${user.id}`, String(enabled));
+      
+      if (enabled) {
+        // Check if unipileRealTimeSync is configured
+        if (!unipileRealTimeSync.isConfigured()) {
+          console.log('Configuring Unipile for auto-sync...');
+          const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+          if (accounts.length > 0) {
+            const account = accounts[0];
+            const accountId = account.unipileAccountId || account.id || account.account_id;
+            if (accountId) {
+              unipileRealTimeSync.configure({
+                apiKey: 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
+                accountId: accountId
+              });
+            }
+          }
+        }
+        
+        unipileRealTimeSync.startAutoSync(60);
+        toast.success('Auto-sync enabled (every hour)');
+        setSyncState(prev => ({
+          ...prev,
+          autoSyncEnabled: true,
+          nextSyncTime: new Date(Date.now() + 60 * 60 * 1000)
+        }));
+      } else {
+        unipileRealTimeSync.stopAutoSync();
+        toast.info('Auto-sync disabled');
+        setSyncState(prev => ({
+          ...prev,
+          autoSyncEnabled: false,
+          nextSyncTime: null
+        }));
+      }
+    } catch (error) {
+      console.error('Error toggling auto-sync:', error);
+      toast.error('Failed to toggle auto-sync');
     }
   }, []);
 
