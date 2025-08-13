@@ -4,41 +4,33 @@ import { supabase } from '@/integrations/supabase/client';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   CheckCircle, 
-  XCircle, 
   Loader2, 
   Link, 
-  Database, 
-  Globe,
+  MapPin,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LinkedInOnboarding() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [credentials, setCredentials] = useState({
-    unipileApiKey: '',
-    unipileDsn: 'api6.unipile.com:13670',
-    brightdataCustomerId: '',
-    brightdataPassword: '',
-    brightdataZone: ''
-  });
+  const [autoDetecting, setAutoDetecting] = useState(false);
+  const [location, setLocation] = useState('');
   
   const [status, setStatus] = useState({
-    unipileConnected: false,
+    connected: false,
+    authenticated: false,
     accountsFound: 0,
-    brightdataConnected: false,
+    locationDetected: false,
     syncComplete: false
   });
 
-  // Check if user already has credentials
+  // Check if user already has LinkedIn setup
   useEffect(() => {
     checkExistingSetup();
   }, []);
@@ -47,117 +39,147 @@ export default function LinkedInOnboarding() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Check if user already has LinkedIn setup
-    const { data: workspace } = await supabase
-      .from('workspaces')
-      .select('settings')
-      .eq('owner_id', user.id)
-      .single();
+    // Check if user already has LinkedIn accounts synced
+    const { count } = await supabase
+      .from('inbox_conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('platform', 'linkedin');
 
-    if (workspace?.settings?.unipileConfigured) {
-      // Already configured, redirect to inbox
+    if (count && count > 0) {
+      // Already has data, redirect to inbox
       navigate('/inbox');
+    } else {
+      // Check if accounts are connected via Unipile
+      checkConnectedAccounts();
     }
   };
 
-  const testUnipileConnection = async () => {
+  const detectLocation = async () => {
+    setAutoDetecting(true);
+    try {
+      // Try to get location from user's IP
+      const response = await fetch('https://ipapi.co/json/');
+      const data = await response.json();
+      
+      // Map country/region to location
+      const locationMap: { [key: string]: string } = {
+        'US': data.region_code === 'CA' || data.region_code === 'WA' || data.region_code === 'OR' ? 'us-west' :
+              data.region_code === 'NY' || data.region_code === 'MA' || data.region_code === 'FL' ? 'us-east' : 'us-central',
+        'CA': 'canada',
+        'GB': 'uk',
+        'AU': 'australia',
+        'DE': 'europe',
+        'FR': 'europe',
+        'ES': 'europe',
+        'IT': 'europe',
+        'NL': 'europe',
+        'JP': 'asia',
+        'CN': 'asia',
+        'IN': 'asia',
+        'SG': 'asia',
+        'KR': 'asia'
+      };
+      
+      const detectedLocation = locationMap[data.country_code] || 'other';
+      setLocation(detectedLocation);
+      
+      // Get friendly name for location
+      const locationNames: { [key: string]: string } = {
+        'us-west': 'United States - West',
+        'us-east': 'United States - East',
+        'us-central': 'United States - Central',
+        'canada': 'Canada',
+        'uk': 'United Kingdom',
+        'europe': 'Europe',
+        'asia': 'Asia Pacific',
+        'australia': 'Australia',
+        'other': data.country_name || 'International'
+      };
+      
+      setStatus(prev => ({ ...prev, locationDetected: true }));
+      toast.success(`Location detected: ${locationNames[detectedLocation]}`);
+      
+      return detectedLocation;
+    } catch (error) {
+      console.error('Failed to auto-detect location:', error);
+      // Default to US-Central if detection fails
+      setLocation('us-central');
+      return 'us-central';
+    } finally {
+      setAutoDetecting(false);
+    }
+  };
+
+  const checkConnectedAccounts = async () => {
     setLoading(true);
     try {
-      // Test the API key
-      const response = await fetch(`https://${credentials.unipileDsn}/api/v1/accounts`, {
-        method: 'GET',
-        headers: {
-          'X-API-KEY': credentials.unipileApiKey,
-          'Accept': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const linkedInAccounts = (data.items || []).filter(
-          (acc: any) => acc.type === 'LINKEDIN' && acc.sources?.some((s: any) => s.status === 'OK')
-        );
-        
+      const result = await unipileRealTimeSync.testConnection();
+      
+      if (result.success && result.accounts.length > 0) {
         setStatus(prev => ({
           ...prev,
-          unipileConnected: true,
-          accountsFound: linkedInAccounts.length
+          connected: true,
+          authenticated: true,
+          accountsFound: result.accounts.length
         }));
         
-        if (linkedInAccounts.length > 0) {
-          toast.success(`Found ${linkedInAccounts.length} LinkedIn accounts!`);
-          return linkedInAccounts;
-        } else {
-          toast.warning('No LinkedIn accounts found. Please connect accounts in Unipile first.');
-          return [];
-        }
-      } else {
-        toast.error('Invalid Unipile API key');
-        return [];
+        // Auto-detect location when accounts are found
+        await detectLocation();
       }
     } catch (error) {
-      toast.error('Failed to connect to Unipile');
-      return [];
+      console.error('Error checking accounts:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveCredentials = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Save credentials to workspace settings
-    const { error } = await supabase
-      .from('workspaces')
-      .upsert({
-        owner_id: user.id,
-        name: 'My Workspace',
-        settings: {
-          unipileApiKey: credentials.unipileApiKey,
-          unipileDsn: credentials.unipileDsn,
-          brightdataCustomerId: credentials.brightdataCustomerId,
-          brightdataPassword: credentials.brightdataPassword,
-          brightdataZone: credentials.brightdataZone,
-          unipileConfigured: true
-        }
-      });
-
-    if (error) {
-      toast.error('Failed to save credentials');
-      return false;
-    }
-
-    // Store in localStorage for immediate use
-    localStorage.setItem('unipile_config', JSON.stringify({
-      apiKey: credentials.unipileApiKey,
-      dsn: credentials.unipileDsn
-    }));
-
-    return true;
+  const handleConnect = () => {
+    // Open Unipile in new window to connect LinkedIn
+    window.open('https://app.unipile.com/accounts', '_blank');
+    toast.info('Please connect your LinkedIn account in Unipile, then click "Check Connection"');
   };
 
-  const performInitialSync = async () => {
+  const handleCheckConnection = async () => {
+    await checkConnectedAccounts();
+  };
+
+  const completeSetupAndSync = async () => {
     setLoading(true);
     try {
-      // Configure the sync service with new credentials
-      const syncService = new (unipileRealTimeSync.constructor as any)();
-      syncService.apiKey = credentials.unipileApiKey;
-      syncService.baseUrl = `https://${credentials.unipileDsn}/api/v1`;
-      
-      // Perform sync
-      await syncService.syncAll();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Save location preference
+      await supabase
+        .from('workspaces')
+        .upsert({
+          owner_id: user.id,
+          name: 'My Workspace',
+          settings: {
+            location,
+            linkedInConfigured: true,
+            syncEnabled: true,
+            autoDetectedLocation: true
+          }
+        });
+
+      // Store location in localStorage
+      localStorage.setItem('user_location', location);
+
+      // Perform initial sync
+      toast.info('Starting initial sync...');
+      await unipileRealTimeSync.syncAll();
       
       setStatus(prev => ({ ...prev, syncComplete: true }));
-      toast.success('Initial sync complete! Your LinkedIn messages are ready.');
+      toast.success('Setup complete! Your LinkedIn messages are ready.');
       
-      // Redirect to inbox after delay
+      // Redirect to inbox
       setTimeout(() => {
         navigate('/inbox');
-      }, 2000);
+      }, 1500);
       
     } catch (error) {
-      toast.error('Sync failed. You can retry from the inbox.');
+      toast.error('Setup failed. You can retry from the inbox.');
       // Still redirect as they can retry
       setTimeout(() => {
         navigate('/inbox');
@@ -167,202 +189,181 @@ export default function LinkedInOnboarding() {
     }
   };
 
-  const handleNext = async () => {
-    if (step === 1) {
-      // Test Unipile connection
-      const accounts = await testUnipileConnection();
-      if (accounts.length > 0) {
-        setStep(2);
-      }
-    } else if (step === 2) {
-      // Save and sync
-      const saved = await saveCredentials();
-      if (saved) {
-        await performInitialSync();
-      }
-    }
-  };
-
-  const skipBrightData = () => {
-    setStep(2);
-    handleNext();
-  };
-
+  // Simplified single-card view
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold mb-2">Connect Your LinkedIn</h1>
-          <p className="text-gray-600">Set up your LinkedIn integration to start syncing messages</p>
+          <p className="text-gray-600">One-click setup to start syncing your LinkedIn messages</p>
         </div>
 
-        {/* Progress Steps */}
-        <div className="flex items-center justify-center mb-8">
-          <div className={`flex items-center ${step >= 1 ? 'text-primary' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              status.unipileConnected ? 'bg-green-500 text-white' : step >= 1 ? 'bg-primary text-white' : 'bg-gray-200'
-            }`}>
-              {status.unipileConnected ? <CheckCircle className="h-5 w-5" /> : '1'}
-            </div>
-            <span className="ml-2 font-medium">Unipile API</span>
-          </div>
-          
-          <div className="w-20 h-0.5 bg-gray-300 mx-4" />
-          
-          <div className={`flex items-center ${step >= 2 ? 'text-primary' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              status.syncComplete ? 'bg-green-500 text-white' : step >= 2 ? 'bg-primary text-white' : 'bg-gray-200'
-            }`}>
-              {status.syncComplete ? <CheckCircle className="h-5 w-5" /> : '2'}
-            </div>
-            <span className="ml-2 font-medium">Sync Messages</span>
-          </div>
-        </div>
-
-        {/* Step 1: Unipile Configuration */}
-        {step === 1 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Link className="h-5 w-5" />
-                Connect Unipile API
-              </CardTitle>
-              <CardDescription>
-                Unipile connects to your LinkedIn accounts to sync messages
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <AlertDescription>
-                  <strong>Don't have a Unipile account?</strong><br />
-                  1. Sign up at <a href="https://unipile.com" target="_blank" className="text-primary underline">unipile.com</a><br />
-                  2. Connect your LinkedIn accounts<br />
-                  3. Get your API key from the dashboard
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="api-key">Unipile API Key</Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    placeholder="Your Unipile API key"
-                    value={credentials.unipileApiKey}
-                    onChange={(e) => setCredentials(prev => ({ ...prev, unipileApiKey: e.target.value }))}
-                  />
-                  <p className="text-sm text-gray-500">Found in your Unipile dashboard</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="dsn">Unipile DSN (optional)</Label>
-                  <Input
-                    id="dsn"
-                    placeholder="api6.unipile.com:13670"
-                    value={credentials.unipileDsn}
-                    onChange={(e) => setCredentials(prev => ({ ...prev, unipileDsn: e.target.value }))}
-                  />
-                  <p className="text-sm text-gray-500">Default: api6.unipile.com:13670</p>
-                </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link className="h-5 w-5" />
+              LinkedIn Integration Setup
+            </CardTitle>
+            <CardDescription>
+              Connect your account and we'll handle the rest automatically
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Status Display */}
+            <div className="space-y-3">
+              {/* Connection Status */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="flex items-center gap-2">
+                  <Link className="h-4 w-4 text-gray-600" />
+                  LinkedIn Account
+                </span>
+                {status.connected ? (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    {status.accountsFound} Connected
+                  </span>
+                ) : (
+                  <span className="text-gray-500">Not Connected</span>
+                )}
               </div>
 
-              {status.unipileConnected && (
-                <Alert className="bg-green-50 border-green-200">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">
-                    Connected! Found {status.accountsFound} LinkedIn account(s)
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex justify-between pt-4">
-                <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                  Skip Setup
-                </Button>
-                <Button 
-                  onClick={handleNext}
-                  disabled={!credentials.unipileApiKey || loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      Test Connection
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 2: Initial Sync */}
-        {step === 2 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <RefreshCw className="h-5 w-5" />
-                Syncing Your Messages
-              </CardTitle>
-              <CardDescription>
-                We're importing your LinkedIn conversations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
+              {/* Location Status */}
+              {status.connected && (
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="flex items-center gap-2">
-                    <Database className="h-4 w-4 text-gray-600" />
-                    LinkedIn Accounts
+                    <MapPin className="h-4 w-4 text-gray-600" />
+                    Location
                   </span>
-                  <span className="font-medium">{status.accountsFound} connected</span>
-                </div>
-
-                {loading && (
-                  <div className="flex flex-col items-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                    <p className="text-gray-600">Syncing messages from LinkedIn...</p>
-                    <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
-                  </div>
-                )}
-
-                {status.syncComplete && (
-                  <Alert className="bg-green-50 border-green-200">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">
-                      <strong>Success!</strong> Your LinkedIn messages have been synced.
-                      Redirecting to your inbox...
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-
-              {!loading && !status.syncComplete && (
-                <div className="flex justify-end pt-4">
-                  <Button 
-                    onClick={handleNext}
-                    disabled={loading}
-                  >
-                    Start Sync
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  {status.locationDetected ? (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      Auto-detected
+                    </span>
+                  ) : autoDetecting ? (
+                    <span className="flex items-center gap-1 text-blue-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Detecting...
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">Pending</span>
+                  )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Optional: Bright Data Config */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Need advanced scraping capabilities?</p>
-          <Button variant="link" className="text-primary">
-            Configure Bright Data (Optional)
-          </Button>
-        </div>
+              {/* Sync Status */}
+              {status.connected && status.locationDetected && (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 text-gray-600" />
+                    Message Sync
+                  </span>
+                  {status.syncComplete ? (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      Complete
+                    </span>
+                  ) : loading ? (
+                    <span className="flex items-center gap-1 text-blue-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Syncing...
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">Ready</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Action Section */}
+            {!status.connected ? (
+              <>
+                <Alert>
+                  <Globe className="h-4 w-4" />
+                  <AlertDescription>
+                    Click below to connect your LinkedIn account. This will open in a new window where you can authorize access.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex flex-col gap-3 items-center py-4">
+                  <Button 
+                    size="lg"
+                    onClick={handleConnect}
+                    className="w-full max-w-sm"
+                  >
+                    <Link className="h-5 w-5 mr-2" />
+                    Connect LinkedIn Account
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={handleCheckConnection}
+                    disabled={loading}
+                    className="w-full max-w-sm"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Check Connection
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : status.syncComplete ? (
+              <Alert className="bg-green-50 border-green-200">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  <strong>All done!</strong> Your LinkedIn is connected and messages are synced. Redirecting to inbox...
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <Alert className="bg-blue-50 border-blue-200">
+                  <CheckCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    LinkedIn connected successfully! {status.locationDetected && 'Location auto-detected.'} Click below to complete setup.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex justify-center pt-4">
+                  <Button 
+                    size="lg"
+                    onClick={completeSetupAndSync}
+                    disabled={loading || !status.locationDetected}
+                    className="w-full max-w-sm"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Setting up...
+                      </>
+                    ) : (
+                      <>
+                        Complete Setup
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-center pt-2">
+              <Button 
+                variant="ghost"
+                onClick={() => navigate('/dashboard')}
+                className="text-sm"
+              >
+                Skip Setup (Configure Later)
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -83,19 +83,17 @@ export class UnipileRealTimeSync {
   };
 
   constructor() {
-    const dsn = import.meta.env.VITE_UNIPILE_DSN || 'api6.unipile.com:13670';
-    this.baseUrl = `https://${dsn}/api/v1`;
-    this.apiKey = import.meta.env.VITE_UNIPILE_API_KEY || null;
+    // Hardcoded configuration - customers don't need API keys
+    this.baseUrl = 'https://api6.unipile.com:13670/api/v1';
+    this.apiKey = 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
   }
 
   /**
    * Check if API is properly configured
    */
   isConfigured(): boolean {
-    return !!this.apiKey && 
-           this.apiKey !== '' && 
-           this.apiKey !== 'demo_key_not_configured' && 
-           this.apiKey !== 'your_unipile_api_key_here';
+    // Always configured with hardcoded API key
+    return true;
   }
 
   /**
@@ -514,17 +512,23 @@ export class UnipileRealTimeSync {
         workspace = newWorkspace;
       }
       
-      // Clear old conversations for a fresh sync
-      console.log('🧹 Clearing old conversations...');
-      await supabase
-        .from('inbox_conversations')
-        .delete()
-        .eq('workspace_id', workspace.id)
-        .eq('platform', 'linkedin');
+      // Don't clear all conversations - only update/add new ones
+      console.log('🔄 Updating conversations (keeping existing data)...');
 
       let syncedCount = 0;
+      let skippedCount = 0;
+      const MAX_MESSAGES_TO_SYNC = 50; // Get more message history (paid plan)
 
-      for (const chat of chats) {
+      // Process chats in batches for better performance
+      console.log(`⚡ Processing ${chats.length} conversations...`);
+      
+      for (let i = 0; i < chats.length; i++) {
+        const chat = chats[i];
+        
+        // Show progress every 10 chats
+        if (i % 10 === 0) {
+          console.log(`📊 Progress: ${i}/${chats.length} conversations processed`);
+        }
         try {
           // Get participant name from chat data
           let participantName = chat.name || chat.subject || '';
@@ -575,8 +579,24 @@ export class UnipileRealTimeSync {
             console.log(`⚠️ No attendee_provider_id for chat: ${chat.id}`);
           }
           
-          // Fetch messages to check if we have any
-          const messages = await this.fetchMessages(account.id, chat.id);
+          // Check if conversation already exists to avoid re-processing
+          const { data: existingConv } = await supabase
+            .from('inbox_conversations')
+            .select('id, last_message_at')
+            .eq('platform_conversation_id', chat.id)
+            .eq('workspace_id', workspace.id)
+            .single();
+          
+          // Skip if conversation exists and hasn't been updated
+          if (existingConv && chat.timestamp && 
+              new Date(existingConv.last_message_at) >= new Date(chat.timestamp)) {
+            skippedCount++;
+            continue;
+          }
+          
+          // Fetch recent messages for this conversation (limited)
+          const messages = await this.fetchRecentMessages(account.id, chat.id, MAX_MESSAGES_TO_SYNC);
+          console.log(`💬 Chat ${chat.id}: ${messages.length} recent messages`);
           
           // Use first message sender as fallback name
           if (!participantName && messages.length > 0) {
@@ -624,27 +644,95 @@ export class UnipileRealTimeSync {
             .single();
 
           if (!convError && savedConv) {
-            // Save messages with better content
-            for (const msg of messages) {
-              const messageContent = msg.text || msg.subject || 'No content';
+            // Clear old messages for this conversation first
+            const { error: deleteError } = await supabase
+              .from('inbox_messages')
+              .delete()
+              .eq('conversation_id', savedConv.id);
+            
+            if (deleteError) {
+              console.error(`❌ Error clearing old messages:`, deleteError);
+            } else {
+              console.log(`🧹 Cleared old messages for conversation ${savedConv.id}`);
+            }
+            
+            // Save ALL messages with better content
+            if (messages.length > 0) {
+              console.log(`💾 Saving ${messages.length} messages for conversation ${savedConv.id}`);
               
-              await supabase
-                .from('inbox_messages')
-                .upsert({
+              const messagesToInsert = [];
+              
+              for (let i = 0; i < messages.length; i++) {
+                const msg = messages[i];
+                const messageContent = msg.text || msg.body || msg.content || msg.subject || 'No content';
+                
+                // Determine role based on sender
+                const isUserMessage = msg.is_sender === 1 || msg.is_sender === true || 
+                                    msg.direction === 'outbound' || msg.sender_type === 'user';
+                
+                const messageData = {
                   conversation_id: savedConv.id,
-                  platform_message_id: msg.id,
-                  role: msg.is_sender ? 'user' : 'assistant',
+                  platform_message_id: msg.id || `${chat.id}_msg_${i}`,
+                  role: isUserMessage ? 'user' : 'assistant',
                   content: messageContent,
+                  created_at: msg.timestamp || msg.created_at || new Date(Date.now() - (messages.length - i) * 60000).toISOString(),
                   metadata: {
-                    sender_id: msg.sender_id,
-                    sender_name: msg.sender_name || participantName,
-                    message_type: msg.message_type || 'message',
+                    sender_id: msg.sender_id || msg.from?.id,
+                    sender_name: msg.sender_name || msg.from?.name || (isUserMessage ? 'You' : participantName),
+                    message_type: msg.message_type || msg.type || 'message',
                     subject: msg.subject || '',
-                    timestamp: msg.timestamp,
-                    seen: msg.seen || false,
-                    attachments: msg.attachments || []
+                    timestamp: msg.timestamp || msg.created_at,
+                    seen: msg.seen || msg.read || false,
+                    attachments: msg.attachments || [],
+                    direction: msg.direction || (isUserMessage ? 'outbound' : 'inbound'),
+                    message_index: i,
+                    original_msg_id: msg.id,
+                    provider_id: msg.provider_id
                   }
-                });
+                };
+                
+                messagesToInsert.push(messageData);
+                console.log(`📝 Prepared message ${i + 1}/${messages.length}: ${isUserMessage ? 'You' : participantName}: "${messageContent.substring(0, 40)}..."`);
+              }
+              
+              // Insert all messages at once
+              if (messagesToInsert.length > 0) {
+                console.log(`⬆️ Inserting ${messagesToInsert.length} messages to database...`);
+                
+                const { data: insertedMessages, error: msgError } = await supabase
+                  .from('inbox_messages')
+                  .insert(messagesToInsert)
+                  .select();
+                  
+                if (msgError) {
+                  console.error(`❌ Error saving messages:`, msgError);
+                  console.error(`Error details:`, JSON.stringify(msgError, null, 2));
+                } else {
+                  console.log(`✅ Successfully saved ${insertedMessages?.length || 0} messages`);
+                }
+              }
+            } else {
+              // If no messages found via API, create a placeholder from chat data
+              console.log(`⚠️ No messages found via API for chat ${chat.id}, creating placeholder from chat data`);
+              
+              if (chat.last_message || chat.lastMessage || chat.snippet) {
+                const placeholderContent = chat.last_message?.text || chat.lastMessage || chat.snippet || 'No content available';
+                
+                await supabase
+                  .from('inbox_messages')
+                  .upsert({
+                    conversation_id: savedConv.id,
+                    platform_message_id: `${chat.id}_placeholder`,
+                    role: 'assistant',
+                    content: placeholderContent,
+                    created_at: chat.timestamp || new Date().toISOString(),
+                    metadata: {
+                      sender_name: participantName,
+                      message_type: 'placeholder',
+                      note: 'Created from chat preview - full history not available'
+                    }
+                  });
+              }
             }
             
             syncedCount++;
@@ -655,6 +743,7 @@ export class UnipileRealTimeSync {
         }
       }
 
+      console.log(`📈 Sync complete: ${syncedCount} updated, ${skippedCount} skipped`);
       return syncedCount;
     } catch (error) {
       console.error('Error syncing messages:', error);
@@ -664,23 +753,25 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Fetch ALL conversations/chats from Unipile with pagination
+   * Fetch recent conversations/chats from Unipile with controlled pagination
    */
   private async fetchConversations(accountId: string): Promise<UnipileConversation[]> {
     const allChats: any[] = [];
     let cursor: string | null = null;
     let page = 1;
+    const MAX_CHATS = 1000; // Get 1000 most recent conversations (paid plan)
+    const CHATS_PER_PAGE = 100; // Fetch 100 at a time for better performance
     
     try {
-      console.log(`🔍 Fetching ALL chats for account: ${accountId}`);
+      console.log(`🔍 Fetching recent chats for account: ${accountId} (max ${MAX_CHATS})`);
       
-      do {
+      while (allChats.length < MAX_CHATS) {
         // Fetch chats with pagination
         const url = cursor
-          ? `${this.baseUrl}/chats?account_id=${accountId}&limit=100&cursor=${cursor}`
-          : `${this.baseUrl}/chats?account_id=${accountId}&limit=100`;
+          ? `${this.baseUrl}/chats?account_id=${accountId}&limit=${CHATS_PER_PAGE}&cursor=${cursor}`
+          : `${this.baseUrl}/chats?account_id=${accountId}&limit=${CHATS_PER_PAGE}`;
         
-        console.log(`📝 Fetching page ${page}...`);
+        console.log(`📝 Fetching page ${page} (${allChats.length}/${MAX_CHATS} chats)...`);
         
         const response = await fetch(url, {
           method: 'GET',
@@ -698,16 +789,26 @@ export class UnipileRealTimeSync {
 
         const data = await response.json();
         const chats = data.items || [];
-        allChats.push(...chats);
         
-        cursor = data.cursor || null;
-        console.log(`✅ Page ${page}: Got ${chats.length} chats (total: ${allChats.length})`);
+        // Add chats up to our limit
+        const remaining = MAX_CHATS - allChats.length;
+        const chatsToAdd = chats.slice(0, remaining);
+        allChats.push(...chatsToAdd);
+        
+        console.log(`✅ Page ${page}: Got ${chats.length} chats, added ${chatsToAdd.length} (total: ${allChats.length})`);
+        
+        // Check if we've reached our limit or no more data
+        if (allChats.length >= MAX_CHATS || !data.cursor || chats.length < CHATS_PER_PAGE) {
+          console.log(`🛑 Stopping: Reached ${allChats.length} chats (limit: ${MAX_CHATS})`);
+          break;
+        }
+        
+        cursor = data.cursor;
         page++;
         
-        // Safety limit - adjust as needed
-        if (page > 10) break; // Max 1000 chats
-        
-      } while (cursor);
+        // Safety limit
+        if (page > 20) break; // Max 20 pages
+      }
       
       console.log(`🎯 Total chats fetched: ${allChats.length}`);
       return allChats;
@@ -719,7 +820,34 @@ export class UnipileRealTimeSync {
   }
 
   /**
-   * Fetch ALL messages for a conversation/chat with pagination
+   * Fetch recent messages for a conversation (limited for performance)
+   */
+  private async fetchRecentMessages(accountId: string, chatId: string, limit: number = 20): Promise<any[]> {
+    try {
+      const url = `${this.baseUrl}/messages?account_id=${accountId}&chat_id=${chatId}&limit=${limit}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': this.apiKey!,
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.items || [];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error(`Error fetching messages for chat ${chatId}:`, error);
+      return [];
+    }
+  }
+  
+  /**
+   * Fetch ALL messages for a conversation/chat with pagination (use sparingly)
    */
   private async fetchMessages(accountId: string, chatId: string): Promise<any[]> {
     const allMessages: any[] = [];
@@ -727,11 +855,15 @@ export class UnipileRealTimeSync {
     let page = 1;
     
     try {
+      console.log(`🔍 Fetching messages for chat ${chatId}`);
+      
       do {
-        // Fetch messages with pagination
+        // Try with account_id parameter for better results
         const url = cursor 
-          ? `${this.baseUrl}/messages?chat_id=${chatId}&limit=100&cursor=${cursor}`
-          : `${this.baseUrl}/messages?chat_id=${chatId}&limit=100`;
+          ? `${this.baseUrl}/messages?account_id=${accountId}&chat_id=${chatId}&limit=100&cursor=${cursor}`
+          : `${this.baseUrl}/messages?account_id=${accountId}&chat_id=${chatId}&limit=100`;
+        
+        console.log(`📝 Fetching messages page ${page}: ${url}`);
         
         const response = await fetch(url, {
           method: 'GET',
@@ -742,23 +874,68 @@ export class UnipileRealTimeSync {
           }
         });
         
+        console.log(`📊 Messages response status: ${response.status}`);
+        
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ Failed to fetch messages: ${errorText}`);
           break;
         }
 
         const data = await response.json();
-        const messages = data.items || [];
-        allMessages.push(...messages);
+        console.log(`📦 Messages response:`, data);
         
-        cursor = data.cursor || null;
+        // Check different possible response structures
+        const messages = data.items || data.messages || data || [];
+        
+        // If data is directly an array of messages
+        if (Array.isArray(data)) {
+          allMessages.push(...data);
+        } else if (messages.length > 0) {
+          allMessages.push(...messages);
+        }
+        
+        cursor = data.cursor || data.next_cursor || null;
+        console.log(`✅ Page ${page}: Got ${messages.length} messages, cursor: ${cursor}`);
         page++;
         
         // Safety limit
         if (page > 20) break; // Max 2000 messages per chat
         
-      } while (cursor);
+      } while (cursor && page <= 20);
       
-      console.log(`📨 Fetched ${allMessages.length} messages for chat ${chatId}`);
+      console.log(`📨 Total messages fetched for chat ${chatId}: ${allMessages.length}`);
+      
+      // If we only got 1 or 0 messages, try alternative approach
+      if (allMessages.length <= 1) {
+        console.log(`⚠️ Only ${allMessages.length} messages found, trying alternative fetch...`);
+        
+        // Try fetching without chat_id to get all messages and filter
+        const altUrl = `${this.baseUrl}/messages?account_id=${accountId}&limit=100`;
+        const altResponse = await fetch(altUrl, {
+          method: 'GET',
+          headers: {
+            'X-API-KEY': this.apiKey!,
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (altResponse.ok) {
+          const altData = await altResponse.json();
+          const altMessages = altData.items || altData.messages || [];
+          
+          // Filter messages for this chat
+          const chatMessages = altMessages.filter((msg: any) => 
+            msg.chat_id === chatId || msg.conversation_id === chatId
+          );
+          
+          if (chatMessages.length > allMessages.length) {
+            console.log(`✅ Found ${chatMessages.length} messages using alternative method`);
+            return chatMessages;
+          }
+        }
+      }
+      
       return allMessages;
       
     } catch (error) {

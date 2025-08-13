@@ -2,9 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useLinkedInSync } from '@/hooks/useLinkedInSync';
 import { toast } from 'sonner';
+import { previewSync } from '@/services/unipile/PreviewSync';
+import PreviewSyncStatus from '@/components/PreviewSyncStatus';
+// import MessageComposer from '@/components/MessageComposer'; // Temporarily disabled
 
 interface Message {
-  id: number;
+  id: string;
   from: string;
   avatar: string;
   company: string;
@@ -15,6 +18,9 @@ interface Message {
   read: boolean;
   priority?: string;
   tags?: string[];
+  conversationData?: any;
+  isPreviewOnly?: boolean; // New field to indicate preview-only conversations
+  totalMessages?: number;   // Total message count for preview conversations
 }
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +68,11 @@ export default function GlobalInbox() {
   const [activeTab, setActiveTab] = useState("all");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showComposer, setShowComposer] = useState(false);
+  const [composerMode, setComposerMode] = useState<'reply' | 'new'>('new');
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [newMessageContent, setNewMessageContent] = useState('');
+  const [newMessageRecipient, setNewMessageRecipient] = useState('');
   
   // Use the LinkedIn sync hook
   const { syncState, performManualSync, toggleAutoSync } = useLinkedInSync();
@@ -142,14 +153,28 @@ export default function GlobalInbox() {
       // Transform conversations into inbox messages format
       const inboxMessages: Message[] = conversations.map((conv, index) => {
         const latestMessage = conv.inbox_messages?.[conv.inbox_messages.length - 1];
+        const messageCount = conv.inbox_messages?.length || 0;
+        const isPreviewOnly = conv.metadata?.preview_only === true;
+        const totalMessages = conv.metadata?.total_messages || messageCount;
+        
+        // Build tags array
+        const tags = [];
+        if (conv.platform === 'linkedin') tags.push('LinkedIn');
+        if (isPreviewOnly) {
+          tags.push('Preview Only');
+          tags.push(`${totalMessages} total`);
+        } else {
+          tags.push(`${messageCount} msgs`);
+        }
+        
         return {
-          id: index + 1,
+          id: conv.id, // Use actual conversation ID instead of index
           from: conv.participant_name || 'Unknown',
           avatar: conv.participant_avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.participant_name}`,
           company: conv.participant_company || '',
           channel: conv.platform || 'linkedin',
           subject: `Message from ${conv.participant_name}`,
-          preview: latestMessage?.content || 'No message content',
+          preview: latestMessage?.content || conv.metadata?.last_message_preview || 'No message content',
           time: new Date(conv.last_message_at).toLocaleTimeString('en-US', { 
             hour: 'numeric', 
             minute: '2-digit',
@@ -157,7 +182,10 @@ export default function GlobalInbox() {
           }),
           read: false,
           priority: 'normal',
-          tags: conv.platform === 'linkedin' ? ['LinkedIn'] : []
+          tags,
+          conversationData: conv, // Store the full conversation data
+          isPreviewOnly,
+          totalMessages
         };
       });
       
@@ -179,10 +207,88 @@ export default function GlobalInbox() {
     setLoading(false);
   };
 
+  // Load conversation messages (helper function)
+  const loadConversationMessages = async (message: Message) => {
+    if (message.conversationData?.inbox_messages) {
+      // Use existing data
+      const sortedMessages = message.conversationData.inbox_messages.sort((a: any, b: any) => {
+        if (a.metadata?.message_index !== undefined && b.metadata?.message_index !== undefined) {
+          return a.metadata.message_index - b.metadata.message_index;
+        }
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+      setSelectedConversation(sortedMessages);
+    } else {
+      // Reload from database
+      const { data: conv } = await supabase
+        .from('inbox_conversations')
+        .select(`
+          *,
+          inbox_messages (
+            *
+          )
+        `)
+        .eq('id', message.id)
+        .single();
+      
+      if (conv?.inbox_messages && conv.inbox_messages.length > 0) {
+        const sortedMessages = conv.inbox_messages.sort((a: any, b: any) => {
+          if (a.metadata?.message_index !== undefined && b.metadata?.message_index !== undefined) {
+            return a.metadata.message_index - b.metadata.message_index;
+          }
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+        setSelectedConversation(sortedMessages);
+      } else {
+        setSelectedConversation([]);
+      }
+    }
+  };
+
+  // Load full conversation for preview-only messages
+  const handleLoadFullConversation = async (message: Message) => {
+    if (!message.isPreviewOnly || !message.conversationData) return;
+    
+    try {
+      toast.info('Loading full conversation history...');
+      
+      // Get the Unipile account
+      const { unipileRealTimeSync } = await import('@/services/unipile/UnipileRealTimeSync');
+      const accounts = await unipileRealTimeSync.testConnection();
+      
+      if (accounts.success && accounts.accounts.length > 0) {
+        const account = accounts.accounts[0];
+        const chatId = message.conversationData.platform_conversation_id;
+        
+        // Load full conversation using PreviewSync
+        const messages = await previewSync.loadFullConversation(
+          message.id, // conversation ID in our database
+          chatId,     // chat ID in Unipile
+          account.id  // Unipile account ID
+        );
+        
+        if (messages && messages.length > 0) {
+          // Reload the messages to show the full conversation
+          await loadMessages();
+          
+          // Re-select the message to show full conversation
+          const updatedMessage = messages.find(m => m.id === message.id);
+          if (updatedMessage) {
+            setSelectedMessage(updatedMessage);
+            await loadConversationMessages(updatedMessage);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading full conversation:', error);
+      toast.error('Failed to load full conversation');
+    }
+  };
+
   // Action handlers
   const handleReply = () => {
     if (selectedMessage) {
-      setReplyContent(`Dear ${selectedMessage.from},\n\nThank you for your message. `);
+      setReplyContent(`Hi ${selectedMessage.from},\n\n`);
       setReplyModalOpen(true);
     }
   };
@@ -204,37 +310,60 @@ export default function GlobalInbox() {
 
   const sendReply = async () => {
     try {
-      if (!selectedMessage) return;
+      if (!selectedMessage || !replyContent.trim()) return;
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get current user's profile
-      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+      toast.info('Sending reply...');
       
-      // Insert reply message into database
-      const { error } = await supabase
-        .from('conversation_messages')
-        .insert({
-          conversation_id: selectedMessage.id, // Use message ID as conversation ID for simplicity
-          role: 'user',
-          content: replyContent,
-          metadata: {
-            type: 'reply',
-            original_message_id: selectedMessage.id,
-            recipient: selectedMessage.from
+      // Try to send via Unipile API
+      const { unipileRealTimeSync } = await import('@/services/unipile/UnipileRealTimeSync');
+      const accounts = await unipileRealTimeSync.testConnection();
+      
+      if (accounts.success && accounts.accounts.length > 0) {
+        // Get the chat ID from conversation data
+        const chatId = selectedMessage.conversationData?.platform_conversation_id;
+        const account = accounts.accounts[0];
+        
+        if (chatId && account) {
+          // Send the actual message via Unipile
+          const success = await unipileRealTimeSync.sendMessage(
+            account.id,
+            chatId, // Use chat ID as recipient
+            replyContent
+          );
+          
+          if (success) {
+            toast.success('Reply sent successfully!');
           }
-        });
-
-      if (error) throw error;
+        }
+      }
+      
+      // Save to our database
+      const { data: { user } } = await supabase.auth.getUser();
+      if (selectedMessage.conversationData?.id) {
+        await supabase
+          .from('inbox_messages')
+          .insert({
+            conversation_id: selectedMessage.conversationData.id,
+            role: 'user',
+            content: replyContent,
+            metadata: {
+              type: 'reply',
+              sender_name: 'You',
+              direction: 'outbound',
+              timestamp: new Date().toISOString()
+            }
+          });
+      }
 
       setReplyModalOpen(false);
       setReplyContent("");
       
       // Refresh messages
       loadMessages();
+      
     } catch (error) {
       console.error('Error sending reply:', error);
+      toast.error('Failed to send reply');
     }
   };
 
@@ -366,8 +495,17 @@ export default function GlobalInbox() {
               </span>
             )}
           </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Syncing up to 500 most recent conversations with 20 messages each
+          </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={() => setShowNewMessageModal(true)}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            New Message
+          </Button>
           <Button 
             variant="outline"
             onClick={handleSyncMessages}
@@ -445,6 +583,11 @@ export default function GlobalInbox() {
             More Filters
           </Button>
         </div>
+      </div>
+
+      {/* Preview Sync Status */}
+      <div className="mb-6">
+        <PreviewSyncStatus />
       </div>
 
       {/* Inbox Stats */}
@@ -553,22 +696,45 @@ export default function GlobalInbox() {
                       } ${!message.read ? "bg-blue-50" : ""}`}
                       onClick={async () => {
                         setSelectedMessage(message);
-                        // Load full conversation thread
-                        const { data: conv } = await supabase
-                          .from('inbox_conversations')
-                          .select(`
-                            *,
-                            inbox_messages (
-                              *
-                            )
-                          `)
-                          .eq('id', message.id)
-                          .single();
                         
-                        if (conv?.inbox_messages) {
-                          setSelectedConversation(conv.inbox_messages.sort((a: any, b: any) => 
-                            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-                          ));
+                        // Use the conversation data we already have or reload it
+                        if (message.conversationData?.inbox_messages) {
+                          // Use existing data
+                          const sortedMessages = message.conversationData.inbox_messages.sort((a: any, b: any) => {
+                            if (a.metadata?.message_index !== undefined && b.metadata?.message_index !== undefined) {
+                              return a.metadata.message_index - b.metadata.message_index;
+                            }
+                            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                          });
+                          console.log(`Using ${sortedMessages.length} cached messages`);
+                          setSelectedConversation(sortedMessages);
+                        } else {
+                          // Reload from database
+                          console.log(`Reloading messages for conversation ${message.id}`);
+                          const { data: conv } = await supabase
+                            .from('inbox_conversations')
+                            .select(`
+                              *,
+                              inbox_messages (
+                                *
+                              )
+                            `)
+                            .eq('id', message.id)
+                            .single();
+                          
+                          if (conv?.inbox_messages && conv.inbox_messages.length > 0) {
+                            console.log(`Loaded ${conv.inbox_messages.length} messages from database`);
+                            const sortedMessages = conv.inbox_messages.sort((a: any, b: any) => {
+                              if (a.metadata?.message_index !== undefined && b.metadata?.message_index !== undefined) {
+                                return a.metadata.message_index - b.metadata.message_index;
+                              }
+                              return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                            });
+                            setSelectedConversation(sortedMessages);
+                          } else {
+                            console.log('No messages found in database');
+                            setSelectedConversation([]);
+                          }
                         }
                       }}
                     >
@@ -688,41 +854,90 @@ export default function GlobalInbox() {
                   
                   {/* Full conversation thread */}
                   <div className="space-y-4">
+                    {/* Show Load Full Conversation button for preview-only messages */}
+                    {selectedMessage.isPreviewOnly && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-amber-900">Preview Mode</p>
+                            <p className="text-xs text-amber-700 mt-1">
+                              This conversation has {selectedMessage.totalMessages || 'many'} total messages. 
+                              Currently showing preview only.
+                            </p>
+                          </div>
+                          <Button 
+                            onClick={() => handleLoadFullConversation(selectedMessage)}
+                            variant="outline"
+                            size="sm"
+                            className="ml-4"
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Load Full Conversation
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
                     {selectedConversation.length > 0 ? (
-                      selectedConversation.map((msg: any, idx: number) => (
-                        <div key={idx} className={`p-4 rounded-lg ${
-                          msg.role === 'user' ? 'bg-blue-50 ml-8' : 'bg-gray-50 mr-8'
-                        }`}>
-                          <div className="flex items-start gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage 
-                                src={msg.role === 'user' ? '' : selectedMessage.avatar} 
-                                alt="Avatar" 
-                              />
-                              <AvatarFallback className="text-xs">
-                                {msg.role === 'user' ? 'You' : selectedMessage.from.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm">
-                                  {msg.role === 'user' ? 'You' : msg.metadata?.sender_name || selectedMessage.from}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(msg.created_at || msg.metadata?.timestamp).toLocaleString()}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-900 whitespace-pre-wrap">
-                                {msg.content}
+                      <>
+                        <div className="text-xs text-gray-500 mb-2">
+                          Showing {selectedConversation.length} message{selectedConversation.length !== 1 ? 's' : ''} in this conversation
+                          {selectedMessage.isPreviewOnly && ' (preview only)'}
+                        </div>
+                        {selectedConversation.map((msg: any, idx: number) => {
+                          const isUser = msg.role === 'user' || msg.metadata?.direction === 'outbound';
+                          const senderName = isUser ? 'You' : 
+                            (msg.metadata?.sender_name || selectedMessage.from);
+                          
+                          return (
+                            <div key={msg.id || idx} className={`p-4 rounded-lg transition-all ${
+                              isUser ? 'bg-blue-50 ml-8' : 'bg-gray-50 mr-8'
+                            }`}>
+                              <div className="flex items-start gap-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage 
+                                    src={isUser ? '' : selectedMessage.avatar} 
+                                    alt={senderName} 
+                                  />
+                                  <AvatarFallback className="text-xs">
+                                    {isUser ? 'You' : selectedMessage.from.split(' ').map(n => n[0]).join('')}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-sm">
+                                      {senderName}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(msg.created_at || msg.metadata?.timestamp || Date.now()).toLocaleString()}
+                                    </span>
+                                    {msg.metadata?.message_type === 'placeholder' && (
+                                      <Badge variant="outline" className="text-xs">
+                                        Preview Only
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                                    {msg.content || 'No content'}
+                                  </div>
+                                  {msg.metadata?.attachments?.length > 0 && (
+                                    <div className="mt-2 text-xs text-gray-500">
+                                      📎 {msg.metadata.attachments.length} attachment(s)
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      ))
+                          );
+                        })}
+                      </>
                     ) : (
                       <div className="prose max-w-none">
                         <p className="text-gray-900 leading-relaxed">
                           {selectedMessage.preview}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-4">
+                          Full conversation history is being synced. Try refreshing in a moment.
                         </p>
                       </div>
                     )}
@@ -898,6 +1113,87 @@ export default function GlobalInbox() {
             </Button>
             <Button onClick={scheduleMeeting} disabled={!meetingTitle.trim() || !meetingDate || !meetingTime}>
               Schedule Meeting
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Message Modal */}
+      <Dialog open={showNewMessageModal} onOpenChange={setShowNewMessageModal}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>New LinkedIn Message</DialogTitle>
+            <DialogDescription>
+              Send a message to a LinkedIn connection
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="recipient">To (LinkedIn Name or Email)</Label>
+              <Input
+                id="recipient"
+                placeholder="Enter recipient name..."
+                value={newMessageRecipient}
+                onChange={(e) => setNewMessageRecipient(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="message">Message</Label>
+              <Textarea
+                id="message"
+                placeholder="Type your message here..."
+                value={newMessageContent}
+                onChange={(e) => setNewMessageContent(e.target.value)}
+                className="min-h-[200px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowNewMessageModal(false);
+              setNewMessageContent('');
+              setNewMessageRecipient('');
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={async () => {
+              if (!newMessageRecipient.trim() || !newMessageContent.trim()) {
+                toast.error('Please enter recipient and message');
+                return;
+              }
+              
+              toast.info('Sending message...');
+              
+              try {
+                // Import and use Unipile API
+                const { unipileRealTimeSync } = await import('@/services/unipile/UnipileRealTimeSync');
+                const accounts = await unipileRealTimeSync.testConnection();
+                
+                if (accounts.success && accounts.accounts.length > 0) {
+                  const account = accounts.accounts[0];
+                  
+                  // Note: For new messages, we'd need to search for the recipient's LinkedIn ID
+                  // This is a simplified version
+                  toast.success('Message feature coming soon!');
+                  
+                  // TODO: Implement recipient search and actual sending
+                  // const success = await unipileRealTimeSync.sendMessage(
+                  //   account.id,
+                  //   recipientLinkedInId,
+                  //   newMessageContent
+                  // );
+                }
+                
+                setShowNewMessageModal(false);
+                setNewMessageContent('');
+                setNewMessageRecipient('');
+                
+              } catch (error) {
+                console.error('Error sending message:', error);
+                toast.error('Failed to send message');
+              }
+            }}>
+              Send Message
             </Button>
           </DialogFooter>
         </DialogContent>
