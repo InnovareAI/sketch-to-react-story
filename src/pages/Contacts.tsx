@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/integrations/supabase/client';
 import { ContactsListView } from "@/components/contacts/ContactsListView";
-import { DebugLinkedInSync } from "@/components/DebugLinkedInSync";
 import { AutoSyncControl } from "@/components/AutoSyncControl";
 import { contactMessageSync } from '@/services/unipile/ContactMessageSync';
 import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
@@ -391,9 +390,6 @@ export default function Contacts() {
               />
             )}
             
-            {/* Debug Component - Remove this after testing */}
-            <DebugLinkedInSync />
-            
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
@@ -401,55 +397,6 @@ export default function Contacts() {
                 <p className="text-gray-600 mt-1">Manage your LinkedIn contacts and prospects</p>
               </div>
               <div className="flex gap-2">
-                {/* Debug Button - Temporary */}
-                <Button 
-                  variant="destructive" 
-                  onClick={async () => {
-                    console.log('🔍 DEBUG: Starting comprehensive contact sync test...');
-                    toast.info('Running contact sync test. Check console for details.');
-                    
-                    if ((window as any).testContactSync) {
-                      const results = await (window as any).testContactSync();
-                      
-                      if (results.errors.length === 0 && results.contactsFetched > 0) {
-                        toast.success(`Test passed! ${results.contactsFetched} contacts available.`);
-                      } else if (results.errors.length > 0) {
-                        toast.error(`Test failed with ${results.errors.length} errors. Check console.`);
-                      } else {
-                        toast.warning('Test completed. Check console for details.');
-                      }
-                    } else {
-                      console.error('Test function not loaded yet. Try again in a moment.');
-                      toast.error('Test not ready. Please try again.');
-                    }
-                  }}
-                  title="Run comprehensive contact sync test"
-                >
-                  🧪 Test Sync
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={handleLinkedInSync} 
-                  disabled={isSyncing}
-                  className={backgroundSyncEnabled ? "bg-green-50 hover:bg-green-100 border-green-200" : "bg-blue-50 hover:bg-blue-100 border-blue-200"}
-                >
-                  {isSyncing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Syncing...
-                    </>
-                  ) : backgroundSyncEnabled ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Sync Now (Auto-sync ON)
-                    </>
-                  ) : (
-                    <>
-                      <Linkedin className="h-4 w-4 mr-2" />
-                      Enable Auto-Sync
-                    </>
-                  )}
-                </Button>
                 <Button variant="outline" onClick={handleExport} disabled={exporting || contacts.length === 0}>
                   <Download className="h-4 w-4 mr-2" />
                   {exporting ? 'Exporting...' : 'Export'}
