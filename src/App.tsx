@@ -41,6 +41,7 @@ import SearchResults from "./pages/SearchResults";
 import Profile from "./pages/Profile";
 import LinkedInAccountSetup from "./pages/LinkedInAccountSetup";
 import LinkedInAccountManager from "./pages/LinkedInAccountManager";
+import LinkedInDiagnostic from "./pages/LinkedInDiagnostic";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App: React.FC = () => {
               <Route path="/simple-inbox" element={<TestInbox />} />
               <Route path="/linkedin-setup" element={<LinkedInAccountSetup />} />
               <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
+              <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
               
               {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
               <Route 
