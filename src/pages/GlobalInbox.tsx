@@ -448,10 +448,11 @@ export default function GlobalInbox() {
               </div>
               <Inbox className="h-8 w-8 text-premium-purple" />
             </div>
-            <p className="text-xs text-green-600 mt-2">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +24 today
-            </p>
+            {messages.length > 0 && (
+              <p className="text-xs text-gray-500 mt-2">
+                Synced from LinkedIn
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -464,9 +465,11 @@ export default function GlobalInbox() {
               </div>
               <AlertCircle className="h-8 w-8 text-premium-orange" />
             </div>
-            <p className="text-xs text-red-600 mt-2">
-              Requires attention
-            </p>
+            {messages.filter(m => !m.read).length > 0 && (
+              <p className="text-xs text-orange-600 mt-2">
+                Requires attention
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -474,14 +477,13 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">89</div>
-                <div className="text-sm text-gray-600">Responses Today</div>
+                <div className="text-2xl font-bold text-gray-900">0</div>
+                <div className="text-sm text-gray-600">Sent Today</div>
               </div>
               <CheckCircle className="h-8 w-8 text-premium-cyan" />
             </div>
-            <p className="text-xs text-green-600 mt-2">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +15% vs yesterday
+            <p className="text-xs text-gray-500 mt-2">
+              Track sent messages
             </p>
           </CardContent>
         </Card>
@@ -490,13 +492,13 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">23</div>
+                <div className="text-2xl font-bold text-gray-900">0</div>
                 <div className="text-sm text-gray-600">High Priority</div>
               </div>
               <Star className="h-8 w-8 text-yellow-500" />
             </div>
-            <p className="text-xs text-gray-600 mt-2">
-              Action required
+            <p className="text-xs text-gray-500 mt-2">
+              Important messages
             </p>
           </CardContent>
         </Card>
