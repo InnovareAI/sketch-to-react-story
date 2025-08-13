@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { syncLinkedInContacts, getContactsCount } from '@/services/linkedin/ContactSync';
+import { realLinkedInSync } from '@/services/linkedin/RealLinkedInSync';
 
 export default function TestInbox() {
   const [log, setLog] = useState<string[]>([]);
@@ -62,92 +63,116 @@ export default function TestInbox() {
     addLog('Starting sync...');
     
     try {
-      // Generate unique IDs for each message
-      const timestamp = Date.now();
-      const randomNum = Math.floor(Math.random() * 1000);
-      
-      // Sample LinkedIn messages to sync
-      const sampleMessages = [
-        {
-          name: 'Emma Wilson',
-          company: 'TechStart Inc',
-          message: 'Hi! I noticed your work in AI development. Would love to connect and discuss potential collaborations.'
-        },
-        {
-          name: 'James Chen',
-          company: 'Innovation Labs',
-          message: 'Thanks for accepting my connection! Our team is looking for solutions like yours.'
-        },
-        {
-          name: 'Sofia Rodriguez',
-          company: 'Digital Ventures',
-          message: 'Great presentation at the conference! Let\'s schedule a follow-up call to explore synergies.'
+      // Check if real API is configured
+      if (realLinkedInSync.isConfigured()) {
+        addLog('🔄 Using real Unipile API for sync...');
+        
+        // Sync real LinkedIn messages
+        const messageCount = await realLinkedInSync.syncInboxMessages();
+        
+        if (messageCount > 0) {
+          addLog(`✅ Synced ${messageCount} real LinkedIn messages`);
+          
+          // Update sync times on success
+          const now = new Date();
+          setLastSync(now);
+          setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
+          
+          await loadMessages();
+        } else {
+          addLog('❌ No new messages to sync');
         }
-      ];
-      
-      // Pick a random message
-      const sample = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
-      const conversationId = `linkedin_${timestamp}_${randomNum}`;
-      
-      // Get a valid workspace first
-      const { data: workspace } = await supabase
-        .from('workspaces')
-        .select('id')
-        .limit(1)
-        .single();
-      
-      const workspaceId = workspace?.id || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-      
-      // Create conversation
-      const { data: conv, error: convError } = await supabase
-        .from('inbox_conversations')
-        .upsert({
-          workspace_id: workspaceId,
-          platform: 'linkedin',
-          platform_conversation_id: conversationId,
-          participant_name: sample.name,
-          participant_company: sample.company,
-          participant_avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sample.name}`,
-          status: 'active',
-          last_message_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-        
-      if (convError) {
-        addLog(`❌ Conversation error: ${JSON.stringify(convError)}`);
-        setLoading(false);
-        return;
-      }
-      
-      addLog(`✅ Created conversation: ${conv.id}`);
-      
-      // Create message
-      const { error: msgError } = await supabase
-        .from('inbox_messages')
-        .upsert({
-          conversation_id: conv.id,
-          platform_message_id: `msg_${conversationId}`,
-          role: 'assistant',
-          content: sample.message,
-          metadata: {
-            sender_name: sample.name,
-            sender_company: sample.company,
-            type: 'inbound'
-          }
-        });
-        
-      if (msgError) {
-        addLog(`❌ Message error: ${JSON.stringify(msgError)}`);
       } else {
-        addLog(`✅ Synced message from ${sample.name}`);
+        // Fallback to demo data if API not configured
+        addLog('⚠️ Unipile API not configured, using demo data');
         
-        // Update sync times on success
-        const now = new Date();
-        setLastSync(now);
-        setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
+        // Generate unique IDs for each message
+        const timestamp = Date.now();
+        const randomNum = Math.floor(Math.random() * 1000);
         
-        await loadMessages();
+        // Sample LinkedIn messages to sync
+        const sampleMessages = [
+          {
+            name: 'Emma Wilson',
+            company: 'TechStart Inc',
+            message: 'Hi! I noticed your work in AI development. Would love to connect and discuss potential collaborations.'
+          },
+          {
+            name: 'James Chen',
+            company: 'Innovation Labs',
+            message: 'Thanks for accepting my connection! Our team is looking for solutions like yours.'
+          },
+          {
+            name: 'Sofia Rodriguez',
+            company: 'Digital Ventures',
+            message: 'Great presentation at the conference! Let\'s schedule a follow-up call to explore synergies.'
+          }
+        ];
+        
+        // Pick a random message
+        const sample = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
+        const conversationId = `linkedin_${timestamp}_${randomNum}`;
+        
+        // Get a valid workspace first
+        const { data: workspace } = await supabase
+          .from('workspaces')
+          .select('id')
+          .limit(1)
+          .single();
+        
+        const workspaceId = workspace?.id || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+        
+        // Create conversation
+        const { data: conv, error: convError } = await supabase
+          .from('inbox_conversations')
+          .upsert({
+            workspace_id: workspaceId,
+            platform: 'linkedin',
+            platform_conversation_id: conversationId,
+            participant_name: sample.name,
+            participant_company: sample.company,
+            participant_avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sample.name}`,
+            status: 'active',
+            last_message_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+          
+        if (convError) {
+          addLog(`❌ Conversation error: ${JSON.stringify(convError)}`);
+          setLoading(false);
+          return;
+        }
+        
+        addLog(`✅ Created demo conversation: ${conv.id}`);
+        
+        // Create message
+        const { error: msgError } = await supabase
+          .from('inbox_messages')
+          .upsert({
+            conversation_id: conv.id,
+            platform_message_id: `msg_${conversationId}`,
+            role: 'assistant',
+            content: sample.message,
+            metadata: {
+              sender_name: sample.name,
+              sender_company: sample.company,
+              type: 'inbound'
+            }
+          });
+          
+        if (msgError) {
+          addLog(`❌ Message error: ${JSON.stringify(msgError)}`);
+        } else {
+          addLog(`✅ Synced demo message from ${sample.name}`);
+          
+          // Update sync times on success
+          const now = new Date();
+          setLastSync(now);
+          setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
+          
+          await loadMessages();
+        }
       }
     } catch (err: any) {
       addLog(`❌ Exception: ${err.message}`);
@@ -161,7 +186,18 @@ export default function TestInbox() {
     addLog('🔄 Syncing LinkedIn contacts...');
     
     try {
-      const count = await syncLinkedInContacts();
+      let count = 0;
+      
+      // Try real API first
+      if (realLinkedInSync.isConfigured()) {
+        addLog('🔄 Using real Unipile API for contacts...');
+        count = await realLinkedInSync.syncContacts();
+      } else {
+        // Fallback to demo data
+        addLog('⚠️ Using demo contacts (configure Unipile API for real data)');
+        count = await syncLinkedInContacts();
+      }
+      
       if (count > 0) {
         addLog(`✅ Synced ${count} new contacts`);
         // Update contact count
