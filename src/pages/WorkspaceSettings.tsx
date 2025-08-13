@@ -46,6 +46,7 @@ import { EmailAccountConnection } from "@/components/settings/EmailAccountConnec
 import { CalendarIntegration } from "@/components/settings/CalendarIntegration";
 import { AutoProvisioningStatus } from "@/components/settings/AutoProvisioningStatus";
 import { WorkspaceTwoFactorManagement } from "@/components/security/WorkspaceTwoFactorManagement";
+import PreviewSyncStatus from "@/components/PreviewSyncStatus";
 
 export default function WorkspaceSettings() {
   const { toast } = useToast();
@@ -459,9 +460,10 @@ export default function WorkspaceSettings() {
                     <TeamAccountsSettings />
                   </TabsContent>
 
-                  {/* LinkedIn Tab - Clean design with just connection */}
+                  {/* LinkedIn Tab - Connection and Sync Settings */}
                   <TabsContent value="linkedin" className="space-y-6">
                     <LinkedInAccountConnection />
+                    <PreviewSyncStatus />
                   </TabsContent>
 
                   {/* Email Tab */}

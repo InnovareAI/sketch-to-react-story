@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLinkedInSync } from '@/hooks/useLinkedInSync';
 import { toast } from 'sonner';
 import { previewSync } from '@/services/unipile/PreviewSync';
-import PreviewSyncStatus from '@/components/PreviewSyncStatus';
 // import MessageComposer from '@/components/MessageComposer'; // Temporarily disabled
 
 interface Message {
@@ -583,11 +582,6 @@ export default function GlobalInbox() {
             More Filters
           </Button>
         </div>
-      </div>
-
-      {/* Preview Sync Status */}
-      <div className="mb-6">
-        <PreviewSyncStatus />
       </div>
 
       {/* Inbox Stats */}
