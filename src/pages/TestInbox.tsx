@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 
 export default function TestInbox() {
   const [log, setLog] = useState<string[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [nextSync, setNextSync] = useState<Date | null>(null);
 
   const addLog = (msg: string) => {
     console.log(msg);
@@ -42,6 +45,11 @@ export default function TestInbox() {
   const syncMessage = async () => {
     setLoading(true);
     addLog('Adding test message...');
+    
+    // Update sync times
+    const now = new Date();
+    setLastSync(now);
+    setNextSync(new Date(now.getTime() + 1800000)); // 30 minutes from now
     
     try {
       const testId = 'test_' + Date.now();
@@ -90,9 +98,33 @@ export default function TestInbox() {
     }
   };
 
+  // Auto-load messages on mount and set up auto-sync
+  useEffect(() => {
+    loadMessages();
+    
+    // Auto-sync every 30 minutes (1800000 ms)
+    const interval = setInterval(() => {
+      addLog('⏰ Auto-sync triggered (every 30 minutes)');
+      syncMessage();
+    }, 1800000); // 30 minutes
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">LinkedIn Inbox Test Page</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Global Inbox</h1>
+        <div className="text-sm text-gray-600">
+          {lastSync && (
+            <span>Last sync: {lastSync.toLocaleTimeString()} | </span>
+          )}
+          {nextSync && (
+            <span>Next auto-sync: {nextSync.toLocaleTimeString()}</span>
+          )}
+        </div>
+      </div>
       
       <div className="flex gap-4 mb-6">
         <button 
@@ -105,19 +137,29 @@ export default function TestInbox() {
         <button 
           onClick={syncMessage}
           disabled={loading}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center"
         >
-          Add Test Message
+          {loading ? (
+            <>
+              <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Syncing...
+            </>
+          ) : (
+            'Sync LinkedIn Inbox'
+          )}
         </button>
         <button 
-          onClick={() => setLog([])}
+          onClick={() => setShowDebug(!showDebug)}
           className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
         >
-          Clear Log
+          {showDebug ? 'Hide Debug' : 'Show Debug'}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={showDebug ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : ""}>
         <div>
           <h2 className="text-xl font-semibold mb-4">Messages ({messages.length})</h2>
           <div className="space-y-3">
@@ -142,9 +184,10 @@ export default function TestInbox() {
           </div>
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Log</h2>
-          <div className="bg-black text-green-400 p-4 rounded-lg font-mono text-sm h-96 overflow-y-auto">
+        {showDebug && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Log</h2>
+            <div className="bg-black text-green-400 p-4 rounded-lg font-mono text-sm h-96 overflow-y-auto">
             {log.length === 0 ? (
               <p>No logs yet. Click a button to start.</p>
             ) : (
@@ -154,16 +197,19 @@ export default function TestInbox() {
                 </div>
               ))
             )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <div className="mt-6 p-4 bg-gray-100 rounded">
-        <h3 className="font-semibold mb-2">Debug Info:</h3>
-        <p>Supabase URL: {import.meta.env.VITE_SUPABASE_URL}</p>
-        <p>Table: inbox_conversations</p>
-        <p>Loading: {loading ? 'Yes' : 'No'}</p>
-      </div>
+      {showDebug && (
+        <div className="mt-6 p-4 bg-gray-100 rounded">
+          <h3 className="font-semibold mb-2">Debug Info:</h3>
+          <p>Supabase URL: {import.meta.env.VITE_SUPABASE_URL}</p>
+          <p>Table: inbox_conversations</p>
+          <p>Loading: {loading ? 'Yes' : 'No'}</p>
+        </div>
+      )}
     </div>
   );
 }

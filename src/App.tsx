@@ -75,7 +75,7 @@ const App: React.FC = () => {
                 <Route path="analytics" element={<Analytics />} />
                 
                 {/* Team Routes */}
-                <Route path="global-inbox" element={<GlobalInboxSimple />} />
+                <Route path="global-inbox" element={<TestInbox />} />
                 <Route path="team-settings" element={<TeamSettings />} />
                 <Route path="integrations" element={<Integrations />} />
                 
