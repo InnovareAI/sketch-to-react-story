@@ -35,7 +35,7 @@ interface SyncResult {
 }
 
 class ContactMessageSyncService {
-  private readonly UNIPILE_API_KEY = import.meta.env.VITE_UNIPILE_API_KEY || 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
+  private readonly UNIPILE_API_KEY = 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
   private readonly UNIPILE_BASE_URL = 'https://api6.unipile.com:13670/api/v1';
   
   /**
@@ -163,39 +163,42 @@ class ContactMessageSyncService {
           // Parse profile data
           const contact = this.parseLinkedInProfile(profile);
 
-          // Upsert contact to database
+          // Upsert contact to database with proper field mapping
           const { error } = await supabase
             .from('contacts')
             .upsert({
               workspace_id: workspaceId,
-              email: contact.email || `${contactId}@linkedin.com`,
-              first_name: contact.firstName || '',
-              last_name: contact.lastName || '',
-              full_name: contact.name,
-              title: contact.headline,
-              company: '', // Not directly available in profile API
+              email: contact.email || `${contactId}@linkedin.local`,
+              first_name: contact.firstName || contact.name?.split(' ')[0] || 'Unknown',
+              last_name: contact.lastName || contact.name?.split(' ').slice(1).join(' ') || '',
+              title: contact.headline || contact.title || '',
+              department: this.extractDepartment(contact.headline || contact.title),
+              phone: contact.phone || null,
               linkedin_url: contact.linkedinUrl,
-              profile_picture_url: contact.profilePictureUrl,
-              department: this.extractDepartment(contact.headline),
-              location: contact.location,
-              connection_degree: contact.connectionDegree,
               engagement_score: this.calculateEngagementScore(contact),
               tags: this.generateTags(contact),
               metadata: {
                 linkedin_id: profile.provider_id,
                 public_identifier: profile.public_identifier,
                 member_urn: profile.member_urn,
-                is_premium: profile.is_premium,
-                is_influencer: profile.is_influencer,
-                is_creator: profile.is_creator,
-                follower_count: profile.follower_count,
-                connections_count: profile.connections_count,
-                shared_connections_count: profile.shared_connections_count,
+                is_premium: profile.is_premium || false,
+                is_influencer: profile.is_influencer || false,
+                is_creator: profile.is_creator || false,
+                follower_count: profile.follower_count || 0,
+                connections_count: profile.connections_count || 0,
+                shared_connections_count: profile.shared_connections_count || 0,
+                connection_degree: contact.connectionDegree,
+                location: contact.location,
+                profile_picture_url: contact.profilePictureUrl,
                 synced_at: new Date().toISOString()
               },
-              source: 'linkedin',
-              status: 'active',
-              last_synced_at: new Date().toISOString()
+              scraped_data: {
+                source: 'unipile_api',
+                full_profile: profile
+              },
+              qualification_data: {},
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             }, {
               onConflict: 'workspace_id,email',
               ignoreDuplicates: false

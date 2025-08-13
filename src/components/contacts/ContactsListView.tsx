@@ -2,6 +2,7 @@
 // Manage LinkedIn contacts with filtering, search, and campaign assignment
 
 import React, { useState, useEffect } from 'react';
+import { useRealContacts, Contact } from '@/hooks/useRealContacts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,23 +44,6 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 
-interface Contact {
-  id: string;
-  name: string;
-  status: 'Contact' | 'New Contact' | 'Withdrawn manually' | 'Connection request pending';
-  occupation: string;
-  company?: string;
-  tags?: string[];
-  connectionSince?: string;
-  email?: string;
-  phone?: string;
-  linkedin_url?: string;
-  openInMailAvailable?: boolean;
-  emailAvailable?: boolean;
-  profileImage?: string;
-  selected?: boolean;
-}
-
 interface ContactsListViewProps {
   className?: string;
 }
@@ -73,191 +57,55 @@ export function ContactsListView({ className }: ContactsListViewProps) {
   const [selectedEmail, setSelectedEmail] = useState<string>('all');
   const [selectAll, setSelectAll] = useState(false);
 
-  // Mock data - in real app this would come from API
-  const [contacts, setContacts] = useState<Contact[]>([
-    {
-      id: '1',
-      name: 'Aimee Thomson',
-      status: 'New Contact',
-      occupation: 'Deputy General Counsel, Pennsylvania Office of General Counsel',
-      connectionSince: '11 Aug, 2025 at 10:45 PM',
-      linkedin_url: 'https://linkedin.com/in/aimee-thomson',
-      emailAvailable: true,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '2',
-      name: 'Nathan Truitt',
-      status: 'Contact',
-      occupation: 'Executive Vice President of Climate Funding at The American Forest Foundation',
-      connectionSince: '04 Jan, 2022 at 11:48 PM',
-      linkedin_url: 'https://linkedin.com/in/nathan-truitt',
-      emailAvailable: false,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '3',
-      name: 'Lucy Jodlowska',
-      status: 'New Contact',
-      occupation: 'Senior Director, US Programs',
-      linkedin_url: 'https://linkedin.com/in/lucy-jodlowska',
-      emailAvailable: true,
-      openInMailAvailable: false,
-      selected: false
-    },
-    {
-      id: '4',
-      name: 'Shawn Lesser',
-      status: 'Contact',
-      occupation: 'Co Founder & Managing Partner at Big Path Capital',
-      linkedin_url: 'https://linkedin.com/in/shawn-lesser',
-      emailAvailable: false,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '5',
-      name: 'David Cooper',
-      status: 'New Contact',
-      occupation: 'Regenerative Harvest Fund - Co-Founder and Lead of Fund Development at Mission Driven Finance',
-      linkedin_url: 'https://linkedin.com/in/david-cooper',
-      emailAvailable: true,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '6',
-      name: 'Michelle Buckles',
-      status: 'Contact',
-      occupation: 'VP, Investor Relations @ Intl Farming | MBA',
-      linkedin_url: 'https://linkedin.com/in/michelle-buckles',
-      emailAvailable: false,
-      openInMailAvailable: false,
-      selected: false
-    },
-    {
-      id: '7',
-      name: 'John Fullerton',
-      status: 'Contact',
-      occupation: 'Founder and President',
-      linkedin_url: 'https://linkedin.com/in/john-fullerton',
-      emailAvailable: true,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '8',
-      name: 'Wendy Millet',
-      status: 'Contact',
-      occupation: 'Director',
-      linkedin_url: 'https://linkedin.com/in/wendy-millet',
-      emailAvailable: false,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '9',
-      name: 'Aimee Christensen',
-      status: 'Contact',
-      occupation: 'Founder & CEO at Christensen Global',
-      linkedin_url: 'https://linkedin.com/in/aimee-christensen',
-      emailAvailable: true,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '10',
-      name: 'William Sarni',
-      status: 'Contact',
-      occupation: 'Founder and General Partner at Colorado River Basin Fund',
-      linkedin_url: 'https://linkedin.com/in/william-sarni',
-      emailAvailable: false,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '11',
-      name: 'Louisa Schibli',
-      status: 'Contact',
-      occupation: 'Director of Impact & Engagement',
-      connectionSince: '26 Jan, 2022 at 11:52 PM',
-      linkedin_url: 'https://linkedin.com/in/louisa-schibli',
-      emailAvailable: true,
-      openInMailAvailable: false,
-      selected: false
-    },
-    {
-      id: '12',
-      name: 'Brian Collins',
-      status: 'Contact',
-      occupation: 'Strategic Partnerships at Thematic',
-      linkedin_url: 'https://linkedin.com/in/brian-collins',
-      emailAvailable: false,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '13',
-      name: 'Matt Boitano',
-      status: 'Contact',
-      occupation: 'Director of Foundation Engagement at UC Davis',
-      connectionSince: '27 Apr, 2022 at 03:32 PM',
-      linkedin_url: 'https://linkedin.com/in/matt-boitano',
-      emailAvailable: true,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '14',
-      name: 'Jahed Momand',
-      status: 'New Contact',
-      occupation: 'Investor and Advisor',
-      linkedin_url: 'https://linkedin.com/in/jahed-momand',
-      emailAvailable: false,
-      openInMailAvailable: true,
-      selected: false
-    },
-    {
-      id: '15',
-      name: 'Holly Lichtenfeld',
-      status: 'Contact',
-      occupation: 'CMO & Sustainability Advisor (Fractional)',
-      connectionSince: '03 Oct, 2023 at 05:08 PM',
-      linkedin_url: 'https://linkedin.com/in/holly-lichtenfeld',
-      emailAvailable: true,
-      openInMailAvailable: false,
-      selected: false
-    }
-  ]);
+  // Use real contacts from database
+  const { contacts: realContacts, loading, error, refreshData } = useRealContacts();
+  
+  // Add selection state to contacts
+  const [contactsWithSelection, setContactsWithSelection] = useState<(Contact & { selected?: boolean })[]>([]);
 
-  const totalContacts = 25429; // Mock total from your data
-  const filteredContacts = contacts.filter(contact => {
+  // Update contacts with selection when real contacts change
+  useEffect(() => {
+    setContactsWithSelection(realContacts.map(contact => ({ ...contact, selected: false })));
+  }, [realContacts]);
+
+  const totalContacts = realContacts.length;
+  
+  // Helper functions to map database fields to display format
+  const getContactName = (contact: Contact) => {
+    return `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown';
+  };
+  
+  const getContactStatus = (contact: Contact) => {
+    if (contact.engagement_score >= 70) return 'New Contact';
+    return 'Contact';
+  };
+
+  const filteredContacts = contactsWithSelection.filter(contact => {
+    const fullName = getContactName(contact);
     const matchesSearch = searchTerm === '' || 
-      contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.occupation.toLowerCase().includes(searchTerm.toLowerCase());
+      fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = selectedStatus === 'all' || contact.status === selectedStatus;
-    const matchesOpenInMail = selectedOpenInMail === 'all' || 
-      (selectedOpenInMail === 'available' && contact.openInMailAvailable) ||
-      (selectedOpenInMail === 'unavailable' && !contact.openInMailAvailable);
-    const matchesEmail = selectedEmail === 'all' || 
-      (selectedEmail === 'available' && contact.emailAvailable) ||
-      (selectedEmail === 'unavailable' && !contact.emailAvailable);
+    const contactStatus = getContactStatus(contact);
+    const matchesStatus = selectedStatus === 'all' || contactStatus === selectedStatus;
+    
+    // For now, assume all contacts have email/InMail available since we're syncing from LinkedIn
+    const matchesOpenInMail = selectedOpenInMail === 'all' || selectedOpenInMail === 'available';
+    const matchesEmail = selectedEmail === 'all' || (contact.email ? selectedEmail === 'available' : selectedEmail === 'unavailable');
 
     return matchesSearch && matchesStatus && matchesOpenInMail && matchesEmail;
   });
 
-  const selectedCount = contacts.filter(c => c.selected).length;
+  const selectedCount = contactsWithSelection.filter(c => c.selected).length;
 
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
-    setContacts(contacts.map(c => ({ ...c, selected: checked })));
+    setContactsWithSelection(contactsWithSelection.map(c => ({ ...c, selected: checked })));
   };
 
   const handleSelectContact = (id: string, checked: boolean) => {
-    setContacts(contacts.map(c => 
+    setContactsWithSelection(contactsWithSelection.map(c => 
       c.id === id ? { ...c, selected: checked } : c
     ));
   };
@@ -457,106 +305,147 @@ export function ContactsListView({ className }: ContactsListViewProps) {
       {/* Contacts Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={selectAll}
-                    onCheckedChange={handleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Occupation</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Connection since</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredContacts.map((contact) => (
-                <TableRow key={contact.id} className="hover:bg-gray-50">
-                  <TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p>Loading contacts...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <p className="text-red-600 mb-4">Error: {error}</p>
+                <Button onClick={refreshData} variant="outline" size="sm">
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          ) : filteredContacts.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <User className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No contacts found</h3>
+                <p className="text-gray-600 mb-6">
+                  {realContacts.length === 0 
+                    ? "Get started by syncing your LinkedIn contacts" 
+                    : "Try adjusting your filters"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">
                     <Checkbox
-                      checked={contact.selected || false}
-                      onCheckedChange={(checked) => handleSelectContact(contact.id, checked as boolean)}
+                      checked={selectAll}
+                      onCheckedChange={handleSelectAll}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-gray-500" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{contact.name}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          {contact.emailAvailable && (
-                            <Badge variant="outline" className="text-xs">
-                              <Mail className="h-3 w-3 mr-1" />
-                              Email
-                            </Badge>
-                          )}
-                          {contact.openInMailAvailable && (
-                            <Badge variant="outline" className="text-xs">
-                              <MessageSquare className="h-3 w-3 mr-1" />
-                              InMail
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(contact.status)} variant="secondary">
-                      {contact.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-md">
-                      <div className="text-sm text-gray-900 truncate">{contact.occupation}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-500">-</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-500">
-                      {contact.connectionSince || '-'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Open LinkedIn
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Send Message
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Target className="h-4 w-4 mr-2" />
-                          Add to Campaign
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Engagement</TableHead>
+                  <TableHead>Synced</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredContacts.map((contact) => {
+                  const fullName = getContactName(contact);
+                  const contactStatus = getContactStatus(contact);
+                  
+                  return (
+                    <TableRow key={contact.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <Checkbox
+                          checked={contact.selected || false}
+                          onCheckedChange={(checked) => handleSelectContact(contact.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                            <User className="h-4 w-4 text-gray-500" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{fullName}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {contact.email && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  Email
+                                </Badge>
+                              )}
+                              {contact.linkedin_url && (
+                                <Badge variant="outline" className="text-xs">
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  LinkedIn
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(contactStatus)} variant="secondary">
+                          {contactStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-md">
+                          <div className="text-sm text-gray-900 truncate">{contact.title || 'Unknown'}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-600">{contact.accounts?.name || '-'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-600">{contact.engagement_score || 0}%</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-500">
+                          {contact.created_at ? new Date(contact.created_at).toLocaleDateString() : '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Profile
+                            </DropdownMenuItem>
+                            {contact.linkedin_url && (
+                              <DropdownMenuItem onClick={() => window.open(contact.linkedin_url!, '_blank')}>
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Open LinkedIn
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Send Message
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Target className="h-4 w-4 mr-2" />
+                              Add to Campaign
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

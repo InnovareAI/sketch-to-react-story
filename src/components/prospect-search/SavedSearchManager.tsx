@@ -48,6 +48,8 @@ interface SavedSearchManagerProps {
   onSearchSelect?: (config: SearchConfiguration) => void;
   onSearchExecute?: (config: SearchConfiguration) => void;
   showExecuteActions?: boolean;
+  currentSearchParams?: LinkedInSearchParams;
+  currentSearchUrl?: SearchUrlResult;
   className?: string;
 }
 
@@ -361,7 +363,19 @@ export function SavedSearchManager({
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={() => handleSaveSearch({}, { isValid: true } as SearchUrlResult)}>
+                <Button onClick={() => {
+                  // Use current search params if available, otherwise create minimal valid search
+                  const params = props.currentSearchParams || {
+                    keywords: newSearchName,
+                    searchType: 'people'
+                  };
+                  const urlResult = props.currentSearchUrl || {
+                    isValid: true,
+                    searchType: 'people' as const,
+                    url: ''
+                  };
+                  handleSaveSearch(params, urlResult);
+                }}>
                   Save Search
                 </Button>
               </div>

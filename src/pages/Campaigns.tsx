@@ -347,9 +347,24 @@ export default function Campaigns() {
                         }}
                         onEdit={(id) => navigate(`/campaign-setup?id=${id}`)}
                         onAddPeople={(id) => navigate(`/campaign-setup?id=${id}&tab=people`)}
-                        onToggleStatus={(id, newStatus) => {
-                          // TODO: Implement status toggle
-                          console.log('Toggle status:', id, newStatus);
+                        onToggleStatus={async (id, newStatus) => {
+                          try {
+                            const { error } = await supabase
+                              .from('campaigns')
+                              .update({ 
+                                status: newStatus,
+                                updated_at: new Date().toISOString()
+                              })
+                              .eq('id', id);
+                            
+                            if (error) throw error;
+                            
+                            toast.success(`Campaign ${newStatus === 'active' ? 'activated' : 'paused'}`);
+                            refreshData();
+                          } catch (error) {
+                            console.error('Error toggling campaign status:', error);
+                            toast.error('Failed to update campaign status');
+                          }
                         }}
                       />
                     ))}
