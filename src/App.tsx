@@ -43,6 +43,8 @@ import LinkedInAccountManager from "./pages/LinkedInAccountManager";
 import LinkedInDiagnostic from "./pages/LinkedInDiagnostic";
 import LinkedInOnboarding from "./pages/LinkedInOnboarding";
 import ContactSyncTest from "./pages/ContactSyncTest";
+import Onboarding from "./pages/Onboarding";
+import OnboardingCallback from "./pages/OnboardingCallback";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -69,6 +71,8 @@ const App: React.FC = () => {
               <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
               <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
               <Route path="/linkedin-onboarding" element={<LinkedInOnboarding />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/onboarding/callback" element={<OnboardingCallback />} />
               
               {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
               <Route 

@@ -17,6 +17,7 @@ import { AutoSyncControl } from "@/components/AutoSyncControl";
 import { LinkedInConnect } from "@/components/LinkedInConnect";
 import { contactMessageSync } from '@/services/unipile/ContactMessageSync';
 import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
+import { workspaceUnipile } from '@/services/WorkspaceUnipileService';
 import { testUnipileConnection } from '@/utils/testUnipileConnection';
 import { toast } from 'sonner';
 import { 
@@ -211,32 +212,26 @@ export default function Contacts() {
   const handleLinkedInSync = async () => {
     setIsSyncing(true);
     try {
-      // Get workspace ID with fallback
-      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
-      const workspaceId = userProfile.workspace_id || localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID;
+      // Initialize workspace Unipile service
+      const config = await workspaceUnipile.initialize();
       
-      // Get LinkedIn account with better error handling
-      const linkedInAccounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
-      
-      let accountId = DEFAULT_ACCOUNT_ID;
-      if (linkedInAccounts.length > 0) {
-        const account = linkedInAccounts[0];
-        accountId = account.unipileAccountId || account.id || DEFAULT_ACCOUNT_ID;
-      } else {
-        console.warn('No LinkedIn account found, using default for testing');
-      }
-
-      // Debug: Test the connection first
-      console.log('Testing Unipile connection with account:', account);
-      const testResult = await testUnipileConnection(accountId);
-      
-      if (testResult.errors.length > 0) {
-        console.error('Unipile API test failed:', testResult);
-        toast.error('LinkedIn API connection issue. Check console for details.');
+      if (!config.linkedin_connected) {
+        toast.error('LinkedIn not connected. Please complete onboarding first.');
         return;
       }
 
       toast.info('Starting LinkedIn contacts sync...');
+      
+      // Sync contacts using centralized service
+      const result = await workspaceUnipile.syncContacts(100);
+      
+      if (result.contactsSynced > 0) {
+        toast.success(`Successfully synced ${result.contactsSynced} LinkedIn contacts`);
+      }
+      
+      // Get workspace ID for background sync
+      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+      const workspaceId = userProfile.workspace_id || localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID;
       
       // Check if background sync is enabled
       const syncStatus = await backgroundSyncManager.getSyncStatus(workspaceId);
@@ -245,7 +240,7 @@ export default function Contacts() {
         // Enable background sync for continuous syncing
         const enableResult = await backgroundSyncManager.enableBackgroundSync(
           workspaceId,
-          accountId,
+          config.account_id,
           30, // Sync every 30 minutes
           'both' // Sync both contacts and messages
         );
@@ -254,29 +249,13 @@ export default function Contacts() {
           setBackgroundSyncEnabled(true);
           toast.success('Background sync enabled! Your contacts will sync automatically every 30 minutes, even when you leave this page.');
         }
-      } else {
-        // Trigger immediate sync
-        const syncResult = await backgroundSyncManager.triggerImmediateSync(
-          workspaceId,
-          accountId,
-          'contacts'
-        );
-        
-        if (syncResult.success && syncResult.data) {
-          const { contactsSynced, errors } = syncResult.data;
-          if (errors && errors.length > 0) {
-            toast.warning(`Synced ${contactsSynced} contacts with ${errors.length} errors`);
-          } else {
-            toast.success(`Successfully synced ${contactsSynced} LinkedIn contacts`);
-          }
-        }
       }
 
       // Refresh the contacts list
       await refreshData();
     } catch (error) {
       console.error('LinkedIn sync error:', error);
-      toast.error('Failed to sync LinkedIn contacts');
+      toast.error('Failed to sync LinkedIn contacts. Please check your LinkedIn connection in Settings.');
     } finally {
       setIsSyncing(false);
     }
@@ -383,19 +362,10 @@ export default function Contacts() {
         <div className="max-w-7xl mx-auto">
           <div className="p-6 space-y-6">
             {/* LinkedIn Connection or Auto-Sync */}
-            {linkedInAccounts.length === 0 ? (
-              <LinkedInConnect 
-                onConnect={(accountId) => {
-                  // Trigger immediate sync after connection
-                  window.location.reload();
-                }}
-              />
-            ) : (
-              <AutoSyncControl 
-                workspaceId={userProfile.workspace_id || localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID}
-                accountId={linkedInAccounts[0]?.unipileAccountId || linkedInAccounts[0]?.id || linkedInAccounts[0]?.account_id || DEFAULT_ACCOUNT_ID}
-              />
-            )}
+            <AutoSyncControl 
+              workspaceId={localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID}
+              accountId={DEFAULT_ACCOUNT_ID}
+            />
             
             {/* Header */}
             <div className="flex items-center justify-between">
