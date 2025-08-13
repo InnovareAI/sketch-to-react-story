@@ -16,6 +16,30 @@ export class UnipileProxyService {
     try {
       console.log(`[UnipileProxy] Making ${options.method || 'GET'} request to: ${path}`);
       
+      // Try Netlify function first
+      try {
+        const response = await fetch('/.netlify/functions/unipile-proxy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            path,
+            method: options.method || 'GET',
+            body: options.body
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[UnipileProxy] Netlify function response:', data);
+          return data;
+        }
+      } catch (netlifyError) {
+        console.warn('[UnipileProxy] Netlify function failed, trying Supabase...', netlifyError);
+      }
+      
+      // Fallback to Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('unipile-proxy', {
         body: {
           path,
@@ -29,7 +53,7 @@ export class UnipileProxyService {
         throw error;
       }
 
-      console.log('[UnipileProxy] Response:', data);
+      console.log('[UnipileProxy] Supabase response:', data);
       return data;
     } catch (error) {
       console.error('[UnipileProxy] Request failed:', error);
