@@ -1,0 +1,252 @@
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Clock, CheckCircle, AlertCircle, RefreshCw, Zap } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
+
+interface AutoSyncControlProps {
+  workspaceId: string;
+  accountId: string;
+}
+
+export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps) {
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [interval, setInterval] = useState(30);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [nextSync, setNextSync] = useState<Date | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+
+  // Check current sync status
+  useEffect(() => {
+    checkSyncStatus();
+    const interval = setInterval(checkSyncStatus, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [workspaceId, accountId]);
+
+  const checkSyncStatus = async () => {
+    try {
+      const status = await backgroundSyncManager.getSyncStatus(workspaceId, accountId);
+      setIsEnabled(status.isEnabled);
+      setInterval(status.intervalMinutes);
+      if (status.lastSyncAt) setLastSync(new Date(status.lastSyncAt));
+      if (status.nextSyncAt) setNextSync(new Date(status.nextSyncAt));
+    } catch (error) {
+      console.error('Error checking sync status:', error);
+    }
+  };
+
+  const handleToggleSync = async () => {
+    setIsLoading(true);
+    try {
+      if (!isEnabled) {
+        // Enable sync
+        const result = await backgroundSyncManager.enableSync(workspaceId, accountId, interval);
+        if (result.success) {
+          setIsEnabled(true);
+          toast.success('🚀 Auto-sync enabled! Contacts will sync every ' + interval + ' minutes');
+          
+          // Trigger immediate sync
+          setSyncStatus('syncing');
+          await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
+          setSyncStatus('success');
+          setLastSync(new Date());
+          setNextSync(new Date(Date.now() + interval * 60000));
+        }
+      } else {
+        // Disable sync
+        await backgroundSyncManager.disableSync(workspaceId, accountId);
+        setIsEnabled(false);
+        toast.info('Auto-sync disabled');
+        setNextSync(null);
+      }
+    } catch (error) {
+      console.error('Error toggling sync:', error);
+      toast.error('Failed to update sync settings');
+      setSyncStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleIntervalChange = async (newInterval: string) => {
+    const intervalNum = parseInt(newInterval);
+    setInterval(intervalNum);
+    
+    if (isEnabled) {
+      setIsLoading(true);
+      try {
+        await backgroundSyncManager.updateSyncInterval(workspaceId, accountId, intervalNum);
+        toast.success('Sync interval updated to ' + intervalNum + ' minutes');
+        setNextSync(new Date(Date.now() + intervalNum * 60000));
+      } catch (error) {
+        console.error('Error updating interval:', error);
+        toast.error('Failed to update sync interval');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleManualSync = async () => {
+    setSyncStatus('syncing');
+    try {
+      const result = await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
+      if (result.success) {
+        setSyncStatus('success');
+        toast.success('Manual sync completed successfully!');
+        setLastSync(new Date());
+        if (isEnabled) {
+          setNextSync(new Date(Date.now() + interval * 60000));
+        }
+      } else {
+        throw new Error('Sync failed');
+      }
+    } catch (error) {
+      console.error('Error during manual sync:', error);
+      setSyncStatus('error');
+      toast.error('Sync failed. Please try again.');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Zap className="h-5 w-5" />
+          Background Auto-Sync
+        </CardTitle>
+        <CardDescription>
+          Automatically sync LinkedIn contacts and messages even when you're not on the page
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Enable/Disable Toggle */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="auto-sync">Enable Auto-Sync</Label>
+            <p className="text-sm text-muted-foreground">
+              Runs in the background on our servers
+            </p>
+          </div>
+          <Switch
+            id="auto-sync"
+            checked={isEnabled}
+            onCheckedChange={handleToggleSync}
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* Sync Interval */}
+        <div className="space-y-2">
+          <Label htmlFor="sync-interval">Sync Interval</Label>
+          <Select
+            value={interval.toString()}
+            onValueChange={handleIntervalChange}
+            disabled={!isEnabled || isLoading}
+          >
+            <SelectTrigger id="sync-interval">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="15">Every 15 minutes</SelectItem>
+              <SelectItem value="30">Every 30 minutes</SelectItem>
+              <SelectItem value="60">Every hour</SelectItem>
+              <SelectItem value="120">Every 2 hours</SelectItem>
+              <SelectItem value="360">Every 6 hours</SelectItem>
+              <SelectItem value="720">Every 12 hours</SelectItem>
+              <SelectItem value="1440">Daily</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Sync Status */}
+        <div className="space-y-3 pt-2 border-t">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Status</span>
+            <div className="flex items-center gap-2">
+              {syncStatus === 'syncing' && (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Badge variant="secondary">Syncing...</Badge>
+                </>
+              )}
+              {syncStatus === 'success' && (
+                <>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <Badge variant="default" className="bg-green-500">Success</Badge>
+                </>
+              )}
+              {syncStatus === 'error' && (
+                <>
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <Badge variant="destructive">Error</Badge>
+                </>
+              )}
+              {syncStatus === 'idle' && isEnabled && (
+                <>
+                  <Clock className="h-4 w-4" />
+                  <Badge variant="outline">Scheduled</Badge>
+                </>
+              )}
+              {syncStatus === 'idle' && !isEnabled && (
+                <Badge variant="secondary">Disabled</Badge>
+              )}
+            </div>
+          </div>
+
+          {lastSync && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Last Sync</span>
+              <span>{lastSync.toLocaleString()}</span>
+            </div>
+          )}
+
+          {nextSync && isEnabled && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Next Sync</span>
+              <span className="text-green-600 font-medium">
+                {nextSync.toLocaleTimeString()}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Manual Sync Button */}
+        <Button
+          onClick={handleManualSync}
+          disabled={syncStatus === 'syncing'}
+          variant="outline"
+          className="w-full"
+        >
+          {syncStatus === 'syncing' ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Syncing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync Now
+            </>
+          )}
+        </Button>
+
+        {/* Info Alert */}
+        {isEnabled && (
+          <div className="rounded-lg border bg-muted/50 p-3">
+            <p className="text-sm text-muted-foreground">
+              ✅ Auto-sync is running on our servers. You can close this page and syncing will continue every {interval} minutes.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
