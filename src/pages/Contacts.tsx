@@ -363,8 +363,8 @@ export default function Contacts() {
           <div className="p-6 space-y-6">
             {/* LinkedIn Connection or Auto-Sync */}
             <AutoSyncControl 
-              workspaceId={localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID}
-              accountId={DEFAULT_ACCOUNT_ID}
+              workspaceId={DEFAULT_WORKSPACE_ID}
+              // accountId will be loaded automatically from WorkspaceUnipileService
             />
             
             {/* Header */}

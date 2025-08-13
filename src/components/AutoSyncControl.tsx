@@ -15,16 +15,18 @@ import { workspaceUnipile } from '@/services/WorkspaceUnipileService';
 
 interface AutoSyncControlProps {
   workspaceId: string;
-  accountId: string;
+  accountId?: string; // Make optional since we'll load it from WorkspaceUnipileService
 }
 
-export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps) {
+export function AutoSyncControl({ workspaceId, accountId: propAccountId }: AutoSyncControlProps) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [interval, setInterval] = useState(30);
   const [isLoading, setIsLoading] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [nextSync, setNextSync] = useState<Date | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [accountId, setAccountId] = useState<string>(''); // Load from workspace service
+  const [linkedInConnected, setLinkedInConnected] = useState(false);
   const [syncOptions, setSyncOptions] = useState({
     contacts: true,
     messages: true,
@@ -32,12 +34,30 @@ export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps
     calendar: false
   });
 
-  // Check current sync status
+  // Initialize workspace service and check sync status
   useEffect(() => {
-    checkSyncStatus();
-    const interval = setInterval(checkSyncStatus, 60000); // Check every minute
-    return () => clearInterval(interval);
+    initializeWorkspaceService();
+  }, [workspaceId]);
+
+  // Check sync status when accountId changes
+  useEffect(() => {
+    if (accountId) {
+      checkSyncStatus();
+      const interval = setInterval(checkSyncStatus, 60000); // Check every minute
+      return () => clearInterval(interval);
+    }
   }, [workspaceId, accountId]);
+
+  const initializeWorkspaceService = async () => {
+    try {
+      const config = await workspaceUnipile.initialize(workspaceId);
+      setAccountId(config.account_id);
+      setLinkedInConnected(config.linkedin_connected);
+    } catch (error) {
+      console.error('Error initializing workspace service:', error);
+      setLinkedInConnected(false);
+    }
+  };
 
   const checkSyncStatus = async () => {
     try {
@@ -104,16 +124,22 @@ export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps
   };
 
   const handleManualSync = async () => {
+    if (!accountId) {
+      toast.error('No account ID available. Please check workspace configuration.');
+      return;
+    }
+
     setSyncStatus('syncing');
     toast.info('Starting sync with Unipile LinkedIn API...');
     try {
-      // Initialize workspace service to ensure we have proper credentials
-      const config = await workspaceUnipile.initialize(workspaceId);
+      // Use centralized workspace service with proper account ID
+      const config = await workspaceUnipile.getConfig();
       
       // Sync LinkedIn data via centralized service
       if (syncOptions.contacts || syncOptions.messages) {
-        if (!config.linkedin_connected) {
+        if (!linkedInConnected || !config.linkedin_connected) {
           toast.warning('LinkedIn not connected. Please complete onboarding to sync contacts.');
+          setSyncStatus('error');
           return;
         }
         
@@ -123,15 +149,15 @@ export function AutoSyncControl({ workspaceId, accountId }: AutoSyncControlProps
         if (result.contactsSynced > 0) {
           toast.success(`Synced ${result.contactsSynced} real LinkedIn contacts!`);
         } else {
-          // Fallback to background sync
-          const syncResult = await backgroundSyncManager.triggerManualSync(workspaceId, config.account_id);
+          // Fallback to background sync with correct account ID
+          const syncResult = await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
           if (!syncResult.success) {
             throw new Error('LinkedIn sync failed');
           }
         }
       }
       
-      // Sync Email and Calendar
+      // Sync Email and Calendar (use the correct account ID)
       if (syncOptions.emails || syncOptions.calendar) {
         const emailCalResult = await emailCalendarSync.syncAll(accountId, workspaceId, {
           syncEmails: syncOptions.emails,

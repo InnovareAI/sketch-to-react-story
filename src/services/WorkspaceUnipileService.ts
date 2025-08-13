@@ -98,7 +98,7 @@ class WorkspaceUnipileService {
     const config = await this.getConfig();
     
     return {
-      'Authorization': `Bearer ${config.api_key}`,
+      'X-API-Key': config.api_key, // Unipile uses X-API-Key, not Bearer token
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'X-Workspace-ID': this.workspaceId || '',
@@ -113,9 +113,9 @@ class WorkspaceUnipileService {
     const config = await this.getConfig();
     
     // Use dedicated IP if available, otherwise use DSN
-    const host = config.dedicated_ip || config.dsn;
+    const host = config.dedicated_ip || config.dsn || 'api6.unipile.com:13670';
     
-    // Ensure proper protocol
+    // Ensure proper protocol and port
     if (!host.startsWith('http')) {
       return `https://${host}/api/v1`;
     }
