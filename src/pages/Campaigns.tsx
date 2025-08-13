@@ -18,7 +18,10 @@ import {
   Eye,
   Edit,
   Copy,
-  Trash2
+  Trash2,
+  Plus,
+  Filter,
+  Search
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -27,10 +30,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import CampaignCreationModal from "@/components/campaigns/CampaignCreationModal";
+import CampaignOverviewCard from "@/components/campaigns/CampaignOverviewCard";
 
 export default function Campaigns() {
   const navigate = useNavigate();
   const { campaigns, loading, error, refetch, createCampaign } = useCampaigns();
+  const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<'cards' | 'overview'>('overview');
   
   const handleQuickCreateCampaign = async () => {
     try {
@@ -41,6 +58,15 @@ export default function Campaigns() {
     }
   };
 
+  // Filter campaigns based on search and filters
+  const filteredCampaigns = campaigns.filter(campaign => {
+    const matchesSearch = searchQuery === "" || 
+      campaign.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || campaign.status === statusFilter;
+    const matchesType = typeFilter === "all" || campaign.type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
   // Empty state component
   const EmptyState = () => (
     <div className="text-center py-12">
@@ -50,16 +76,10 @@ export default function Campaigns() {
       <div className="flex gap-3 justify-center">
         <Button 
           className="bg-primary hover:bg-primary/90"
-          onClick={handleQuickCreateCampaign}
+          onClick={() => setIsCreationModalOpen(true)}
         >
-          <Target className="h-4 w-4 mr-2" />
-          Quick Create
-        </Button>
-        <Button 
-          variant="outline"
-          onClick={() => navigate('/campaign-setup')}
-        >
-          Advanced Setup
+          <Plus className="h-4 w-4 mr-2" />
+          New Campaign
         </Button>
       </div>
     </div>
@@ -96,9 +116,9 @@ export default function Campaigns() {
                 <div className="flex gap-2">
                   <Button 
                     className="bg-primary hover:bg-primary/90"
-                    onClick={() => navigate('/campaign-setup')}
+                    onClick={() => setIsCreationModalOpen(true)}
                   >
-                    <Target className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2" />
                     New Campaign
                   </Button>
                 </div>
@@ -169,25 +189,62 @@ export default function Campaigns() {
 
               {/* Filters */}
               <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search campaigns..."
-              className="w-80 px-4 py-2 border border-gray-200 rounded-lg text-sm"
-            />
-          </div>
-          <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-            <option>All Status</option>
-            <option>Active</option>
-            <option>Paused</option>
-            <option>Completed</option>
-            <option>Draft</option>
-          </select>
-        </div>
-        <Button variant="outline" size="sm">
-          More Filters
-        </Button>
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search campaigns..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-80 pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="paused">Paused</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="connector">Connector</SelectItem>
+                      <SelectItem value="messenger">Messenger</SelectItem>
+                      <SelectItem value="open_inmail">Open InMail</SelectItem>
+                      <SelectItem value="event">Event</SelectItem>
+                      <SelectItem value="multi_channel">Multi-Channel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === 'overview' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('overview')}
+                  >
+                    Overview
+                  </Button>
+                  <Button
+                    variant={viewMode === 'cards' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('cards')}
+                  >
+                    Cards
+                  </Button>
+                </div>
               </div>
 
               {/* Campaign List */}
@@ -204,10 +261,62 @@ export default function Campaigns() {
                       Try Again
                     </Button>
                   </div>
-                ) : campaigns.length === 0 ? (
+                ) : filteredCampaigns.length === 0 ? (
                   <EmptyState />
+                ) : viewMode === 'overview' ? (
+                  // Overview mode with new campaign cards
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {filteredCampaigns.map((campaign) => (
+                      <CampaignOverviewCard
+                        key={campaign.id}
+                        id={campaign.id}
+                        name={campaign.name}
+                        type={campaign.type === 'connector' ? 'Connector' : 
+                              campaign.type === 'messenger' ? 'Messenger' :
+                              campaign.type === 'open_inmail' ? 'Open InMail' : 
+                              'Event Participants'}
+                        status={campaign.status as 'active' | 'paused' | 'stopped' | 'draft'}
+                        createdAt={new Date(campaign.created_at)}
+                        stoppedAt={campaign.end_date ? new Date(campaign.end_date) : undefined}
+                        priority={(campaign.priority || 'medium') as 'low' | 'medium' | 'high'}
+                        metrics={{
+                          totalPeople: campaign.performance_metrics?.sent || 0,
+                          contacted: {
+                            count: campaign.performance_metrics?.sent || 0,
+                            total: campaign.performance_metrics?.sent || 0,
+                            percentage: 100
+                          },
+                          connected: {
+                            count: campaign.performance_metrics?.opened || 0,
+                            total: campaign.performance_metrics?.sent || 0,
+                            percentage: campaign.performance_metrics?.sent ? 
+                              ((campaign.performance_metrics?.opened || 0) / campaign.performance_metrics.sent) * 100 : 0
+                          },
+                          repliedToConnection: {
+                            count: campaign.performance_metrics?.replied || 0,
+                            total: campaign.performance_metrics?.opened || 0,
+                            percentage: campaign.performance_metrics?.opened ? 
+                              ((campaign.performance_metrics?.replied || 0) / campaign.performance_metrics.opened) * 100 : 0
+                          },
+                          repliedToOther: {
+                            count: campaign.performance_metrics?.converted || 0,
+                            total: campaign.performance_metrics?.replied || 0,
+                            percentage: campaign.performance_metrics?.replied ? 
+                              ((campaign.performance_metrics?.converted || 0) / campaign.performance_metrics.replied) * 100 : 0
+                          }
+                        }}
+                        onEdit={(id) => navigate(`/campaign-setup?id=${id}`)}
+                        onAddPeople={(id) => navigate(`/campaign-setup?id=${id}&tab=people`)}
+                        onToggleStatus={(id, newStatus) => {
+                          // TODO: Implement status toggle
+                          console.log('Toggle status:', id, newStatus);
+                        }}
+                      />
+                    ))}
+                  </div>
                 ) : (
-                  campaigns.map((campaign) => {
+                  // Cards mode (existing layout)
+                  filteredCampaigns.map((campaign) => {
                     // Use real campaign data with performance metrics
                     // Handle both JSONB performance_metrics field and potential legacy fields
                     const performanceMetrics = (() => {
@@ -367,6 +476,12 @@ export default function Campaigns() {
               </div>
             </div>
           </main>
+          
+          {/* Campaign Creation Modal */}
+          <CampaignCreationModal 
+            isOpen={isCreationModalOpen}
+            onClose={() => setIsCreationModalOpen(false)}
+          />
     </div>
   );
 }

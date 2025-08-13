@@ -187,8 +187,8 @@ export default function WorkspaceLayout() {
                   "text-sm flex items-center gap-1",
                   isConversational ? "text-gray-300" : "text-gray-600"
                 )}>
-                  <Linkedin className="h-3 w-3" />
-                  LinkedIn Automation Platform
+                  <Building2 className="h-3 w-3" />
+                  SAM - Sales AI Agent
                 </p>
               </div>
             </div>

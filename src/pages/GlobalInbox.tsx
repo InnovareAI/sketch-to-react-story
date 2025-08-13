@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLinkedInSync } from '@/hooks/useLinkedInSync';
 import { toast } from 'sonner';
 import { previewSync } from '@/services/unipile/PreviewSync';
+import FollowUpModal from '@/components/FollowUpModal';
 // import MessageComposer from '@/components/MessageComposer'; // Temporarily disabled
 
 interface Message {
@@ -11,6 +12,7 @@ interface Message {
   avatar: string;
   company: string;
   channel: string;
+  messageType?: 'message' | 'inmail'; // Differentiate between regular LinkedIn messages and InMail
   subject: string;
   preview: string;
   time: string;
@@ -55,7 +57,9 @@ import {
   RefreshCw,
   X,
   Tag,
-  Plus
+  Plus,
+  Linkedin,
+  Send
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -82,6 +86,8 @@ export default function GlobalInbox() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [selectedMessageForTag, setSelectedMessageForTag] = useState<Message | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [selectedMessageForFollowUp, setSelectedMessageForFollowUp] = useState<Message | null>(null);
   
   // Predefined tags
   const predefinedTags = [
@@ -178,9 +184,20 @@ export default function GlobalInbox() {
         const isPreviewOnly = conv.metadata?.preview_only === true;
         const totalMessages = conv.metadata?.total_messages || messageCount;
         
+        // Detect if this is an InMail message
+        // InMail messages typically have certain characteristics:
+        // 1. They might be marked in metadata
+        // 2. They often have subject lines
+        // 3. They may have specific keywords or patterns
+        const isInMail = conv.metadata?.message_type === 'inmail' || 
+                        conv.metadata?.is_inmail === true ||
+                        (conv.platform === 'linkedin' && conv.metadata?.has_subject === true) ||
+                        (latestMessage?.metadata?.type === 'inmail');
+        
         // Build tags array
         const tags = [];
         if (conv.platform === 'linkedin') tags.push('LinkedIn');
+        if (isInMail) tags.push('InMail');
         if (isPreviewOnly) {
           tags.push('Preview Only');
           tags.push(`${totalMessages} total`);
@@ -188,12 +205,21 @@ export default function GlobalInbox() {
           tags.push(`${messageCount} msgs`);
         }
         
+        // Generate better avatar URL
+        let avatarUrl = conv.participant_avatar_url;
+        if (!avatarUrl || avatarUrl === '' || avatarUrl.includes('dicebear')) {
+          // Use UI Avatars for a cleaner look with the person's initials
+          const name = conv.participant_name || 'Unknown';
+          avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=200&font-size=0.4`;
+        }
+        
         return {
           id: conv.id, // Use actual conversation ID instead of index
           from: conv.participant_name || 'Unknown',
-          avatar: conv.participant_avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.participant_name}`,
+          avatar: avatarUrl,
           company: conv.participant_company || '',
           channel: conv.platform || 'linkedin',
+          messageType: isInMail ? 'inmail' : 'message', // Add message type
           subject: `Message from ${conv.participant_name}`,
           preview: latestMessage?.content || conv.metadata?.last_message_preview || 'No message content',
           time: new Date(conv.last_message_at).toLocaleTimeString('en-US', { 
@@ -441,8 +467,8 @@ export default function GlobalInbox() {
   // Action handlers
   const handleReply = () => {
     if (selectedMessage) {
-      setReplyContent(`Hi ${selectedMessage.from},\n\n`);
-      setReplyModalOpen(true);
+      setSelectedMessageForFollowUp(selectedMessage);
+      setShowFollowUpModal(true);
     }
   };
 
@@ -603,10 +629,20 @@ export default function GlobalInbox() {
   // Empty messages array - will be populated from database
   const demoMessages: Message[] = [];
 
-  const getChannelIcon = (channel: string) => {
+  const getChannelIcon = (channel: string, messageType?: string) => {
     switch (channel) {
       case "email": return <Mail className="h-4 w-4 text-blue-600" />;
-      case "linkedin": return <MessageSquare className="h-4 w-4 text-blue-700" />;
+      case "linkedin":
+        // Show different icons for regular messages vs InMail
+        if (messageType === 'inmail') {
+          return (
+            <div className="relative">
+              <Linkedin className="h-4 w-4 text-blue-700" />
+              <Send className="h-2 w-2 text-blue-700 absolute -bottom-0.5 -right-0.5" />
+            </div>
+          );
+        }
+        return <Linkedin className="h-4 w-4 text-blue-700" />;
       case "whatsapp": return <MessageSquare className="h-4 w-4 text-green-600" />;
       case "phone": return <Phone className="h-4 w-4 text-purple-600" />;
       default: return <Mail className="h-4 w-4" />;
@@ -966,21 +1002,48 @@ export default function GlobalInbox() {
                     >
                       <div className="flex items-start gap-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={message.avatar} alt={message.from} />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            {message.from.split(' ').map(n => n[0]).join('')}
+                          {message.avatar && message.avatar !== '' ? (
+                            <AvatarImage 
+                              src={message.avatar} 
+                              alt={message.from}
+                              onError={(e) => {
+                                // If image fails to load, hide it to show fallback
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : null}
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-medium">
+                            {message.from.split(' ').map(n => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
-                              {getChannelIcon(message.channel)}
+                            <div className="flex items-center gap-2">
+                              {getChannelIcon(message.channel, message.messageType)}
                               <span className={`text-sm font-medium ${!message.read ? "font-semibold" : ""}`}>
                                 {message.from}
                               </span>
+                              {message.messageType === 'inmail' && (
+                                <Badge variant="outline" className="text-xs h-5 px-1.5">
+                                  InMail
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-500">{formatTime(message.time)}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMessageForFollowUp(message);
+                                  setShowFollowUpModal(true);
+                                }}
+                                title="Create follow-up"
+                              >
+                                <Reply className="h-3 w-3" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1050,8 +1113,13 @@ export default function GlobalInbox() {
                   </Avatar>
                   <div>
                     <div className="flex items-center gap-2">
-                      {getChannelIcon(selectedMessage.channel)}
+                      {getChannelIcon(selectedMessage.channel, selectedMessage.messageType)}
                       <CardTitle className="text-lg">{selectedMessage.from}</CardTitle>
+                      {selectedMessage.messageType === 'inmail' && (
+                        <Badge variant="outline" className="text-xs h-5 px-1.5">
+                          InMail
+                        </Badge>
+                      )}
                     </div>
                     <CardDescription>{selectedMessage.company}</CardDescription>
                   </div>
@@ -1206,7 +1274,7 @@ export default function GlobalInbox() {
                 <div className="flex gap-2 pt-4 border-t">
                   <Button onClick={handleReply}>
                     <Reply className="h-4 w-4 mr-2" />
-                    Reply
+                    Follow Up
                   </Button>
                   <Button variant="outline" onClick={handleForward}>
                     <Forward className="h-4 w-4 mr-2" />
@@ -1510,6 +1578,31 @@ export default function GlobalInbox() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Follow-Up Modal */}
+      {showFollowUpModal && (
+        <FollowUpModal
+          isOpen={showFollowUpModal}
+          onClose={() => {
+            setShowFollowUpModal(false);
+            setSelectedMessageForFollowUp(null);
+          }}
+          message={selectedMessageForFollowUp ? {
+            id: selectedMessageForFollowUp.id,
+            from: selectedMessageForFollowUp.from,
+            company: selectedMessageForFollowUp.company,
+            subject: selectedMessageForFollowUp.subject,
+            channel: selectedMessageForFollowUp.channel,
+            conversationData: selectedMessageForFollowUp.conversationData
+          } : undefined}
+          onSend={(followUpData) => {
+            console.log('Follow-up created:', followUpData);
+            toast('Follow-up scheduled successfully');
+            // Refresh messages to show follow-up indicator
+            loadInboxMessages();
+          }}
+        />
+      )}
     </div>
   );
 }

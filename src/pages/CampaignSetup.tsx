@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import CampaignSetupFlow from "@/components/campaigns/CampaignSetupFlow";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { 
   ArrowLeft,
   Target,
@@ -53,14 +56,31 @@ interface Message {
 export default function CampaignSetup() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: showToast } = useToast();
+  
+  // If a campaign type is specified in the URL, use the new flow
+  const campaignTypeParam = searchParams.get('type');
+  if (campaignTypeParam) {
+    return <CampaignSetupFlow />;
+  }
+  
   const [activeTab, setActiveTab] = useState("people");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [campaignName, setCampaignName] = useState(searchParams.get('name') || "Connector Campaign");
-  const [campaignType] = useState(searchParams.get('type') || "Connector");
+  const [campaignType] = useState("Connector");
+  const [campaignId, setCampaignId] = useState<string | null>(searchParams.get('id'));
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   const [prospectMethod, setProspectMethod] = useState<"search" | "existing" | "csv">("search");
   const [connectionDegrees, setConnectionDegrees] = useState<string[]>(["2nd", "3rd"]);
+  const [dailyContactLimit, setDailyContactLimit] = useState(20);
+  const [dailyFollowupLimit, setDailyFollowupLimit] = useState(50);
+  const [campaignPriority, setCampaignPriority] = useState<"low" | "medium" | "high">("medium");
+  const [usePriority, setUsePriority] = useState(false);
+  const [startImmediately, setStartImmediately] = useState(true);
+  const [scheduledDate, setScheduledDate] = useState<string>("");
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -196,18 +216,157 @@ export default function CampaignSetup() {
     setMessages(messages.map(m => m.id === id ? { ...m, ...updates } : m));
   };
 
-  const handleSaveCampaign = () => {
-    toast({
-      title: "Campaign Saved",
-      description: `${campaignName} has been saved successfully.`
-    });
+  // Load workspace on mount
+  useEffect(() => {
+    loadWorkspace();
+    if (campaignId) {
+      loadCampaign(campaignId);
+    }
+  }, [campaignId]);
+
+  const loadWorkspace = async () => {
+    try {
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('id')
+        .limit(1)
+        .single();
+      
+      if (workspace) {
+        setWorkspaceId(workspace.id);
+      }
+    } catch (error) {
+      console.error('Error loading workspace:', error);
+    }
   };
 
-  const handleActivateCampaign = () => {
-    toast({
-      title: "Campaign Activated",
-      description: `${campaignName} is now active and will start processing prospects.`
-    });
+  const loadCampaign = async (id: string) => {
+    setLoading(true);
+    try {
+      const { data: campaign, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      if (campaign) {
+        setCampaignName(campaign.name);
+        setDailyContactLimit(campaign.settings?.daily_contact_limit || 20);
+        setDailyFollowupLimit(campaign.settings?.daily_followup_limit || 50);
+        setCampaignPriority(campaign.settings?.priority || 'medium');
+        setUsePriority(campaign.settings?.use_priority || false);
+        setStartImmediately(campaign.settings?.start_immediately !== false);
+        setScheduledDate(campaign.settings?.scheduled_date || '');
+        
+        // Load messages
+        if (campaign.settings?.messages) {
+          setMessages(campaign.settings.messages);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading campaign:', error);
+      toast.error('Failed to load campaign');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveCampaign = async () => {
+    if (!workspaceId) {
+      toast.error('No workspace found');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const campaignData = {
+        workspace_id: workspaceId,
+        name: campaignName,
+        type: campaignType.toLowerCase(),
+        status: 'draft',
+        settings: {
+          daily_contact_limit: dailyContactLimit,
+          daily_followup_limit: dailyFollowupLimit,
+          priority: campaignPriority,
+          use_priority: usePriority,
+          start_immediately: startImmediately,
+          scheduled_date: scheduledDate,
+          prospect_method: prospectMethod,
+          connection_degrees: connectionDegrees,
+          messages: messages,
+          csv_file: csvFile?.name || null
+        },
+        stats: {
+          total_prospects: 0,
+          sent: 0,
+          accepted: 0,
+          replied: 0
+        }
+      };
+
+      if (campaignId) {
+        // Update existing campaign
+        const { error } = await supabase
+          .from('campaigns')
+          .update(campaignData)
+          .eq('id', campaignId);
+        
+        if (error) throw error;
+        
+        toast.success('Campaign updated successfully');
+      } else {
+        // Create new campaign
+        const { data, error } = await supabase
+          .from('campaigns')
+          .insert(campaignData)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+          setCampaignId(data.id);
+          // Update URL with campaign ID
+          const newParams = new URLSearchParams(searchParams);
+          newParams.set('id', data.id);
+          window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
+        }
+        
+        toast.success('Campaign created successfully');
+      }
+    } catch (error) {
+      console.error('Error saving campaign:', error);
+      toast.error('Failed to save campaign');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleActivateCampaign = async () => {
+    if (!campaignId) {
+      toast.error('Please save the campaign first');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .update({ 
+          status: 'active',
+          started_at: new Date().toISOString()
+        })
+        .eq('id', campaignId);
+      
+      if (error) throw error;
+      
+      toast.success(`${campaignName} is now active and will start processing prospects.`);
+      navigate('/campaigns');
+    } catch (error) {
+      console.error('Error activating campaign:', error);
+      toast.error('Failed to activate campaign');
+    }
   };
 
   return (
@@ -230,9 +389,13 @@ export default function CampaignSetup() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleSaveCampaign}>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleSaveCampaign}
+                    disabled={saving}
+                  >
                     <Save className="h-4 w-4 mr-2" />
-                    Save
+                    {saving ? 'Saving...' : 'Save'}
                   </Button>
                   <Button onClick={handleActivateCampaign}>
                     <Play className="h-4 w-4 mr-2" />
@@ -544,11 +707,23 @@ export default function CampaignSetup() {
                       <CardContent className="space-y-4">
                         <div>
                           <Label htmlFor="daily-contacts">Set the number of new people to be contacted by this campaign daily:</Label>
-                          <Input id="daily-contacts" type="number" defaultValue="20" className="mt-2" />
+                          <Input 
+                            id="daily-contacts" 
+                            type="number" 
+                            value={dailyContactLimit}
+                            onChange={(e) => setDailyContactLimit(parseInt(e.target.value) || 20)}
+                            className="mt-2" 
+                          />
                         </div>
                         <div>
                           <Label htmlFor="daily-followups">Set the number of follow up messages to be sent from this campaign daily:</Label>
-                          <Input id="daily-followups" type="number" defaultValue="50" className="mt-2" />
+                          <Input 
+                            id="daily-followups" 
+                            type="number" 
+                            value={dailyFollowupLimit}
+                            onChange={(e) => setDailyFollowupLimit(parseInt(e.target.value) || 50)}
+                            className="mt-2" 
+                          />
                         </div>
                       </CardContent>
                     </Card>
@@ -563,9 +738,17 @@ export default function CampaignSetup() {
                         <div className="flex items-center justify-between">
                           <Label>Priority level</Label>
                           <div className="flex items-center gap-3">
-                            <Checkbox id="use-priority" />
+                            <Checkbox 
+                              id="use-priority" 
+                              checked={usePriority}
+                              onCheckedChange={(checked) => setUsePriority(checked as boolean)}
+                            />
                             <Label htmlFor="use-priority" className="text-sm">Use priority</Label>
-                            <Select defaultValue="medium">
+                            <Select 
+                              value={campaignPriority}
+                              onValueChange={(value) => setCampaignPriority(value as "low" | "medium" | "high")}
+                              disabled={!usePriority}
+                            >
                               <SelectTrigger className="w-32">
                                 <SelectValue />
                               </SelectTrigger>
@@ -590,7 +773,10 @@ export default function CampaignSetup() {
                         <div>
                           <Label>Select date and time</Label>
                           <div className="flex items-center gap-3 mt-2">
-                            <RadioGroup defaultValue="immediately">
+                            <RadioGroup 
+                              value={startImmediately ? "immediately" : "scheduled"}
+                              onValueChange={(value) => setStartImmediately(value === "immediately")}
+                            >
                               <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="immediately" id="start-immediately" />
                                 <Label htmlFor="start-immediately">Start immediately</Label>

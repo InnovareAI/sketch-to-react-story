@@ -47,8 +47,8 @@ export default function Dashboard() {
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="display-text">Analytics Dashboard</h1>
-                  <p className="body-text mt-1">Real-time insights into your outreach performance</p>
+                  <h1 className="display-text">SAM Analytics</h1>
+                  <p className="body-text mt-1">AI-powered sales intelligence and performance metrics</p>
                   {error && (
                     <div className="mt-2 text-red-600 text-sm">
                       <AlertTriangle className="h-4 w-4 inline mr-1" />

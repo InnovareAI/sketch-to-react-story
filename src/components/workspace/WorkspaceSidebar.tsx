@@ -20,6 +20,7 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SAMBranding } from '@/components/branding/SAMBranding';
 
 // Main Navigation Items
 const mainNavItems = [
@@ -98,8 +99,9 @@ export function WorkspaceSidebar({
       isConversational ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
     )}>
       <div className="h-full flex flex-col">
-        {/* Workspace Header */}
+        {/* SAM Branding Header */}
         <div className="p-4 border-b border-gray-200">
+          <SAMBranding variant="default" showTagline={true} className="mb-4" />
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center gap-3 w-full">
               <div className={cn(

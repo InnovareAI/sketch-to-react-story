@@ -53,7 +53,61 @@ export default function Contacts() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterDepartment, setFilterDepartment] = useState<string>("all");
+  const [filterEngagement, setFilterEngagement] = useState<string>("all");
+  const [filterTags, setFilterTags] = useState<string[]>([]);
   const { contacts, stats, loading, error, refreshData, createContact, updateContact, deleteContact } = useRealContacts();
+
+  // Filter contacts based on search and filters
+  const filteredContacts = contacts.filter(contact => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = 
+        contact.first_name?.toLowerCase().includes(query) ||
+        contact.last_name?.toLowerCase().includes(query) ||
+        contact.email?.toLowerCase().includes(query) ||
+        contact.title?.toLowerCase().includes(query) ||
+        contact.company?.toLowerCase().includes(query) ||
+        contact.department?.toLowerCase().includes(query) ||
+        contact.phone?.toLowerCase().includes(query);
+      
+      if (!matchesSearch) return false;
+    }
+    
+    // Department filter
+    if (filterDepartment !== "all" && contact.department !== filterDepartment) {
+      return false;
+    }
+    
+    // Engagement score filter
+    if (filterEngagement !== "all") {
+      const score = contact.engagement_score || 0;
+      if (filterEngagement === "high" && score < 70) return false;
+      if (filterEngagement === "medium" && (score < 40 || score >= 70)) return false;
+      if (filterEngagement === "low" && score >= 40) return false;
+    }
+    
+    // Tags filter
+    if (filterTags.length > 0) {
+      const contactTags = contact.tags || [];
+      const hasMatchingTag = filterTags.some(tag => contactTags.includes(tag));
+      if (!hasMatchingTag) return false;
+    }
+    
+    return true;
+  });
+
+  // Get unique departments for filter
+  const uniqueDepartments = Array.from(new Set(
+    contacts.map(c => c.department).filter(Boolean)
+  )).sort();
+
+  // Get unique tags for filter
+  const uniqueTags = Array.from(new Set(
+    contacts.flatMap(c => c.tags || [])
+  )).sort();
 
   const handleEditContact = (contact: Contact) => {
     setEditingContact({ ...contact });
@@ -213,6 +267,98 @@ export default function Contacts() {
                 </Button>
               </div>
             </div>
+
+            {/* Search and Filters */}
+            <Card className="p-4">
+              <div className="flex flex-col lg:flex-row gap-4">
+                {/* Search Bar */}
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search contacts by name, email, title, company..."
+                      className="pl-10 pr-10"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {searchQuery && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                        onClick={() => setSearchQuery('')}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Department Filter */}
+                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All Departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {uniqueDepartments.map(dept => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {/* Engagement Filter */}
+                <Select value={filterEngagement} onValueChange={setFilterEngagement}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All Engagement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Engagement</SelectItem>
+                    <SelectItem value="high">High (70%+)</SelectItem>
+                    <SelectItem value="medium">Medium (40-69%)</SelectItem>
+                    <SelectItem value="low">Low (&lt;40%)</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {/* Clear Filters */}
+                {(searchQuery || filterDepartment !== 'all' || filterEngagement !== 'all') && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFilterDepartment('all');
+                      setFilterEngagement('all');
+                      setFilterTags([]);
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+              
+              {/* Active Filters Display */}
+              <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+                <Filter className="h-4 w-4" />
+                <span>
+                  Showing {filteredContacts.length} of {contacts.length} contacts
+                </span>
+                {searchQuery && (
+                  <Badge variant="secondary">
+                    Search: "{searchQuery}"
+                  </Badge>
+                )}
+                {filterDepartment !== 'all' && (
+                  <Badge variant="secondary">
+                    Dept: {filterDepartment}
+                  </Badge>
+                )}
+                {filterEngagement !== 'all' && (
+                  <Badge variant="secondary">
+                    Engagement: {filterEngagement}
+                  </Badge>
+                )}
+              </div>
+            </Card>
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
