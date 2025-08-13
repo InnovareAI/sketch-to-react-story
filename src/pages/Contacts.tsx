@@ -53,11 +53,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Make test function available globally
+// Make test functions available globally
 if (typeof window !== 'undefined') {
   import('@/utils/testUnipileConnection').then(module => {
     (window as any).testUnipileConnection = module.testUnipileConnection;
     console.log('🧪 LinkedIn Sync Test Available: window.testUnipileConnection(accountId)');
+  });
+  
+  import('@/utils/testContactSync').then(module => {
+    (window as any).testContactSync = module.testContactSync;
+    console.log('🧪 Contact Sync Test Available: window.testContactSync()');
   });
 }
 
@@ -391,26 +396,27 @@ export default function Contacts() {
                 <Button 
                   variant="destructive" 
                   onClick={async () => {
-                    console.log('🔍 DEBUG: Starting LinkedIn sync debug...');
-                    const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
-                    console.log('LinkedIn Accounts:', accounts);
-                    if (accounts.length > 0) {
-                      const acc = accounts[0];
-                      console.log('Using account:', acc);
-                      const id = acc.unipileAccountId || acc.id || acc.account_id;
-                      console.log('Account ID:', id);
-                      if (id && window.testUnipileConnection) {
-                        await window.testUnipileConnection(id);
+                    console.log('🔍 DEBUG: Starting comprehensive contact sync test...');
+                    toast.info('Running contact sync test. Check console for details.');
+                    
+                    if ((window as any).testContactSync) {
+                      const results = await (window as any).testContactSync();
+                      
+                      if (results.errors.length === 0 && results.contactsFetched > 0) {
+                        toast.success(`Test passed! ${results.contactsFetched} contacts available.`);
+                      } else if (results.errors.length > 0) {
+                        toast.error(`Test failed with ${results.errors.length} errors. Check console.`);
                       } else {
-                        console.error('No account ID or test function not available');
+                        toast.warning('Test completed. Check console for details.');
                       }
                     } else {
-                      console.error('No LinkedIn accounts found');
-                      toast.error('No LinkedIn account connected');
+                      console.error('Test function not loaded yet. Try again in a moment.');
+                      toast.error('Test not ready. Please try again.');
                     }
                   }}
+                  title="Run comprehensive contact sync test"
                 >
-                  🔍 Debug Sync
+                  🧪 Test Sync
                 </Button>
                 <Button 
                   variant="outline" 
