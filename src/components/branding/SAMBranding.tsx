@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Bot, Brain, Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface SAMBrandingProps {
   variant?: 'default' | 'compact' | 'large';
@@ -35,22 +35,13 @@ export function SAMBranding({
   return (
     <div className={cn("flex flex-col", className)}>
       <div className="flex items-center gap-2">
-        <div className="relative">
-          <Brain className={cn(size.icon, "text-blue-600")} />
-          <Sparkles className={cn("absolute -top-1 -right-1 h-3 w-3 text-yellow-500")} />
-        </div>
-        <span className={cn(size.text, "bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent")}>
-          SAM
+        <span className={cn(size.text, "text-gray-900")}>
+          InnovareAI
         </span>
-        <span className={cn(size.text, "text-gray-700 font-light")}>
-          AI
-        </span>
+        <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-2 py-0.5 text-xs">
+          Pro
+        </Badge>
       </div>
-      {showTagline && (
-        <p className={cn(size.tagline, "text-gray-600 mt-1 ml-8")}>
-          Your Sales AI Agent
-        </p>
-      )}
     </div>
   );
 }

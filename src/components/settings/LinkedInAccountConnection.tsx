@@ -39,6 +39,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { linkedInDataSync } from '@/services/linkedin/LinkedInDataSync';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { previewSync } from '@/services/unipile/PreviewSync';
+import ContactMessageSyncService from '@/services/unipile/ContactMessageSync';
+import { LinkedInRateLimitWarning } from '@/components/linkedin/LinkedInRateLimitWarning';
+import { useLinkedInRateLimit } from '@/hooks/useLinkedInRateLimit';
 import { 
   Select, 
   SelectContent, 
@@ -76,6 +79,11 @@ export function LinkedInAccountConnection() {
   const [showProxyUpdate, setShowProxyUpdate] = useState<string | null>(null);
   const [manualSyncType, setManualSyncType] = useState<'standard' | 'preview' | 'smart'>('standard');
   const [isSyncing, setIsSyncing] = useState(false);
+  const contactMessageSync = new ContactMessageSyncService();
+  
+  // Rate limit monitoring
+  const activeAccountId = accounts.length > 0 ? accounts[0].unipileAccountId : undefined;
+  const { rateLimitStatus, checkRateLimit, clearRateLimit } = useLinkedInRateLimit(activeAccountId);
 
   useEffect(() => {
     loadConnectedAccounts();
@@ -568,47 +576,77 @@ export function LinkedInAccountConnection() {
     }
   };
 
-  // Manual sync function
+  // Manual sync function with contact and message sync
   const performManualSync = async () => {
     if (isSyncing) return;
+    
+    // Check for rate limits before starting
+    if (rateLimitStatus?.isLimited) {
+      toast.error('LinkedIn rate limit active. Please wait before syncing.');
+      return;
+    }
     
     setIsSyncing(true);
     
     try {
       // Get workspace ID
-      const workspaceId = user?.workspace_id;
+      const workspaceId = user?.workspace_id || localStorage.getItem('workspace_id');
       if (!workspaceId) {
         throw new Error('No workspace found');
       }
       
-      // Get connected accounts
-      const connectedAccounts = await unipileRealTimeSync.testConnection();
-      if (!connectedAccounts.success || connectedAccounts.accounts.length === 0) {
+      // Get the first connected account
+      if (accounts.length === 0) {
         throw new Error('No LinkedIn account connected');
       }
       
-      const account = connectedAccounts.accounts[0];
+      const account = accounts[0];
+      const accountId = account.unipileAccountId || account.id;
       
-      // Perform sync based on selected type
-      if (manualSyncType === 'preview') {
-        toast.info('Starting preview sync (500 full + 2000 preview)...');
-        const results = await previewSync.syncWithPreviews(account.id, workspaceId);
-        toast.success(`Preview sync complete! ${results.fullSync} full + ${results.previewOnly} preview conversations`);
-      } else if (manualSyncType === 'smart') {
-        toast.info('Starting smart sync (optimized for large inboxes)...');
-        const { smartSync } = await import('@/services/unipile/SmartSync');
-        const results = await smartSync.syncLargeInbox(account.id, workspaceId);
-        toast.success(`Smart sync complete! Strategy: ${results.strategy}`);
+      toast.info('Starting LinkedIn sync for contacts and messages...');
+      
+      // Use ContactMessageSync service for unified syncing
+      const syncResult = await contactMessageSync.syncContactsAndMessages(
+        accountId,
+        workspaceId,
+        {
+          syncMessages: true,
+          syncContacts: true,
+          contactLimit: manualSyncType === 'preview' ? 500 : 1000,
+          messageLimit: manualSyncType === 'preview' ? 500 : 1000,
+          onlyFirstDegree: manualSyncType === 'smart'
+        }
+      );
+      
+      // Check for rate limit after sync
+      await checkRateLimit();
+      
+      if (syncResult.errors.length > 0) {
+        console.error('Sync errors:', syncResult.errors);
+        toast.warning(`Sync completed with ${syncResult.errors.length} errors. Check console for details.`);
       } else {
-        // Standard sync
-        toast.info('Starting standard sync...');
-        await unipileRealTimeSync.syncAll();
-        toast.success('Standard sync complete!');
+        toast.success(
+          `Sync complete! ${syncResult.contactsSynced} contacts (${syncResult.firstDegreeContacts} 1st degree) and ${syncResult.messagesSynced} messages synced in ${(syncResult.duration / 1000).toFixed(1)}s`
+        );
       }
+      
+      // Update last sync time
+      const updatedAccounts = accounts.map(acc => 
+        acc.id === account.id 
+          ? { ...acc, metadata: { ...acc.metadata, last_sync: new Date().toISOString() } }
+          : acc
+      );
+      setAccounts(updatedAccounts);
+      localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
       
     } catch (error) {
       console.error('Manual sync error:', error);
       toast.error(`Sync failed: ${(error as Error).message}`);
+      
+      // Check if it's a rate limit error
+      if (error.message?.includes('rate limit') || error.message?.includes('429')) {
+        await checkRateLimit();
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -616,6 +654,16 @@ export function LinkedInAccountConnection() {
 
   return (
     <div className="space-y-6">
+      {/* Rate Limit Warning */}
+      {rateLimitStatus && (
+        <LinkedInRateLimitWarning
+          rateLimitInfo={rateLimitStatus}
+          onDismiss={clearRateLimit}
+          onRetry={performManualSync}
+          variant="inline"
+        />
+      )}
+      
       {/* Header Card */}
       <Card>
         <CardHeader>
