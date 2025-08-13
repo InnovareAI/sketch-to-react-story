@@ -1,7 +1,7 @@
 // Netlify Function to proxy Unipile API requests
 const https = require('https');
 
-const UNIPILE_API_KEY = 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ';
+const UNIPILE_API_KEY = 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
 const UNIPILE_BASE_URL = 'api6.unipile.com';
 const UNIPILE_PORT = 13670;
 
@@ -43,7 +43,7 @@ exports.handler = async (event, context) => {
         path: `/api/v1${path}`,
         method: method,
         headers: {
-          'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+          'X-API-Key': UNIPILE_API_KEY,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
