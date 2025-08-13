@@ -39,7 +39,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { linkedInDataSync } from '@/services/linkedin/LinkedInDataSync';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { previewSync } from '@/services/unipile/PreviewSync';
-import ContactMessageSyncService from '@/services/unipile/ContactMessageSync';
+import { contactMessageSync } from '@/services/unipile/ContactMessageSync';
 import { LinkedInRateLimitWarning } from '@/components/linkedin/LinkedInRateLimitWarning';
 import { useLinkedInRateLimit } from '@/hooks/useLinkedInRateLimit';
 import { 
@@ -79,7 +79,6 @@ export function LinkedInAccountConnection() {
   const [showProxyUpdate, setShowProxyUpdate] = useState<string | null>(null);
   const [manualSyncType, setManualSyncType] = useState<'standard' | 'preview' | 'smart'>('standard');
   const [isSyncing, setIsSyncing] = useState(false);
-  const contactMessageSync = new ContactMessageSyncService();
   
   // Rate limit monitoring
   const activeAccountId = accounts.length > 0 ? accounts[0].unipileAccountId : undefined;

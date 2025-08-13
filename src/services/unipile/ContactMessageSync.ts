@@ -556,3 +556,4 @@ class ContactMessageSyncService {
 
 // Export singleton instance
 export const contactMessageSync = new ContactMessageSyncService();
+export default ContactMessageSyncService;
