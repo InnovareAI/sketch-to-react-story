@@ -299,16 +299,18 @@ export class UnipileRealTimeSync {
             const data = await response.json();
             const accounts = data.items || [];
             
-            // Filter for LinkedIn accounts with OK status
-            const linkedInAccounts = accounts.filter((acc: any) => 
+            // ONLY return Thorsten Linz account
+            const thorstenAccount = accounts.find((acc: any) => 
+              acc.name === 'Thorsten Linz' && 
               acc.type === 'LINKEDIN' && 
-              acc.sources?.some((s: any) => s.status === 'OK')
+              acc.id === '4jyMc-EDT1-hE5pOoT7EaQ'
             );
 
-            if (linkedInAccounts.length > 0) {
-              // Store for next time
-              localStorage.setItem('linkedin_accounts', JSON.stringify(linkedInAccounts));
-              return linkedInAccounts;
+            if (thorstenAccount) {
+              // Only return Thorsten's account
+              const filteredAccounts = [thorstenAccount];
+              localStorage.setItem('linkedin_accounts', JSON.stringify(filteredAccounts));
+              return filteredAccounts;
             }
           }
         } catch (error) {
@@ -476,10 +478,11 @@ export class UnipileRealTimeSync {
     try {
       console.log(`Syncing messages for account: ${account.name || account.id}`);
       
-      // Fetch conversations
-      const conversations = await this.fetchConversations(account.id);
+      // Fetch chats using the correct Unipile format
+      const chats = await this.fetchConversations(account.id);
       
-      if (conversations.length === 0) {
+      if (chats.length === 0) {
+        console.log('No chats found for account');
         return 0;
       }
 
@@ -491,56 +494,88 @@ export class UnipileRealTimeSync {
         .single();
       
       if (!workspace) {
-        throw new Error('No workspace found');
+        // Create default workspace if none exists
+        const { data: newWorkspace } = await supabase
+          .from('workspaces')
+          .insert({ name: 'Default Workspace' })
+          .select()
+          .single();
+        
+        if (!newWorkspace) {
+          throw new Error('Could not create workspace');
+        }
+        workspace = newWorkspace;
       }
 
       let syncedCount = 0;
 
-      for (const conv of conversations) {
-        // Save conversation
-        const { data: savedConv, error: convError } = await supabase
-          .from('inbox_conversations')
-          .upsert({
-            workspace_id: workspace.id,
-            platform: 'linkedin',
-            platform_conversation_id: conv.id,
-            participant_name: conv.participants[0]?.name || 'LinkedIn User',
-            participant_company: conv.participants[0]?.company || '',
-            participant_avatar_url: conv.participants[0]?.profile_picture || '',
-            status: conv.unread_count > 0 ? 'unread' : 'active',
-            last_message_at: conv.updated_at || new Date().toISOString(),
-            metadata: {
-              account_id: account.id,
-              account_name: account.name,
-              participants: conv.participants
-            }
-          })
-          .select()
-          .single();
-
-        if (!convError && savedConv) {
-          // Fetch and save messages for this conversation
-          const messages = await this.fetchMessages(account.id, conv.id);
+      for (const chat of chats) {
+        try {
+          // Fetch messages first to get participant info
+          const messages = await this.fetchMessages(account.id, chat.id);
           
-          for (const msg of messages) {
-            await supabase
-              .from('inbox_messages')
-              .upsert({
-                conversation_id: savedConv.id,
-                platform_message_id: msg.id,
-                role: msg.direction === 'outbound' ? 'user' : 'assistant',
-                content: msg.text || msg.html || '',
-                metadata: {
-                  sender_name: msg.from.name,
-                  sender_company: msg.from.company,
-                  direction: msg.direction,
-                  created_at: msg.created_at,
-                  attachments: msg.attachments
-                }
-              });
+          if (messages.length === 0) {
+            continue;
           }
           
-          syncedCount++;
+          // Get participant name from first message or chat subject
+          const firstMessage = messages[0];
+          let participantName = chat.name || chat.subject || 'LinkedIn User';
+          
+          // Try to get attendee info if available
+          if (chat.attendee_provider_id) {
+            // For now, use the chat name or extract from message
+            participantName = chat.name || chat.subject || participantName;
+          }
+          
+          // Save conversation
+          const { data: savedConv, error: convError } = await supabase
+            .from('inbox_conversations')
+            .upsert({
+              workspace_id: workspace.id,
+              platform: 'linkedin',
+              platform_conversation_id: chat.id,
+              participant_name: participantName,
+              participant_company: '',
+              participant_avatar_url: '',
+              status: chat.unread_count > 0 ? 'unread' : 'active',
+              last_message_at: chat.timestamp || new Date().toISOString(),
+              metadata: {
+                account_id: account.id,
+                account_name: account.name,
+                chat_type: chat.content_type,
+                unread_count: chat.unread_count,
+                attendee_id: chat.attendee_provider_id
+              }
+            })
+            .select()
+            .single();
+
+          if (!convError && savedConv) {
+            // Save messages
+            for (const msg of messages) {
+              await supabase
+                .from('inbox_messages')
+                .upsert({
+                  conversation_id: savedConv.id,
+                  platform_message_id: msg.id,
+                  role: msg.is_sender ? 'user' : 'assistant',
+                  content: msg.text || '',
+                  metadata: {
+                    sender_id: msg.sender_id,
+                    message_type: msg.message_type,
+                    subject: msg.subject,
+                    timestamp: msg.timestamp,
+                    attachments: msg.attachments
+                  }
+                });
+            }
+            
+            syncedCount++;
+            console.log(`✅ Synced chat: ${participantName}`);
+          }
+        } catch (chatError) {
+          console.error(`Error syncing chat ${chat.id}:`, chatError);
         }
       }
 
@@ -600,10 +635,8 @@ export class UnipileRealTimeSync {
   /**
    * Fetch messages for a conversation/chat
    */
-  private async fetchMessages(accountId: string, chatId: string): Promise<UnipileMessage[]> {
+  private async fetchMessages(accountId: string, chatId: string): Promise<any[]> {
     try {
-      console.log(`🔍 Fetching messages for chat: ${chatId}`);
-      
       // Unipile uses /messages endpoint with chat_id as query param
       const url = `${this.baseUrl}/messages?chat_id=${chatId}&limit=100`;
       
@@ -615,24 +648,13 @@ export class UnipileRealTimeSync {
           'Content-Type': 'application/json'
         }
       });
-
-      console.log(`📊 Messages response status: ${response.status}`);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to fetch messages:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText
-        });
         return [];
       }
 
       const data = await response.json();
-      console.log(`✅ Received messages data for chat ${chatId}:`, data);
-      
-      const messages = data.items || data.messages || data || [];
-      console.log(`📬 Found ${messages.length} messages`);
+      const messages = data.items || [];
       
       return messages;
     } catch (error) {
