@@ -43,6 +43,7 @@ import LinkedInAccountSetup from "./pages/LinkedInAccountSetup";
 import LinkedInAccountManager from "./pages/LinkedInAccountManager";
 import LinkedInDiagnostic from "./pages/LinkedInDiagnostic";
 import LinkedInOnboarding from "./pages/LinkedInOnboarding";
+import ContactSyncTest from "./pages/ContactSyncTest";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const App: React.FC = () => {
                 <Route path="campaigns" element={<Campaigns />} />
                 <Route path="contacts" element={<ContactsView />} />
                 <Route path="contacts-old" element={<Contacts />} />
+                <Route path="test-sync" element={<ContactSyncTest />} />
                 <Route path="inbox" element={<GlobalInbox />} />
                 <Route path="templates" element={<Templates />} />
                 <Route path="analytics" element={<Analytics />} />
