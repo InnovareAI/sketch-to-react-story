@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from '@/integrations/supabase/client';
 import { ContactsListView } from "@/components/contacts/ContactsListView";
 import { contactMessageSync } from '@/services/unipile/ContactMessageSync';
+import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { toast } from 'sonner';
 import { 
   Mail, 
@@ -62,6 +63,7 @@ export default function Contacts() {
   const [filterEngagement, setFilterEngagement] = useState<string>("all");
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [backgroundSyncEnabled, setBackgroundSyncEnabled] = useState(false);
   const { contacts, stats, loading, error, refreshData, createContact, updateContact, deleteContact } = useRealContacts();
 
   // Filter contacts based on search and filters
@@ -210,22 +212,38 @@ export default function Contacts() {
 
       toast.info('Starting LinkedIn contacts sync...');
       
-      // Sync contacts from LinkedIn
-      const result = await contactMessageSync.syncContactsAndMessages(
-        accountId,
-        workspaceId,
-        {
-          syncContacts: true,
-          syncMessages: false, // Only sync contacts for this page
-          contactLimit: 1000,
-          onlyFirstDegree: false
+      // Check if background sync is enabled
+      const syncStatus = await backgroundSyncManager.getSyncStatus(workspaceId);
+      
+      if (!syncStatus?.isEnabled) {
+        // Enable background sync for continuous syncing
+        const enableResult = await backgroundSyncManager.enableBackgroundSync(
+          workspaceId,
+          accountId,
+          30, // Sync every 30 minutes
+          'both' // Sync both contacts and messages
+        );
+        
+        if (enableResult.success) {
+          setBackgroundSyncEnabled(true);
+          toast.success('Background sync enabled! Your contacts will sync automatically every 30 minutes, even when you leave this page.');
         }
-      );
-
-      if (result.errors.length > 0) {
-        toast.warning(`Synced ${result.contactsSynced} contacts with ${result.errors.length} errors`);
       } else {
-        toast.success(`Successfully synced ${result.contactsSynced} LinkedIn contacts (${result.firstDegreeContacts} are 1st degree connections)`);
+        // Trigger immediate sync
+        const syncResult = await backgroundSyncManager.triggerImmediateSync(
+          workspaceId,
+          accountId,
+          'contacts'
+        );
+        
+        if (syncResult.success && syncResult.data) {
+          const { contactsSynced, errors } = syncResult.data;
+          if (errors && errors.length > 0) {
+            toast.warning(`Synced ${contactsSynced} contacts with ${errors.length} errors`);
+          } else {
+            toast.success(`Successfully synced ${contactsSynced} LinkedIn contacts`);
+          }
+        }
       }
 
       // Refresh the contacts list
@@ -237,6 +255,42 @@ export default function Contacts() {
       setIsSyncing(false);
     }
   };
+
+  // Check background sync status on mount
+  useEffect(() => {
+    const checkSyncStatus = async () => {
+      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+      const workspaceId = userProfile.workspace_id || localStorage.getItem('workspace_id');
+      
+      if (workspaceId) {
+        const status = await backgroundSyncManager.getSyncStatus(workspaceId);
+        setBackgroundSyncEnabled(status?.isEnabled || false);
+      }
+    };
+    
+    checkSyncStatus();
+    
+    // Listen for sync status updates
+    const handleSyncStatusUpdate = (event: CustomEvent) => {
+      const status = event.detail;
+      setBackgroundSyncEnabled(status.isEnabled);
+      
+      // Show notification if sync just completed
+      if (status.recentSyncs && status.recentSyncs.length > 0) {
+        const latestSync = status.recentSyncs[0];
+        if (new Date(latestSync.synced_at).getTime() > Date.now() - 60000) {
+          toast.info(`Background sync completed: ${latestSync.contacts_synced} contacts, ${latestSync.messages_synced} messages`);
+          refreshData();
+        }
+      }
+    };
+    
+    window.addEventListener('linkedin-sync-status', handleSyncStatusUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('linkedin-sync-status', handleSyncStatusUpdate as EventListener);
+    };
+  }, [refreshData]);
 
   const processImport = async () => {
     if (!csvFile) return;
@@ -314,17 +368,22 @@ export default function Contacts() {
                   variant="outline" 
                   onClick={handleLinkedInSync} 
                   disabled={isSyncing}
-                  className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                  className={backgroundSyncEnabled ? "bg-green-50 hover:bg-green-100 border-green-200" : "bg-blue-50 hover:bg-blue-100 border-blue-200"}
                 >
                   {isSyncing ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                       Syncing...
                     </>
+                  ) : backgroundSyncEnabled ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Sync Now (Auto-sync ON)
+                    </>
                   ) : (
                     <>
                       <Linkedin className="h-4 w-4 mr-2" />
-                      Sync LinkedIn
+                      Enable Auto-Sync
                     </>
                   )}
                 </Button>
