@@ -372,7 +372,7 @@ export default function GlobalInbox() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Global Inbox</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Inbox</h1>
           <p className="text-gray-600 mt-1">Manage all your conversations across channels</p>
         </div>
         <div className="flex gap-2">
@@ -383,7 +383,7 @@ export default function GlobalInbox() {
             title="Sync all LinkedIn messages from Unipile API"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Sync LinkedIn Inbox
+            Sync LinkedIn
           </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { realLinkedInSync } from '@/services/linkedin/RealLinkedInSync';
+import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { toast } from 'sonner';
 import { 
   Search, 
@@ -73,7 +73,7 @@ export default function ContactsView() {
       if (error) throw error;
       
       setContacts(data || []);
-      console.log(`Loaded ${data?.length || 0} contacts`);
+      // No console logs for clean UX
       
     } catch (error) {
       console.error('Error loading contacts:', error);
@@ -87,16 +87,23 @@ export default function ContactsView() {
     setSyncing(true);
     try {
       // Check if API is configured
-      if (!realLinkedInSync.isConfigured()) {
-        toast.error('Unipile API not configured. Please configure in Netlify environment.');
+      if (!unipileRealTimeSync.isConfigured()) {
+        toast.error('LinkedIn sync not configured. Please check settings.');
         setSyncing(false);
         return;
       }
       
-      const count = await realLinkedInSync.syncContacts();
-      if (count > 0) {
-        toast.success(`Synced ${count} contacts from LinkedIn`);
+      toast.info('Syncing LinkedIn connections...');
+      
+      // Sync all data including contacts
+      await unipileRealTimeSync.syncAll();
+      const status = unipileRealTimeSync.getStatus();
+      
+      if (status.contactsSynced > 0) {
+        toast.success(`Synced ${status.contactsSynced} LinkedIn connections`);
         await loadContacts();
+      } else if (status.messagessynced > 0) {
+        toast.info(`Synced ${status.messagessynced} messages. Contacts sync pending.`);
       } else {
         toast.info('No new contacts found in LinkedIn');
       }
