@@ -90,6 +90,7 @@ export default function FollowUps() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [showScheduleMeeting, setShowScheduleMeeting] = useState(false);
   const [selectedFollowUp, setSelectedFollowUp] = useState<FollowUp | null>(null);
+  const [showResponseModal, setShowResponseModal] = useState(false);
   
   // Meeting scheduler state
   const [meetingTitle, setMeetingTitle] = useState('');
@@ -97,6 +98,14 @@ export default function FollowUps() {
   const [meetingDate, setMeetingDate] = useState<Date | undefined>();
   const [meetingDuration, setMeetingDuration] = useState('30');
   const [attendeeEmails, setAttendeeEmails] = useState('');
+  
+  // Response modal state
+  const [responseMessage, setResponseMessage] = useState('');
+  const [reminderDate, setReminderDate] = useState<Date | undefined>();
+  const [createTask, setCreateTask] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskPriority, setTaskPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     loadFollowUps();
@@ -223,6 +232,93 @@ export default function FollowUps() {
     } catch (error) {
       console.error('Error scheduling meeting:', error);
       toast.error('Failed to schedule meeting');
+    }
+  };
+
+  // Response modal functions
+  const openResponseModal = (followUp: FollowUp) => {
+    setSelectedFollowUp(followUp);
+    setResponseMessage(`Hi ${followUp.metadata?.from || 'there'},\n\n`);
+    setShowResponseModal(true);
+  };
+
+  const handleSendResponse = async () => {
+    if (!responseMessage.trim() || !selectedFollowUp) {
+      toast.error('Please enter a message');
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      // 1. Update the follow-up status to 'sent'
+      await supabase
+        .from('follow_ups')
+        .update({
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          metadata: {
+            ...selectedFollowUp.metadata,
+            response_sent: true,
+            response_content: responseMessage
+          }
+        })
+        .eq('id', selectedFollowUp.id);
+
+      // 2. Create a new follow-up if reminder is set
+      if (reminderDate) {
+        await supabase
+          .from('follow_ups')
+          .insert({
+            workspace_id: selectedFollowUp.workspace_id,
+            conversation_id: selectedFollowUp.conversation_id,
+            content: `Follow-up reminder: ${taskTitle || 'Check response from ' + (selectedFollowUp.metadata?.from || 'contact')}`,
+            scheduled_at: reminderDate.toISOString(),
+            status: 'scheduled',
+            priority: taskPriority,
+            tags: ['reminder', ...selectedFollowUp.tags],
+            reminder_enabled: true,
+            contact_info: selectedFollowUp.contact_info,
+            metadata: {
+              ...selectedFollowUp.metadata,
+              is_reminder: true,
+              original_follow_up_id: selectedFollowUp.id
+            }
+          });
+      }
+
+      // 3. Create task if requested (simulated for demo)
+      if (createTask && taskTitle) {
+        console.log('Creating task:', { title: taskTitle, priority: taskPriority });
+        toast.success(`Task created: ${taskTitle}`);
+      }
+
+      // 4. Simulate message sending (in real app, this would integrate with LinkedIn/email)
+      console.log('Sending message:', {
+        to: selectedFollowUp.metadata?.from,
+        content: responseMessage,
+        platform: selectedFollowUp.metadata?.channel || 'linkedin'
+      });
+
+      toast.success('Response sent successfully!');
+      
+      // Reset form and close modal
+      setShowResponseModal(false);
+      setResponseMessage('');
+      setReminderDate(undefined);
+      setCreateTask(false);
+      setTaskTitle('');
+      setTaskPriority('normal');
+      setSelectedFollowUp(null);
+      
+      // Reload follow-ups to show updated status
+      loadFollowUps();
+
+    } catch (error) {
+      console.error('Error sending response:', error);
+      toast.error('Failed to send response');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -406,6 +502,15 @@ export default function FollowUps() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => openResponseModal(followUp)}
+                          disabled={followUp.status === 'sent'}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          {followUp.status === 'sent' ? 'Sent' : 'Respond'}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -604,6 +709,160 @@ export default function FollowUps() {
             <Button onClick={handleScheduleMeeting}>
               <Send className="h-4 w-4 mr-2" />
               Schedule Meeting
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Response Modal */}
+      <Dialog open={showResponseModal} onOpenChange={setShowResponseModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Respond to Follow-up
+            </DialogTitle>
+            <DialogDescription>
+              Send a response to {selectedFollowUp?.metadata?.from || 'this contact'} and set up reminders or tasks
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Response Message */}
+            <div className="space-y-2">
+              <Label>Your Response</Label>
+              <Textarea
+                value={responseMessage}
+                onChange={(e) => setResponseMessage(e.target.value)}
+                placeholder="Type your response message here..."
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-gray-500">
+                This message will be sent via {selectedFollowUp?.metadata?.channel || 'LinkedIn'}
+              </p>
+            </div>
+
+            {/* Reminder Section */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <Label>Set Reminder (Optional)</Label>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {reminderDate ? format(reminderDate, 'PPP p') : 'Set reminder date & time'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={reminderDate}
+                    onSelect={setReminderDate}
+                    initialFocus
+                  />
+                  {reminderDate && (
+                    <div className="p-3 border-t">
+                      <Input
+                        type="time"
+                        value={reminderDate ? format(reminderDate, 'HH:mm') : ''}
+                        onChange={(e) => {
+                          if (reminderDate) {
+                            const [hours, minutes] = e.target.value.split(':');
+                            const newDate = new Date(reminderDate);
+                            newDate.setHours(parseInt(hours), parseInt(minutes));
+                            setReminderDate(newDate);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+              {reminderDate && (
+                <p className="text-xs text-gray-600">
+                  A reminder follow-up will be created for {format(reminderDate, 'PPP p')}
+                </p>
+              )}
+            </div>
+
+            {/* Task Creation Section */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="create-task"
+                  checked={createTask}
+                  onChange={(e) => setCreateTask(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="create-task" className="flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  Create Task
+                </Label>
+              </div>
+              
+              {createTask && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Task Title</Label>
+                    <Input
+                      value={taskTitle}
+                      onChange={(e) => setTaskTitle(e.target.value)}
+                      placeholder="e.g., Follow up on proposal response"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Task Priority</Label>
+                    <Select value={taskPriority} onValueChange={(value: any) => setTaskPriority(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low Priority</SelectItem>
+                        <SelectItem value="normal">Normal Priority</SelectItem>
+                        <SelectItem value="high">High Priority</SelectItem>
+                        <SelectItem value="urgent">Urgent Priority</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Preview Info */}
+            {selectedFollowUp && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-sm text-gray-600">
+                  <strong>Sending to:</strong> {selectedFollowUp.metadata?.from || 'Contact'} 
+                  {selectedFollowUp.metadata?.company && ` at ${selectedFollowUp.metadata.company}`}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Platform:</strong> {selectedFollowUp.metadata?.channel || 'LinkedIn'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowResponseModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendResponse} disabled={sending || !responseMessage.trim()}>
+              {sending ? (
+                <>
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Response
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
