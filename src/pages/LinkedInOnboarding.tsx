@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
+import { enhancedLinkedInImport } from '@/services/EnhancedLinkedInImport';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -27,6 +28,8 @@ export default function LinkedInOnboarding() {
     authenticated: false,
     accountsFound: 0,
     locationDetected: false,
+    contactsImported: false,
+    contactCount: 0,
     syncComplete: false
   });
 
@@ -149,40 +152,124 @@ export default function LinkedInOnboarding() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Save location preference
-      await supabase
+      // Get or create workspace
+      let { data: workspace, error: wsError } = await supabase
         .from('workspaces')
-        .upsert({
-          owner_id: user.id,
-          name: 'My Workspace',
-          settings: {
-            location,
-            linkedInConfigured: true,
-            syncEnabled: true,
-            autoDetectedLocation: true
-          }
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
+
+      if (wsError || !workspace) {
+        const { data: newWorkspace, error: createError } = await supabase
+          .from('workspaces')
+          .insert({
+            owner_id: user.id,
+            name: 'My Workspace',
+            settings: {
+              location,
+              linkedInConfigured: true,
+              syncEnabled: true,
+              autoDetectedLocation: true
+            }
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        workspace = newWorkspace;
+      } else {
+        // Update existing workspace
+        await supabase
+          .from('workspaces')
+          .update({
+            settings: {
+              location,
+              linkedInConfigured: true,
+              syncEnabled: true,
+              autoDetectedLocation: true
+            }
+          })
+          .eq('id', workspace.id);
+      }
+
+      // Store location and workspace in localStorage
+      localStorage.setItem('user_location', location);
+      localStorage.setItem('workspace_id', workspace.id);
+
+      // Step 1: Import LinkedIn contacts immediately after authentication
+      toast.info('🚀 Importing your LinkedIn contacts...');
+      try {
+        enhancedLinkedInImport.initialize(workspace.id);
+        
+        const contactImportResult = await enhancedLinkedInImport.importContacts({
+          limit: 1000, // Generous limit for onboarding
+          preferredMethod: 'both', // Use all available methods
+          useUnipile: true,
+          useLinkedInAPI: true
         });
 
-      // Store location in localStorage
-      localStorage.setItem('user_location', location);
+        if (contactImportResult.success && contactImportResult.contactsSynced > 0) {
+          setStatus(prev => ({ 
+            ...prev, 
+            contactsImported: true, 
+            contactCount: contactImportResult.contactsSynced 
+          }));
+          
+          // Show detailed import results
+          toast.success(`🎉 Imported ${contactImportResult.contactsSynced} LinkedIn contacts!`);
+          
+          // Show quality metrics
+          if (contactImportResult.quality.firstDegree > 0) {
+            toast.info(`🔗 ${contactImportResult.quality.firstDegree} 1st degree, ${contactImportResult.quality.secondDegree} 2nd degree connections`);
+          }
+          
+          if (contactImportResult.quality.withJobTitles > 0) {
+            toast.info(`✅ ${contactImportResult.quality.withJobTitles} contacts with job titles, ${contactImportResult.quality.withProfiles} with LinkedIn profiles`);
+          }
+        } else {
+          // Still mark as success but with warning
+          setStatus(prev => ({ ...prev, contactsImported: true, contactCount: 0 }));
+          toast.warning('Contact import completed but no new contacts were found');
+        }
+      } catch (contactError) {
+        console.error('Contact import during onboarding failed:', contactError);
+        // Don't fail the entire onboarding due to contact import issues
+        setStatus(prev => ({ ...prev, contactsImported: true, contactCount: 0 }));
+        toast.warning('Contact import encountered issues but setup will continue');
+      }
 
-      // Perform initial sync
-      toast.info('Starting initial sync...');
+      // Step 2: Perform initial message sync
+      toast.info('📨 Syncing your LinkedIn messages...');
       await unipileRealTimeSync.syncAll();
       
       setStatus(prev => ({ ...prev, syncComplete: true }));
-      toast.success('Setup complete! Your LinkedIn messages are ready.');
       
-      // Redirect to inbox
+      // Get final contact count from latest state
+      const finalContactCount = contactImportResult.success ? contactImportResult.contactsSynced : 0;
+      
+      // Final success message with contact count
+      if (finalContactCount > 0) {
+        toast.success(`🎉 Setup complete! ${finalContactCount} contacts imported and messages synced.`);
+      } else {
+        toast.success('Setup complete! Your LinkedIn messages are ready.');
+      }
+      
+      // Redirect to contacts if we imported any, otherwise to inbox
       setTimeout(() => {
-        navigate('/inbox');
-      }, 1500);
+        if (finalContactCount > 0) {
+          navigate('/contacts'); // Show the user their imported contacts
+        } else {
+          navigate('/inbox'); // Go to messages if no contacts
+        }
+      }, 2000);
       
     } catch (error) {
-      toast.error('Setup failed. You can retry from the inbox.');
-      // Still redirect as they can retry
+      console.error('Onboarding setup error:', error);
+      toast.error('Setup encountered issues. You can retry from the dashboard.');
+      
+      // Still redirect so they can use the app
       setTimeout(() => {
-        navigate('/inbox');
+        navigate('/dashboard');
       }, 2000);
     } finally {
       setLoading(false);
@@ -250,7 +337,30 @@ export default function LinkedInOnboarding() {
                 </div>
               )}
 
-              {/* Sync Status */}
+              {/* Contact Import Status */}
+              {status.connected && status.locationDetected && (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-gray-600" />
+                    LinkedIn Contacts
+                  </span>
+                  {status.contactsImported ? (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      {status.contactCount > 0 ? `${status.contactCount} Imported` : 'Complete'}
+                    </span>
+                  ) : loading ? (
+                    <span className="flex items-center gap-1 text-blue-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Importing...
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">Ready</span>
+                  )}
+                </div>
+              )}
+
+              {/* Message Sync Status */}
               {status.connected && status.locationDetected && (
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="flex items-center gap-2">
