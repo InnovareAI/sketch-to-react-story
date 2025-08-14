@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
+import { serverLinkedInImport } from '@/services/ServerLinkedInImport';
 import { toast } from 'sonner';
 import { 
   Search, 
@@ -219,6 +220,100 @@ export default function ContactsView() {
     }
   };
 
+  const handleServerSync = async () => {
+    setSyncing(true);
+    console.log('🔍 DEBUG: Starting Server-Side LinkedIn Import');
+    console.log('═'.repeat(60));
+    
+    try {
+      // Get user and workspace info
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('❌ User authentication failed:', userError);
+        toast.error('Please sign in to start server import');
+        return;
+      }
+      
+      console.log('✅ User authenticated:', user.email);
+      
+      // Get workspace ID
+      let { data: workspace, error: wsError } = await supabase
+        .from('workspaces')
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
+        
+      if (wsError || !workspace) {
+        console.log('⚠️ No workspace found, using default');
+        workspace = { id: 'a0000000-0000-0000-0000-000000000000' };
+      }
+      
+      console.log('✅ Using workspace:', workspace.id);
+      
+      // Check server availability
+      toast.info('🔍 Checking server availability...');
+      const availability = await serverLinkedInImport.checkServerAvailability();
+      
+      if (!availability.available) {
+        console.error('❌ Server import not available:', availability.error);
+        toast.error(`Server import not available: ${availability.error || 'Unknown error'}`);
+        return;
+      }
+      
+      console.log('✅ Server import available');
+      
+      // Initialize server import
+      serverLinkedInImport.initialize(workspace.id);
+      
+      // Show server import advantages
+      const importInfo = serverLinkedInImport.getImportInfo();
+      toast.info('🖥️ Starting server-side import - continues even if you close the browser!', {
+        duration: 6000
+      });
+      
+      console.log('🚀 Server import advantages:', importInfo.advantages);
+      
+      // Start server import with progress tracking
+      const result = await serverLinkedInImport.startImport({
+        limit: 500,
+        method: 'both',
+        onProgress: (progress) => {
+          console.log(`📊 Server import progress: ${progress.status} - ${progress.message}`);
+          
+          switch (progress.status) {
+            case 'starting':
+              toast.info(progress.message);
+              break;
+            case 'running':
+              toast.info(`🔄 ${progress.message}${progress.progress ? ` (${progress.progress}%)` : ''}`);
+              break;
+            case 'completed':
+              toast.success(progress.message);
+              break;
+            case 'failed':
+              toast.error(progress.message);
+              break;
+          }
+        }
+      });
+      
+      console.log('📊 Server import final result:', result);
+      
+      if (result.success) {
+        console.log('✅ Server import successful, refreshing contacts...');
+        await loadContacts();
+      }
+      
+    } catch (error) {
+      console.error('❌ Server sync error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Server import failed: ${errorMessage}. Check console for details.`);
+    } finally {
+      console.log('🏁 Server import process completed');
+      setSyncing(false);
+    }
+  };
+
   const handleSelectAll = () => {
     if (selectedContacts.length === filteredContacts.length) {
       setSelectedContacts([]);
@@ -310,12 +405,20 @@ export default function ContactsView() {
         </div>
         <div className="flex gap-3">
           <button
+            onClick={handleServerSync}
+            disabled={syncing}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            Server Sync LinkedIn
+          </button>
+          <button
             onClick={handleSync}
             disabled={syncing}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Sync LinkedIn
+            Browser Sync LinkedIn
           </button>
           <button
             onClick={async () => {
@@ -422,15 +525,23 @@ export default function ContactsView() {
           <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
           <p className="text-gray-600 mb-4">
-            {searchTerm ? 'Try adjusting your search criteria' : 'Click "Sync LinkedIn" to import contacts'}
+            {searchTerm ? 'Try adjusting your search criteria' : 'Click "Server Sync LinkedIn" for reliable background import'}
           </p>
           {!searchTerm && (
-            <button
-              onClick={handleSync}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              Sync LinkedIn Contacts
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={handleServerSync}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+              >
+                Server Sync LinkedIn
+              </button>
+              <button
+                onClick={handleSync}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                Browser Sync LinkedIn
+              </button>
+            </div>
           )}
         </div>
       ) : (
