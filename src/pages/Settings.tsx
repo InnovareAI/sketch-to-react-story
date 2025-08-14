@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,7 @@ interface Workspace {
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { user: authUser, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -127,38 +129,50 @@ export default function Settings() {
     try {
       setLoading(true);
       
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Check if user is authenticated (works for both bypass and regular auth)
+      if (!isAuthenticated || !authUser) {
+        console.log('No authenticated user found, redirecting to login');
         navigate('/login');
         return;
       }
       
-      // Load user profile
+      console.log('Loading settings for user:', authUser.email);
+      
+      // Load user profile using authUser (works for both bypass and regular auth)
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', authUser.id)
         .single();
       
-      if (profile) {
-        setUserProfile(profile);
-        setPersonalForm({
-          full_name: profile.full_name || '',
-          email: profile.email || '',
-          avatar_url: profile.avatar_url || '',
-          notifications_enabled: profile.settings?.notifications_enabled ?? true,
-          profile_visibility: profile.settings?.profile_visibility || 'public',
-          data_sharing: profile.settings?.data_sharing ?? false
-        });
-      }
+      // Use profile data if available, otherwise use authUser data
+      const profileData = profile || {
+        id: authUser.id,
+        email: authUser.email,
+        full_name: authUser.full_name,
+        avatar_url: authUser.avatar_url,
+        role: authUser.role,
+        workspace_id: authUser.workspace_id,
+        settings: {}
+      };
       
-      // Load workspace
-      if (profile?.workspace_id) {
+      setUserProfile(profileData);
+      setPersonalForm({
+        full_name: profileData.full_name || '',
+        email: profileData.email || '',
+        avatar_url: profileData.avatar_url || '',
+        notifications_enabled: profileData.settings?.notifications_enabled ?? true,
+        profile_visibility: profileData.settings?.profile_visibility || 'public',
+        data_sharing: profileData.settings?.data_sharing ?? false
+      });
+      
+      // Load workspace using either profile or authUser workspace_id
+      const workspaceId = profileData.workspace_id;
+      if (workspaceId) {
         const { data: ws } = await supabase
           .from('workspaces')
           .select('*')
-          .eq('id', profile.workspace_id)
+          .eq('id', workspaceId)
           .single();
         
         if (ws) {
@@ -192,7 +206,7 @@ export default function Settings() {
         const { data: members } = await supabase
           .from('profiles')
           .select('*')
-          .eq('workspace_id', profile.workspace_id)
+          .eq('workspace_id', workspaceId)
           .order('created_at', { ascending: false });
         
         setTeamMembers(members || []);
@@ -309,6 +323,13 @@ export default function Settings() {
     try {
       if (passwordForm.new !== passwordForm.confirm) {
         toast.error('Passwords do not match');
+        return;
+      }
+      
+      // Check if this is a bypass user
+      const isBypassUser = localStorage.getItem('bypass_auth') === 'true';
+      if (isBypassUser) {
+        toast.error('Password changes are not available for bypass authentication users');
         return;
       }
       
@@ -529,6 +550,14 @@ export default function Settings() {
                   {/* Password Change */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Change Password</h3>
+                    {localStorage.getItem('bypass_auth') === 'true' && (
+                      <Alert>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          Password changes are not available for bypass authentication users. Contact your administrator for password management.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="current_password">Current Password</Label>
@@ -538,6 +567,8 @@ export default function Settings() {
                             type={showPassword ? "text" : "password"}
                             value={passwordForm.current}
                             onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
+                            disabled={localStorage.getItem('bypass_auth') === 'true'}
+                            className={localStorage.getItem('bypass_auth') === 'true' ? 'bg-gray-100' : ''}
                           />
                         </div>
                       </div>
@@ -548,6 +579,8 @@ export default function Settings() {
                           type={showPassword ? "text" : "password"}
                           value={passwordForm.new}
                           onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
+                          disabled={localStorage.getItem('bypass_auth') === 'true'}
+                          className={localStorage.getItem('bypass_auth') === 'true' ? 'bg-gray-100' : ''}
                         />
                       </div>
                       <div className="space-y-2">
@@ -558,6 +591,8 @@ export default function Settings() {
                             type={showPassword ? "text" : "password"}
                             value={passwordForm.confirm}
                             onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+                            disabled={localStorage.getItem('bypass_auth') === 'true'}
+                            className={localStorage.getItem('bypass_auth') === 'true' ? 'bg-gray-100' : ''}
                           />
                           <Button
                             type="button"
@@ -565,13 +600,17 @@ export default function Settings() {
                             size="sm"
                             className="absolute right-0 top-0 h-full px-3"
                             onClick={() => setShowPassword(!showPassword)}
+                            disabled={localStorage.getItem('bypass_auth') === 'true'}
                           >
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </Button>
                         </div>
                       </div>
                     </div>
-                    <Button onClick={changePassword} disabled={saving}>
+                    <Button 
+                      onClick={changePassword} 
+                      disabled={saving || localStorage.getItem('bypass_auth') === 'true'}
+                    >
                       <Lock className="h-4 w-4 mr-2" />
                       Change Password
                     </Button>
