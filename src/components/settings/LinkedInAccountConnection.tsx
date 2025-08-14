@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Linkedin, 
   Plus, 
@@ -29,7 +31,12 @@ import {
   MapPin,
   ChevronRight,
   ChevronLeft,
-  CheckCircle
+  CheckCircle,
+  UserPlus,
+  Building2,
+  Crown,
+  Settings,
+  Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { unipileService, LinkedInAccountData } from '@/services/unipile/UnipileService';
@@ -79,6 +86,21 @@ export function LinkedInAccountConnection() {
   const [showProxyUpdate, setShowProxyUpdate] = useState<string | null>(null);
   const [manualSyncType, setManualSyncType] = useState<'standard' | 'preview' | 'smart'>('standard');
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // CPR Workers management state
+  const [showCPRWorkerForm, setShowCPRWorkerForm] = useState(false);
+  const [cprWorkerForm, setCprWorkerForm] = useState({
+    name: '',
+    email: '',
+    profileUrl: '',
+    proxyLocation: 'PH',
+    specialization: '',
+    hourlyRate: '',
+    workingHours: '',
+    description: ''
+  });
+  const [addingCPRWorker, setAddingCPRWorker] = useState(false);
+  const [cprWorkers, setCprWorkers] = useState<LinkedInAccountData[]>([]);
   
   // Rate limit monitoring
   const activeAccountId = accounts.length > 0 ? accounts[0].unipileAccountId : undefined;
@@ -651,6 +673,104 @@ export function LinkedInAccountConnection() {
     }
   };
 
+  // Check if user is admin (can manage CPR workers)
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+
+  // Handle adding CPR worker account
+  const handleAddCPRWorker = async () => {
+    if (!isAdmin) {
+      toast.error('Only admins can add CPR worker accounts');
+      return;
+    }
+
+    if (!cprWorkerForm.name || !cprWorkerForm.email) {
+      toast.error('Please fill in at least name and email');
+      return;
+    }
+
+    setAddingCPRWorker(true);
+    try {
+      // Create CPR worker account data
+      const cprWorkerAccount: LinkedInAccountData = {
+        id: crypto.randomUUID?.() || `cpr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        provider: 'LINKEDIN',
+        email: cprWorkerForm.email,
+        name: cprWorkerForm.name,
+        profileUrl: cprWorkerForm.profileUrl || `https://linkedin.com/in/${cprWorkerForm.email.split('@')[0]}`,
+        status: 'active',
+        unipileAccountId: `cpr_${cprWorkerForm.email.replace('@', '_').replace('.', '_')}`,
+        metadata: {
+          proxy_location: cprWorkerForm.proxyLocation,
+          account_type: 'cpr_worker',
+          specialization: cprWorkerForm.specialization,
+          hourly_rate: cprWorkerForm.hourlyRate,
+          working_hours: cprWorkerForm.workingHours,
+          description: cprWorkerForm.description,
+          added_by: user?.email,
+          added_at: new Date().toISOString(),
+          headline: `${cprWorkerForm.specialization ? cprWorkerForm.specialization + ' - ' : ''}CPR Worker`,
+          location: proxyLocations.find(l => l.code === cprWorkerForm.proxyLocation)?.name || 'Philippines'
+        }
+      };
+
+      // Add to CPR workers list
+      const updatedCPRWorkers = [...cprWorkers, cprWorkerAccount];
+      setCprWorkers(updatedCPRWorkers);
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('cpr_workers', JSON.stringify(updatedCPRWorkers));
+      
+      // Save to Supabase team accounts
+      await saveToSupabase(cprWorkerAccount);
+      
+      // Reset form
+      setCprWorkerForm({
+        name: '',
+        email: '',
+        profileUrl: '',
+        proxyLocation: 'PH',
+        specialization: '',
+        hourlyRate: '',
+        workingHours: '',
+        description: ''
+      });
+      setShowCPRWorkerForm(false);
+      
+      toast.success(`CPR worker ${cprWorkerForm.name} added successfully!`);
+    } catch (error) {
+      console.error('Error adding CPR worker:', error);
+      toast.error('Failed to add CPR worker: ' + (error as Error).message);
+    } finally {
+      setAddingCPRWorker(false);
+    }
+  };
+
+  // Load CPR workers from localStorage on component mount
+  useEffect(() => {
+    const savedCPRWorkers = localStorage.getItem('cpr_workers');
+    if (savedCPRWorkers) {
+      setCprWorkers(JSON.parse(savedCPRWorkers));
+    }
+  }, []);
+
+  // Remove CPR worker
+  const removeCPRWorker = async (workerId: string) => {
+    if (!isAdmin) {
+      toast.error('Only admins can remove CPR worker accounts');
+      return;
+    }
+
+    try {
+      const updatedCPRWorkers = cprWorkers.filter(worker => worker.id !== workerId);
+      setCprWorkers(updatedCPRWorkers);
+      localStorage.setItem('cpr_workers', JSON.stringify(updatedCPRWorkers));
+      toast.success('CPR worker removed successfully');
+    } catch (error) {
+      console.error('Error removing CPR worker:', error);
+      toast.error('Failed to remove CPR worker');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Rate Limit Warning */}
@@ -1168,6 +1288,235 @@ export function LinkedInAccountConnection() {
               </Alert>
             </CardContent>
           </Card>
+          
+          {/* CPR Workers Management - Only for Admins */}
+          {isAdmin && (
+            <Card className="mt-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5" />
+                      CPR Workers Accounts
+                      <Badge variant="outline">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Admin Only
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      Add and manage LinkedIn accounts from CPR (Customer Profile Research) workers
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => setShowCPRWorkerForm(true)}
+                    variant="outline"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add CPR Worker
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* CPR Workers List */}
+                {cprWorkers.length > 0 ? (
+                  <div className="space-y-3">
+                    {cprWorkers.map((worker) => (
+                      <div key={worker.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-full bg-orange-100 p-2">
+                            <Building2 className="h-5 w-5 text-orange-600" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{worker.name}</h4>
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700">
+                                CPR Worker
+                              </Badge>
+                              {worker.metadata?.proxy_location && (
+                                <span className="text-lg" title={`Location: ${proxyLocations.find(l => l.code === worker.metadata.proxy_location)?.name}`}>
+                                  {proxyLocations.find(l => l.code === worker.metadata.proxy_location)?.flag}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{worker.email}</p>
+                            {worker.metadata?.specialization && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Specializes in: {worker.metadata.specialization}
+                              </p>
+                            )}
+                            {worker.metadata?.working_hours && (
+                              <p className="text-xs text-muted-foreground">
+                                Working hours: {worker.metadata.working_hours}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-100 text-green-800">Active</Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removeCPRWorker(worker.id)}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No CPR workers added yet</p>
+                    <p className="text-sm">Add CPR worker accounts to expand your outreach team</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* CPR Worker Add Form */}
+          {showCPRWorkerForm && isAdmin && (
+            <Card className="mt-4 border-orange-200 bg-orange-50/50">
+              <CardHeader>
+                <CardTitle>Add CPR Worker Account</CardTitle>
+                <CardDescription>
+                  Add a LinkedIn account from a CPR (Customer Profile Research) worker to your team
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert>
+                  <Building2 className="h-4 w-4" />
+                  <AlertDescription>
+                    CPR workers help with lead research and outreach. Add their LinkedIn account details to manage them as part of your team.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="worker-name">Worker Name *</Label>
+                    <Input
+                      id="worker-name"
+                      placeholder="Enter full name"
+                      value={cprWorkerForm.name}
+                      onChange={(e) => setCprWorkerForm({...cprWorkerForm, name: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="worker-email">Email Address *</Label>
+                    <Input
+                      id="worker-email"
+                      type="email"
+                      placeholder="worker@example.com"
+                      value={cprWorkerForm.email}
+                      onChange={(e) => setCprWorkerForm({...cprWorkerForm, email: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="worker-profile">LinkedIn Profile URL</Label>
+                  <Input
+                    id="worker-profile"
+                    placeholder="https://linkedin.com/in/username"
+                    value={cprWorkerForm.profileUrl}
+                    onChange={(e) => setCprWorkerForm({...cprWorkerForm, profileUrl: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="worker-proxy">Location</Label>
+                    <Select 
+                      value={cprWorkerForm.proxyLocation} 
+                      onValueChange={(value) => setCprWorkerForm({...cprWorkerForm, proxyLocation: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {proxyLocations.map(location => (
+                          <SelectItem key={location.code} value={location.code}>
+                            <div className="flex items-center gap-2">
+                              <span>{location.flag}</span>
+                              <span>{location.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="worker-specialization">Specialization</Label>
+                    <Input
+                      id="worker-specialization"
+                      placeholder="e.g. Lead Generation"
+                      value={cprWorkerForm.specialization}
+                      onChange={(e) => setCprWorkerForm({...cprWorkerForm, specialization: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="worker-hours">Working Hours</Label>
+                    <Input
+                      id="worker-hours"
+                      placeholder="e.g. 9 AM - 5 PM PST"
+                      value={cprWorkerForm.workingHours}
+                      onChange={(e) => setCprWorkerForm({...cprWorkerForm, workingHours: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="worker-description">Description (Optional)</Label>
+                  <Textarea
+                    id="worker-description"
+                    placeholder="Additional notes about this CPR worker..."
+                    value={cprWorkerForm.description}
+                    onChange={(e) => setCprWorkerForm({...cprWorkerForm, description: e.target.value})}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowCPRWorkerForm(false);
+                      setCprWorkerForm({
+                        name: '',
+                        email: '',
+                        profileUrl: '',
+                        proxyLocation: 'PH',
+                        specialization: '',
+                        hourlyRate: '',
+                        workingHours: '',
+                        description: ''
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAddCPRWorker}
+                    disabled={addingCPRWorker || !cprWorkerForm.name || !cprWorkerForm.email}
+                  >
+                    {addingCPRWorker ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add CPR Worker
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       ) : (
         <Card>
