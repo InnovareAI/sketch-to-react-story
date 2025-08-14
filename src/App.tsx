@@ -54,42 +54,44 @@ import Onboarding from "./pages/Onboarding";
 import OnboardingCallback from "./pages/OnboardingCallback";
 import UserSetup from "./pages/UserSetup";
 import FollowUps from "./pages/FollowUps";
+import FollowUpRedirect from "./components/FollowUpRedirect";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
-  // Initialize global auto-sync and migrate data when app starts
+  // Initialize demo authentication immediately, then other initialization
   useEffect(() => {
+    // Set up demo authentication IMMEDIATELY (no delay)
+    const setupDemoAuth = () => {
+      if (!localStorage.getItem('is_authenticated')) {
+        console.log('🔧 Setting up demo authentication...');
+        localStorage.setItem('is_authenticated', 'true');
+        localStorage.setItem('demo_workspace_id', 'df5d730f-1915-4269-bd5a-9534478b17af');
+        localStorage.setItem('demo_user_id', 'cc000000-0000-0000-0000-000000000001');
+        
+        const demoProfile = {
+          id: 'cc000000-0000-0000-0000-000000000001',
+          email: 'demo@sameaisalesassistant.com',
+          full_name: 'Demo User',
+          role: 'admin',
+          workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+          workspace_name: 'SAM AI Demo',
+          workspace_plan: 'premium',
+          status: 'active'
+        };
+        
+        localStorage.setItem('user_auth_profile', JSON.stringify(demoProfile));
+        console.log('✅ Demo authentication setup complete');
+      }
+    };
+    
+    // Run auth setup immediately
+    setupDemoAuth();
+    
+    // Then run other initialization with delay
     const initialize = async () => {
-      // Clean any bad UUIDs first (already auto-ran via import)
       console.log('🚀 Starting app initialization...');
-      
-      // Set up demo authentication for development
-      const setupDemoAuth = () => {
-        if (!localStorage.getItem('is_authenticated')) {
-          console.log('🔧 Setting up demo authentication...');
-          localStorage.setItem('is_authenticated', 'true');
-          localStorage.setItem('demo_workspace_id', 'df5d730f-1915-4269-bd5a-9534478b17af');
-          localStorage.setItem('demo_user_id', 'cc000000-0000-0000-0000-000000000001');
-          
-          const demoProfile = {
-            id: 'cc000000-0000-0000-0000-000000000001',
-            email: 'demo@sameaisalesassistant.com',
-            full_name: 'Demo User',
-            role: 'admin',
-            workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-            workspace_name: 'SAM AI Demo',
-            workspace_plan: 'premium',
-            status: 'active'
-          };
-          
-          localStorage.setItem('user_auth_profile', JSON.stringify(demoProfile));
-          console.log('✅ Demo authentication setup complete');
-        }
-      };
-      
-      setupDemoAuth();
       
       // Run comprehensive data migration to user-specific storage
       await initializeDataMigration();
@@ -101,7 +103,7 @@ const App: React.FC = () => {
       await globalAutoSync.initialize();
     };
     
-    // Start after a short delay to ensure auth is ready
+    // Start other initialization after a short delay
     const timer = setTimeout(initialize, 2000);
     
     return () => clearTimeout(timer);
@@ -126,6 +128,7 @@ const App: React.FC = () => {
                 <Route path="/test-inbox" element={<TestInbox />} />
                 <Route path="/inbox-direct" element={<InboxDirect />} />
                 <Route path="/simple-inbox" element={<TestInbox />} />
+                <Route path="/follow-ups-public" element={<FollowUps />} />
                 <Route path="/linkedin-setup" element={<LinkedInAccountSetup />} />
                 <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
                 <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
@@ -149,7 +152,7 @@ const App: React.FC = () => {
                 <Route path="contacts-old" element={<Contacts />} />
                 <Route path="test-sync" element={<ContactSyncTest />} />
                 <Route path="inbox" element={<GlobalInbox />} />
-                <Route path="follow-ups" element={<FollowUps />} />
+                <Route path="follow-ups" element={<FollowUpRedirect />} />
                 <Route path="templates" element={<TemplatesEnhanced />} />
                 <Route path="analytics" element={<Dashboard />} /> {/* Analytics redirects to Dashboard */}
                 
