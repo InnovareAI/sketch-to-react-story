@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { 
   ArrowLeft,
   Target,
@@ -80,7 +81,7 @@ export default function CampaignSetup() {
   const [usePriority, setUsePriority] = useState(false);
   const [startImmediately, setStartImmediately] = useState(true);
   const [scheduledDate, setScheduledDate] = useState<string>("");
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const { workspace, workspaceId } = useWorkspace();
   
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -218,27 +219,13 @@ export default function CampaignSetup() {
 
   // Load workspace on mount
   useEffect(() => {
-    loadWorkspace();
+    // Workspace is now loaded via useWorkspace hook
     if (campaignId) {
       loadCampaign(campaignId);
     }
   }, [campaignId]);
 
-  const loadWorkspace = async () => {
-    try {
-      const { data: workspace } = await supabase
-        .from('workspaces')
-        .select('id')
-        .limit(1)
-        .single();
-      
-      if (workspace) {
-        setWorkspaceId(workspace.id);
-      }
-    } catch (error) {
-      console.error('Error loading workspace:', error);
-    }
-  };
+  // Workspace loading now handled by useWorkspace hook
 
   const loadCampaign = async (id: string) => {
     setLoading(true);
@@ -274,8 +261,15 @@ export default function CampaignSetup() {
   };
 
   const handleSaveCampaign = async () => {
+    console.log('Attempting to save campaign, workspaceId:', workspaceId);
     if (!workspaceId) {
-      toast.error('No workspace found');
+      toast.error('No workspace found. Please try refreshing the page.');
+      console.error('workspaceId is missing:', { workspace, workspaceId });
+      return;
+    }
+    
+    if (!campaignName.trim()) {
+      toast.error('Please enter a campaign name');
       return;
     }
 
@@ -338,7 +332,7 @@ export default function CampaignSetup() {
       }
     } catch (error) {
       console.error('Error saving campaign:', error);
-      toast.error('Failed to save campaign');
+      toast.error(`Failed to save campaign: ${error.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
