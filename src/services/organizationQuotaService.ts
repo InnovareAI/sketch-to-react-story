@@ -52,17 +52,25 @@ export class OrganizationQuotaService {
    * Initialize user quota for current month if it doesn't exist
    */
   private async initializeUserQuota(userId: string, monthYear: string): Promise<void> {
-    const { error } = await supabase
-      .from('user_quota_usage')
-      .insert({
-        user_id: userId,
-        month_year: monthYear,
-        contacts_extracted: 0,
-        contacts_remaining: this.MONTHLY_QUOTA
-      });
+    try {
+      const { error } = await supabase
+        .from('user_quota_usage')
+        .insert({
+          user_id: userId,
+          month_year: monthYear,
+          contacts_extracted: 0,
+          contacts_remaining: this.MONTHLY_QUOTA,
+          workspace_id: null // Explicitly set to null for user-based quotas
+        });
 
-    if (error && !error.message.includes('duplicate')) {
-      throw new Error(`Failed to initialize user quota: ${error.message}`);
+      if (error && !error.message.includes('duplicate')) {
+        console.error('User quota initialization error:', error);
+        // Don't throw error, just log it - quota check will work without initialization
+        console.warn(`Could not initialize quota for user ${userId}: ${error.message}`);
+      }
+    } catch (err) {
+      console.error('Unexpected error initializing user quota:', err);
+      // Don't throw - allow operation to continue without quota initialization
     }
   }
 
@@ -72,16 +80,49 @@ export class OrganizationQuotaService {
   async getUserQuota(userId: string): Promise<UserQuota> {
     const currentMonth = this.getCurrentMonth();
     
-    const { data: quota, error } = await supabase
-      .from('user_quota_usage')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('month_year', currentMonth)
-      .single();
+    try {
+      const { data: quota, error } = await supabase
+        .from('user_quota_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('month_year', currentMonth)
+        .single();
 
-    if (error && error.code === 'PGRST116') {
-      // No quota record exists, create one
-      await this.initializeUserQuota(userId, currentMonth);
+      if (error && error.code === 'PGRST116') {
+        // No quota record exists, try to create one
+        await this.initializeUserQuota(userId, currentMonth);
+        // Return default quota even if initialization fails
+        return {
+          totalQuota: this.MONTHLY_QUOTA,
+          used: 0,
+          remaining: this.MONTHLY_QUOTA,
+          resetDate: this.getNextResetDate(),
+          monthYear: currentMonth
+        };
+      }
+
+      if (error) {
+        console.error('Error fetching user quota:', error);
+        // Return default quota on error to prevent blocking operations
+        return {
+          totalQuota: this.MONTHLY_QUOTA,
+          used: 0,
+          remaining: this.MONTHLY_QUOTA,
+          resetDate: this.getNextResetDate(),
+          monthYear: currentMonth
+        };
+      }
+
+      return {
+        totalQuota: this.MONTHLY_QUOTA,
+        used: quota?.contacts_extracted || 0,
+        remaining: Math.max(0, quota?.contacts_remaining || this.MONTHLY_QUOTA),
+        resetDate: this.getNextResetDate(),
+        monthYear: currentMonth
+      };
+    } catch (err) {
+      console.error('Unexpected error getting user quota:', err);
+      // Return default quota to prevent app from breaking
       return {
         totalQuota: this.MONTHLY_QUOTA,
         used: 0,
@@ -90,18 +131,6 @@ export class OrganizationQuotaService {
         monthYear: currentMonth
       };
     }
-
-    if (error) {
-      throw new Error(`Failed to fetch user quota: ${error.message}`);
-    }
-
-    return {
-      totalQuota: this.MONTHLY_QUOTA,
-      used: quota.contacts_extracted || 0,
-      remaining: Math.max(0, quota.contacts_remaining || 0),
-      resetDate: this.getNextResetDate(),
-      monthYear: currentMonth
-    };
   }
 
   /**
