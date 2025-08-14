@@ -78,8 +78,17 @@ export function useWorkspace() {
         .single();
         
       if (supabaseError) {
+        console.error('Supabase workspace query error:', supabaseError);
+        
         if (supabaseError.code === 'PGRST116') {
-          // Workspace doesn't exist, create it
+          // Workspace doesn't exist, create it only if not InnovareAI workspace
+          if (workspaceId === 'df5d730f-1915-4269-bd5a-9534478b17af') {
+            // InnovareAI workspace should exist, something is wrong
+            setError('InnovareAI workspace not found - database connection issue');
+            console.error('InnovareAI workspace missing from database');
+            return;
+          }
+          
           console.log('Workspace not found, creating default workspace...');
           const { data: newWorkspace, error: createError } = await supabase
             .from('workspaces')
@@ -103,14 +112,14 @@ export function useWorkspace() {
             .single();
             
           if (createError) {
-            setError('Failed to create workspace');
+            setError(`Failed to create workspace: ${createError.message}`);
             console.error('Error creating workspace:', createError);
             return;
           }
           
           setWorkspace(newWorkspace);
         } else {
-          setError('Failed to load workspace');
+          setError(`Failed to load workspace: ${supabaseError.message}`);
           console.error('Error loading workspace:', supabaseError);
         }
         return;
@@ -118,8 +127,14 @@ export function useWorkspace() {
       
       setWorkspace(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load workspace');
+      const errorMessage = err.message || 'Failed to load workspace';
+      setError(errorMessage);
       console.error('Error in loadWorkspace:', err);
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        workspaceId
+      });
     } finally {
       setLoading(false);
     }

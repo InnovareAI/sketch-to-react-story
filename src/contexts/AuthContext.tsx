@@ -267,23 +267,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       
       // Check for bypass users
-      const bypassEmails = ['tl@innovareai.com', 'cl@innovareai.com'];
+      const bypassEmails = ['tl@innovareai.com', 'cl@innovareai.com', 'cs@innovareai.com'];
       if (bypassEmails.includes(email.toLowerCase())) {
         console.log(`Using bypass authentication for ${email}`);
         
         // Create mock user profile based on email
-        const isCL = email.toLowerCase() === 'cl@innovareai.com';
-        const mockUser: UserProfile = {
-          id: isCL ? 'cc000000-0000-0000-0000-000000000001' : 'cc000000-0000-0000-0000-000000000002',
-          email: email.toLowerCase(),
-          full_name: isCL ? 'Christopher Lee' : 'Thorsten Linz',
-          role: isCL ? 'admin' : 'owner',
-          workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-          workspace_name: 'InnovareAI',
-          workspace_plan: 'pro',
-          status: 'active',
-          avatar_url: null
-        };
+        const userEmail = email.toLowerCase();
+        let mockUser: UserProfile;
+        
+        if (userEmail === 'cl@innovareai.com') {
+          mockUser = {
+            id: 'cc000000-0000-0000-0000-000000000001',
+            email: userEmail,
+            full_name: 'Christopher Lee',
+            role: 'admin',
+            workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+            workspace_name: 'InnovareAI',
+            workspace_plan: 'pro',
+            status: 'active',
+            avatar_url: null
+          };
+        } else if (userEmail === 'cs@innovareai.com') {
+          mockUser = {
+            id: 'cc000000-0000-0000-0000-000000000003',
+            email: userEmail,
+            full_name: 'Charissa Saniel',
+            role: 'member',
+            workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+            workspace_name: 'InnovareAI',
+            workspace_plan: 'pro',
+            status: 'active',
+            avatar_url: null
+          };
+        } else {
+          // TL
+          mockUser = {
+            id: 'cc000000-0000-0000-0000-000000000002',
+            email: userEmail,
+            full_name: 'Thorsten Linz',
+            role: 'owner',
+            workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+            workspace_name: 'InnovareAI',
+            workspace_plan: 'pro',
+            status: 'active',
+            avatar_url: null
+          };
+        }
         
         // Create mock auth user
         const mockAuthUser = {
