@@ -28,6 +28,9 @@ import {
 import { toast } from 'sonner';
 import { ProspectValidator } from './ProspectValidator';
 import { linkedInExtractor, type ExtractedProspect } from '@/services/linkedinExtractor';
+import { OrganizationApolloService } from '@/services/organizationApolloService';
+import { UserQuotaDisplay } from './UserQuotaDisplay';
+import type { UserQuota } from '@/services/organizationQuotaService';
 
 interface Prospect {
   id?: string;
@@ -66,6 +69,13 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
   const [urlExtractionError, setUrlExtractionError] = useState<string | null>(null);
   const [extractionProgress, setExtractionProgress] = useState<string>('');
   const [lastExtractionResult, setLastExtractionResult] = useState<{ prospects: number; errors: string[] } | null>(null);
+  
+  // Organization quota state
+  const [userQuota, setUserQuota] = useState<UserQuota | null>(null);
+  const [organizationService] = useState(() => new OrganizationApolloService());
+  
+  // Mock user data (in production, get from auth context)
+  const currentUser = { id: 'user-123', workspaceId: 'workspace-456' };
   
   // Manual entry state
   const [manualProspect, setManualProspect] = useState<Partial<Prospect>>({
@@ -239,40 +249,63 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
     }
   }, [csvData, selectedPeople, onPeopleChange]);
 
-  // Search URL Functions
+  // Search URL Functions - Updated to use Organization Apollo Service
   const extractFromSearchUrl = useCallback(async () => {
     if (!searchUrl.trim()) {
       toast.error('Please enter a LinkedIn or Sales Navigator search URL');
       return;
     }
 
+    // Estimate extraction count (default to 100, could be made configurable)
+    const estimatedCount = 100;
+    
+    // Check quota before starting extraction
+    if (userQuota && estimatedCount > userQuota.remaining) {
+      toast.error(`Cannot extract ${estimatedCount} contacts. You have ${userQuota.remaining} contacts remaining in your monthly quota.`);
+      return;
+    }
+
     setIsExtractingFromUrl(true);
     setUrlExtractionError(null);
-    setExtractionProgress('Validating URL...');
+    setExtractionProgress('Checking quota and initializing...');
     setLastExtractionResult(null);
 
     try {
-      // Step 1: Extract prospects from LinkedIn URL
-      setExtractionProgress('Extracting profiles from LinkedIn...');
-      const extractionResult = await linkedInExtractor.extractFromSearchUrl(searchUrl);
+      // Step 1: Use Organization Apollo Service for extraction with quota enforcement
+      setExtractionProgress('Extracting prospects with Apollo database...');
+      
+      const extractionResult = await organizationService.extractProspectsForUser(
+        currentUser.id,
+        currentUser.workspaceId,
+        searchUrl,
+        estimatedCount
+      );
+
+      // Update quota display
+      setUserQuota(extractionResult.quotaInfo);
 
       if (!extractionResult.success) {
-        setUrlExtractionError(extractionResult.errors.join(', '));
-        toast.error(`Extraction failed: ${extractionResult.errors[0]}`);
+        if (extractionResult.quotaExceeded) {
+          setUrlExtractionError(`Quota exceeded: ${extractionResult.errors[0]}`);
+          toast.error(`Quota Error: ${extractionResult.errors[0]}`);
+        } else {
+          setUrlExtractionError(extractionResult.errors.join(', '));
+          toast.error(`Extraction failed: ${extractionResult.errors[0]}`);
+        }
         return;
       }
 
       setExtractionProgress('Processing extracted data...');
 
-      // Step 2: Convert extracted prospects to our format
-      const convertedProspects: Prospect[] = extractionResult.prospects.map((extracted: ExtractedProspect) => ({
-        first_name: extracted.first_name,
-        last_name: extracted.last_name,
+      // Step 2: Convert organization prospects to our format
+      const convertedProspects: Prospect[] = extractionResult.prospects.map((extracted) => ({
+        first_name: extracted.firstName,
+        last_name: extracted.lastName,
         email: extracted.email,
         title: extracted.title,
         company: extracted.company,
-        linkedin_url: extracted.linkedin_url,
-        phone: extracted.phone,
+        linkedin_url: extracted.linkedinUrl,
+        phone: '', // Organization service doesn't extract phones by default
         source: 'search-url' as const
       }));
 
@@ -280,7 +313,7 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
 
       // Step 3: Filter out duplicates
       const existingEmails = new Set(selectedPeople.map(p => p.email.toLowerCase()));
-      const newProspects = convertedProspects.filter(p => !existingEmails.has(p.email.toLowerCase()));
+      const newProspects = convertedProspects.filter(p => p.email && !existingEmails.has(p.email.toLowerCase()));
       
       const duplicateCount = convertedProspects.length - newProspects.length;
 
@@ -289,9 +322,14 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
         const updatedPeople = [...selectedPeople, ...newProspects];
         onPeopleChange(updatedPeople);
         
+        // Show success with quota info
+        const quotaWarning = extractionResult.quotaInfo.remaining < 500 ? 
+          ` (${extractionResult.quotaInfo.remaining} contacts remaining this month)` : '';
+        
         toast.success(
-          `Successfully extracted ${newProspects.length} new prospects!` +
-          (duplicateCount > 0 ? ` (${duplicateCount} duplicates skipped)` : '')
+          `✨ Extracted ${newProspects.length} new prospects using ${extractionResult.method_used}!` +
+          (duplicateCount > 0 ? ` (${duplicateCount} duplicates skipped)` : '') +
+          quotaWarning
         );
       } else if (duplicateCount > 0) {
         toast.warning('All extracted prospects are already in your list');
@@ -379,6 +417,13 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
 
   return (
     <div className="space-y-6">
+      {/* User Quota Display */}
+      <UserQuotaDisplay 
+        userId={currentUser.id}
+        onQuotaUpdate={setUserQuota}
+        showDetails={true}
+      />
+
       {/* Selected Prospects Summary */}
       {selectedPeople.length > 0 && (
         <Card>
@@ -642,8 +687,11 @@ Example: https://www.linkedin.com/sales/search/people?..."
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Note:</strong> This feature requires backend integration with LinkedIn's API or web scraping capabilities. 
-                    Currently showing as a placeholder. For immediate use, please upload a CSV file with your prospect data.
+                    <strong>Apollo Database Integration:</strong> Search URLs are processed using Apollo's B2B database 
+                    for compliance and unlimited daily capacity. {userQuota ? 
+                      `You have ${userQuota.remaining.toLocaleString()} contacts remaining in your monthly quota.` :
+                      'Loading quota information...'
+                    }
                   </AlertDescription>
                 </Alert>
               </div>
