@@ -85,31 +85,136 @@ export default function ContactsView() {
 
   const handleSync = async () => {
     setSyncing(true);
+    console.log('🔍 DEBUG: Starting LinkedIn Sync Process (ContactsView)');
+    console.log('═'.repeat(60));
+    
     try {
+      // Enhanced debugging for production
+      console.log('📊 Sync Configuration:');
+      console.log(`   • Timestamp: ${new Date().toISOString()}`);
+      console.log(`   • User Agent: ${navigator.userAgent}`);
+      console.log(`   • Current URL: ${window.location.href}`);
+      
+      // Check user authentication first
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('❌ User authentication failed:', userError);
+        toast.error('Please sign in to sync LinkedIn contacts');
+        return;
+      }
+      console.log('✅ User authenticated:', user.email);
+      
+      // Get or find workspace ID
+      let { data: workspace, error: wsError } = await supabase
+        .from('workspaces')
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
+        
+      if (wsError || !workspace) {
+        console.log('⚠️ No workspace found for user, using default');
+        workspace = { id: 'a0000000-0000-0000-0000-000000000000' }; // Default workspace
+      }
+      
+      console.log('✅ Workspace ID:', workspace.id);
+      
+      // Test basic database connectivity
+      console.log('🔄 Testing database connectivity...');
+      const { count: existingContactCount } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspace.id);
+      
+      console.log(`✅ Database accessible - existing contacts: ${existingContactCount || 0}`);
+      
+      // Try enhanced LinkedIn import first
+      console.log('🔄 Attempting Enhanced LinkedIn Import...');
+      toast.info('🚀 Starting Enhanced LinkedIn contact sync...');
+      
+      try {
+        // Use the enhanced import service
+        const { enhancedLinkedInImport } = await import('@/services/EnhancedLinkedInImport');
+        enhancedLinkedInImport.initialize(workspace.id);
+        
+        // Test connections before starting
+        console.log('🔄 Testing LinkedIn integration connections...');
+        const connectionTests = await enhancedLinkedInImport.testConnections();
+        console.log('📊 Connection test results:', connectionTests);
+        
+        if (connectionTests.unipile.connected || connectionTests.linkedinAPI.connected) {
+          console.log('🚀 Starting enhanced LinkedIn contact import...');
+          
+          const result = await enhancedLinkedInImport.importContacts({
+            limit: 500,
+            preferredMethod: 'both',
+            useUnipile: true,
+            useLinkedInAPI: true
+          });
+          
+          console.log('📊 Enhanced import results:', result);
+          
+          if (result.success && result.totalContacts > 0) {
+            enhancedLinkedInImport.showImportResults(result);
+            console.log('✅ Enhanced import successful, refreshing contacts...');
+            await loadContacts();
+            return;
+          } else if (result.success && result.totalContacts === 0) {
+            console.log('⚠️ Enhanced import succeeded but no contacts found');
+            toast.info('Enhanced sync completed but no new contacts found');
+          } else {
+            console.log('❌ Enhanced import failed, falling back to legacy sync...');
+            toast.warning('Enhanced import had issues, trying legacy sync...');
+          }
+        } else {
+          console.log('⚠️ No enhanced connections available, using legacy sync...');
+          toast.info('No enhanced integrations available, using legacy sync...');
+        }
+      } catch (enhancedError) {
+        console.error('❌ Enhanced import failed:', enhancedError);
+        console.log('🔄 Falling back to legacy sync method...');
+        toast.warning('Enhanced import failed, trying legacy sync...');
+      }
+      
+      // Fallback to legacy sync method
+      console.log('🔄 Using legacy unipileRealTimeSync method...');
+      
       // Check if API is configured
       if (!unipileRealTimeSync.isConfigured()) {
+        console.error('❌ Unipile sync not configured');
         toast.error('LinkedIn sync not configured. Please check settings.');
         setSyncing(false);
         return;
       }
       
-      toast.info('Syncing LinkedIn connections...');
+      console.log('✅ Unipile sync configured, starting legacy sync...');
+      toast.info('Syncing LinkedIn connections via legacy method...');
       
       // Sync all data including contacts
       await unipileRealTimeSync.syncAll();
       const status = unipileRealTimeSync.getStatus();
+      console.log('📊 Legacy sync status:', status);
       
       if (status.contactsSynced > 0) {
         toast.success(`Synced ${status.contactsSynced} LinkedIn connections`);
+        console.log('✅ Legacy sync successful, refreshing contacts...');
         await loadContacts();
       } else if (status.messagessynced > 0) {
         toast.info(`Synced ${status.messagessynced} messages. Contacts sync pending.`);
       } else {
         toast.info('No new contacts found in LinkedIn');
+        console.log('⚠️ No new data found in legacy sync');
       }
+      
     } catch (error) {
-      toast.error('Failed to sync LinkedIn contacts');
+      console.error('❌ LinkedIn sync error:', error);
+      console.error('🔍 Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
+      toast.error(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}. Check console for details.`);
     } finally {
+      console.log('🏁 LinkedIn sync process completed');
       setSyncing(false);
     }
   };
