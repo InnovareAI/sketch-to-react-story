@@ -23,7 +23,8 @@ import {
   Building2,
   User,
   Trash2,
-  Edit
+  Edit,
+  Save
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProspectValidator } from './ProspectValidator';

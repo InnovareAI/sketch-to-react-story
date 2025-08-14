@@ -18,6 +18,7 @@ import {
   Video,
   Folder,
   Search,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SAMBranding } from '@/components/branding/SAMBranding';
@@ -44,6 +45,11 @@ const teamNavItems = [
 const settingsItems = [
   { title: "Profile", url: "/profile", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
+];
+
+// Super Admin Navigation (for InnovareAI workspace only)
+const superAdminItems = [
+  { title: "Tenant Management", url: "/admin/tenants", icon: Shield },
 ];
 
 // Agent Mode Navigation

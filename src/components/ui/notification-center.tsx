@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, X, Check, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,8 +44,22 @@ export function NotificationCenter() {
     markAsRead, 
     markAllAsRead, 
     removeNotification, 
-    clearAll 
+    clearAll,
+    addNotification 
   } = useNotificationStore();
+
+  // Keyboard shortcut for notifications (Alt+N)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === 'n') {
+        e.preventDefault();
+        setOpen(!open);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [open]);
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.read) {
@@ -65,12 +79,19 @@ export function NotificationCenter() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative h-9 w-9">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="relative h-9 w-9 hover:bg-accent transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -78,10 +99,17 @@ export function NotificationCenter() {
         </Button>
       </PopoverTrigger>
       
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="p-4 border-b">
+      <PopoverContent className="w-80 p-0 shadow-lg" align="end" sideOffset={5}>
+        <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold">Notifications</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-semibold">Notifications</h4>
+              {unreadCount > 0 && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                  {unreadCount} new
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <Button
@@ -110,12 +138,13 @@ export function NotificationCenter() {
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No notifications</p>
+              <p className="text-sm font-medium">All caught up!</p>
+              <p className="text-xs mt-1">No new notifications</p>
             </div>
           ) : (
             <div className="p-2">
               {notifications.map((notification, index) => (
-                <div key={notification.id}>
+                <div key={notification.id} className="group">
                   <div
                     className={`p-3 rounded-md cursor-pointer transition-colors hover:bg-muted/50 ${
                       !notification.read ? 'bg-blue-50 dark:bg-blue-950/20' : ''
@@ -140,7 +169,7 @@ export function NotificationCenter() {
                                 e.stopPropagation();
                                 removeNotification(notification.id);
                               }}
-                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <X className="h-3 w-3" />
                             </Button>

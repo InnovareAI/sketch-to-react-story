@@ -20,6 +20,7 @@ import TestInbox from "./pages/TestInbox";
 import InboxDirect from "./pages/InboxDirect";
 import MessageQueue from "./pages/MessageQueue";
 import Templates from "./pages/Templates";
+import TemplatesEnhanced from "./pages/TemplatesEnhanced";
 import Requests from "./pages/Requests";
 import Placeholders from "./pages/Placeholders";
 import Members from "./pages/Members";
@@ -34,6 +35,7 @@ import LinkedInCallback from "./pages/auth/LinkedInCallback";
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
 import UserLogin from "./pages/auth/UserLogin";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
+import TenantManagement from "./pages/admin/TenantManagement";
 import Settings from "./pages/Settings";
 // Analytics merged with Dashboard - no longer needed as separate page
 import ProspectSearch from "./pages/ProspectSearch";
@@ -66,6 +68,7 @@ const App: React.FC = () => {
                 <Route path="/auth/login" element={<UserLogin />} />
                 <Route path="/admin/login" element={<SuperAdminLogin />} />
                 <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
+                <Route path="/admin/tenants" element={<TenantManagement />} />
                 <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
                 <Route path="/test-inbox" element={<TestInbox />} />
                 <Route path="/inbox-direct" element={<InboxDirect />} />
@@ -93,7 +96,7 @@ const App: React.FC = () => {
                 <Route path="contacts-old" element={<Contacts />} />
                 <Route path="test-sync" element={<ContactSyncTest />} />
                 <Route path="inbox" element={<GlobalInbox />} />
-                <Route path="templates" element={<Templates />} />
+                <Route path="templates" element={<TemplatesEnhanced />} />
                 <Route path="analytics" element={<Dashboard />} /> {/* Analytics redirects to Dashboard */}
                 
                 {/* Team Routes */}

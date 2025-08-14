@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Bell, Plus, User, MessageSquare, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeSwitcher } from "@/components/workspace/ModeSwitcher";
+import { useNotificationStore } from '@/hooks/useNotifications';
 interface WorkspaceHeaderProps {
   isConversational: boolean;
   onToggleMode: (conversational: boolean) => void;
@@ -23,6 +24,22 @@ interface WorkspaceHeaderProps {
 
 export function WorkspaceHeader({ isConversational, onToggleMode, operationMode, onOperationModeChange }: WorkspaceHeaderProps) {
   const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
+  const { addNotification } = useNotificationStore();
+
+  // Simulate real-time notifications
+  useEffect(() => {
+    // Add a notification when component mounts to show it's working
+    const timer = setTimeout(() => {
+      addNotification({
+        title: 'Welcome Back!',
+        message: 'You have 3 pending tasks and 2 new messages',
+        type: 'info',
+        actionUrl: '/inbox'
+      });
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
@@ -85,13 +102,41 @@ export function WorkspaceHeader({ isConversational, onToggleMode, operationMode,
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowNewCampaignDialog(true)}>
+              <DropdownMenuItem onClick={() => {
+                setShowNewCampaignDialog(true);
+                // Add notification when campaign dialog opens
+                addNotification({
+                  title: 'Campaign Creation Started',
+                  message: 'Setting up new campaign workflow',
+                  type: 'info'
+                });
+              }}>
                 New Campaign
               </DropdownMenuItem>
-              <DropdownMenuItem>New Contact</DropdownMenuItem>
-              <DropdownMenuItem>New Company</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                addNotification({
+                  title: 'Contact Form Opened',
+                  message: 'Add new contact to your database',
+                  type: 'info',
+                  actionUrl: '/contacts'
+                });
+              }}>New Contact</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                addNotification({
+                  title: 'Company Creation',
+                  message: 'Add new company profile',
+                  type: 'info'
+                });
+              }}>New Company</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Import Contacts</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                addNotification({
+                  title: 'Import Started',
+                  message: 'Processing CSV contact import',
+                  type: 'success',
+                  actionUrl: '/contacts'
+                });
+              }}>Import Contacts</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
