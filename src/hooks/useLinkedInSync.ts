@@ -34,10 +34,8 @@ export function useLinkedInSync() {
     checkInitialSyncStatus();
     setupAutoSync();
     
-    return () => {
-      // Cleanup auto-sync on unmount
-      unipileRealTimeSync.stopAutoSync();
-    };
+    // NO CLEANUP - Auto-sync should continue running in background
+    // Even when component unmounts or user navigates away
   }, []);
 
   const checkInitialSyncStatus = async () => {

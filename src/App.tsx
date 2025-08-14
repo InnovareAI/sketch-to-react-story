@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGate from "@/components/AuthGate";
+import { globalAutoSync } from "@/services/GlobalAutoSync";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -54,6 +55,18 @@ import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
+  // Initialize global auto-sync when app starts
+  useEffect(() => {
+    const initializeAutoSync = async () => {
+      await globalAutoSync.initialize();
+    };
+    
+    // Start auto-sync after a short delay to ensure auth is ready
+    const timer = setTimeout(initializeAutoSync, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
