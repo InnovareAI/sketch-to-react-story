@@ -65,6 +65,9 @@ export default function CampaignSetupFlow() {
     trackOpens: true,
     trackClicks: true
   });
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDraft, setIsDraft] = useState(false);
 
   useEffect(() => {
     // Initialize default steps based on campaign type
@@ -153,16 +156,59 @@ export default function CampaignSetupFlow() {
     }
   };
 
-  const saveCampaign = () => {
-    // TODO: Save campaign to database
-    console.log('Saving campaign:', {
-      name: campaignName,
-      type: campaignType,
-      steps: campaignSteps,
-      people: selectedPeople,
-      settings: campaignSettings
-    });
-    navigate('/campaigns');
+  const saveCampaign = async (status: 'draft' | 'active' = 'draft') => {
+    if (!campaignName.trim()) {
+      alert('Please enter a campaign name');
+      return false;
+    }
+
+    if (campaignSteps.length === 0) {
+      alert('Please add at least one campaign step');
+      return false;
+    }
+
+    if (selectedPeople.length === 0) {
+      alert('Please add at least one person to the campaign');
+      return false;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const campaignData = {
+        name: campaignName,
+        type: campaignType,
+        steps: campaignSteps,
+        people: selectedPeople,
+        settings: campaignSettings,
+        status: status,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // TODO: Save to Supabase database
+      console.log(`${status === 'draft' ? 'Saving as draft' : 'Activating'} campaign:`, campaignData);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setIsDraft(status === 'draft');
+      
+      if (status === 'active') {
+        alert('Campaign activated successfully!');
+      } else {
+        alert('Campaign saved as draft');
+      }
+      
+      navigate('/campaigns');
+      return true;
+    } catch (error) {
+      console.error('Error saving campaign:', error);
+      alert('Failed to save campaign. Please try again.');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const tabs = [
@@ -196,13 +242,25 @@ export default function CampaignSetupFlow() {
                 Campaign Type: <Badge variant="outline" className="ml-2">{campaignType}</Badge>
               </p>
             </div>
-            <Button 
-              onClick={saveCampaign}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save Campaign
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => saveCampaign('draft')}
+                disabled={isLoading}
+                className="hover:bg-gray-50"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isLoading ? 'Saving...' : 'Save as Draft'}
+              </Button>
+              <Button 
+                onClick={() => saveCampaign('active')}
+                disabled={isLoading}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {isLoading ? 'Activating...' : 'Activate Campaign'}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -573,10 +631,60 @@ export default function CampaignSetupFlow() {
                   </div>
                 </div>
 
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">Ready to launch?</h4>
-                  <p className="text-sm text-blue-700">
-                    Your campaign will start sending messages according to your settings once activated.
+                {/* Validation Status */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    {campaignName.trim() ? (
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    ) : (
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    )}
+                    <span className={`text-sm ${campaignName.trim() ? 'text-green-700' : 'text-red-700'}`}>
+                      Campaign name {campaignName.trim() ? 'set' : 'required'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {campaignSteps.length > 0 ? (
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    ) : (
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    )}
+                    <span className={`text-sm ${campaignSteps.length > 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      Campaign steps {campaignSteps.length > 0 ? 'configured' : 'required'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {selectedPeople.length > 0 ? (
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    ) : (
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    )}
+                    <span className={`text-sm ${selectedPeople.length > 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      People {selectedPeople.length > 0 ? 'added' : 'required'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={`rounded-lg p-4 ${
+                  campaignName.trim() && campaignSteps.length > 0 && selectedPeople.length > 0 
+                    ? 'bg-green-50' : 'bg-yellow-50'
+                }`}>
+                  <h4 className={`font-medium mb-2 ${
+                    campaignName.trim() && campaignSteps.length > 0 && selectedPeople.length > 0 
+                      ? 'text-green-900' : 'text-yellow-900'
+                  }`}>
+                    {campaignName.trim() && campaignSteps.length > 0 && selectedPeople.length > 0 
+                      ? 'Ready to launch!' : 'Complete setup to activate'}
+                  </h4>
+                  <p className={`text-sm ${
+                    campaignName.trim() && campaignSteps.length > 0 && selectedPeople.length > 0 
+                      ? 'text-green-700' : 'text-yellow-700'
+                  }`}>
+                    {campaignName.trim() && campaignSteps.length > 0 && selectedPeople.length > 0 
+                      ? 'Your campaign will start sending messages according to your settings once activated.'
+                      : 'Please complete all required fields above before activating your campaign.'}
                   </p>
                 </div>
 
@@ -586,18 +694,21 @@ export default function CampaignSetupFlow() {
                     Previous
                   </Button>
                   <div className="flex gap-3">
-                    <Button variant="outline" onClick={saveCampaign}>
-                      Save as Draft
+                    <Button 
+                      variant="outline" 
+                      onClick={() => saveCampaign('draft')}
+                      disabled={isLoading}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {isLoading ? 'Saving...' : 'Save as Draft'}
                     </Button>
                     <Button 
                       className="bg-green-600 hover:bg-green-700"
-                      onClick={() => {
-                        saveCampaign();
-                        // TODO: Activate campaign
-                      }}
+                      onClick={() => saveCampaign('active')}
+                      disabled={isLoading || !campaignName.trim() || campaignSteps.length === 0 || selectedPeople.length === 0}
                     >
                       <Play className="h-4 w-4 mr-2" />
-                      Activate Campaign
+                      {isLoading ? 'Activating...' : 'Activate Campaign'}
                     </Button>
                   </div>
                 </div>
