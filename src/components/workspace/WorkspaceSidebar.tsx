@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SAMBranding } from '@/components/branding/SAMBranding';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import WorkspaceSelector from './WorkspaceSelector';
 
 // Main Navigation Items
 const mainNavItems = [
@@ -101,8 +102,8 @@ export function WorkspaceSidebar({
         <div className="p-4 border-b border-gray-200">
           <SAMBranding variant="default" showTagline={true} className="mb-4" />
           <div className="flex flex-col gap-3">
-            {/* Workspace Switcher */}
-            <WorkspaceSwitcher />
+            {/* Workspace Selector */}
+            <WorkspaceSelector />
             
             {/* Mode Switch Button */}
             <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg w-full border border-gray-200">

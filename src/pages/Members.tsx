@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
 import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import InviteModal from "@/components/workspace/InviteModal";
 import { 
   Users, 
   Search, 
@@ -43,6 +44,20 @@ import {
 export default function Members() {
   const [isConversational, setIsConversational] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [currentWorkspace, setCurrentWorkspace] = useState<any>(null);
+  
+  useEffect(() => {
+    // Get current workspace info
+    const userProfile = localStorage.getItem('user_auth_profile');
+    if (userProfile) {
+      const profile = JSON.parse(userProfile);
+      setCurrentWorkspace({
+        id: profile.workspace_id,
+        name: profile.workspace_name || 'My Workspace'
+      });
+    }
+  }, []);
 
   if (isConversational) {
     return (
@@ -138,7 +153,10 @@ export default function Members() {
           <h1 className="text-3xl font-bold text-gray-900">Members</h1>
           <p className="text-gray-600 mt-1">Manage team members and their permissions</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90">
+        <Button 
+          className="bg-primary hover:bg-primary/90"
+          onClick={() => setShowInviteModal(true)}
+        >
           <UserPlus className="h-4 w-4 mr-2" />
           Invite Member
         </Button>
@@ -305,6 +323,16 @@ export default function Members() {
           </main>
         </div>
       </div>
+      
+      {/* Invite Modal */}
+      {currentWorkspace && (
+        <InviteModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          workspaceId={currentWorkspace.id}
+          workspaceName={currentWorkspace.name}
+        />
+      )}
     </SidebarProvider>
   );
 }

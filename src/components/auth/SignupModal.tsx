@@ -54,15 +54,25 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
       const workspaceId = generateUUID();
       
       // Store user data in localStorage (temporary solution)
+      const workspaceName = formData.companyName || `${formData.fullName}'s Workspace`;
       const userData = {
         id: userId,
         email: formData.email,
         full_name: formData.fullName,
         workspace_id: workspaceId,
-        workspace_name: formData.companyName || `${formData.fullName}'s Workspace`,
+        workspace_name: workspaceName,
         role: 'owner',
         created_at: new Date().toISOString()
       };
+      
+      // Store workspace in workspaces list
+      const workspace = {
+        id: workspaceId,
+        name: workspaceName,
+        role: 'owner',
+        memberCount: 1
+      };
+      localStorage.setItem('user_workspaces', JSON.stringify([workspace]));
       
       localStorage.setItem('user_auth_profile', JSON.stringify(userData));
       localStorage.setItem('app_workspace_id', workspaceId);
