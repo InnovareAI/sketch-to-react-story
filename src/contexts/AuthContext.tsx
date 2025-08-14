@@ -279,7 +279,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           mockUser = {
             id: 'cc000000-0000-0000-0000-000000000001',
             email: userEmail,
-            full_name: 'Christopher Lee',
+            full_name: 'Chona Lamberte',
             role: 'admin',
             workspace_id: null, // Will be set dynamically
             workspace_name: 'Loading...',
