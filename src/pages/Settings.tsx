@@ -630,14 +630,91 @@ export default function Settings() {
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="UTC">UTC</SelectItem>
-                          <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                          <SelectItem value="America/Chicago">Central Time</SelectItem>
-                          <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                          <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                        <SelectContent className="max-h-[200px] overflow-y-auto">
+                          {/* UTC */}
+                          <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
+                          
+                          {/* North America */}
+                          <SelectItem value="America/New_York">Eastern Time (New York)</SelectItem>
+                          <SelectItem value="America/Chicago">Central Time (Chicago)</SelectItem>
+                          <SelectItem value="America/Denver">Mountain Time (Denver)</SelectItem>
+                          <SelectItem value="America/Los_Angeles">Pacific Time (Los Angeles)</SelectItem>
+                          <SelectItem value="America/Anchorage">Alaska Time (Anchorage)</SelectItem>
+                          <SelectItem value="Pacific/Honolulu">Hawaii Time (Honolulu)</SelectItem>
+                          <SelectItem value="America/Toronto">Eastern Time (Toronto)</SelectItem>
+                          <SelectItem value="America/Vancouver">Pacific Time (Vancouver)</SelectItem>
+                          <SelectItem value="America/Mexico_City">Mexico City</SelectItem>
+                          
+                          {/* South America */}
+                          <SelectItem value="America/Sao_Paulo">São Paulo, Brazil</SelectItem>
+                          <SelectItem value="America/Argentina/Buenos_Aires">Buenos Aires, Argentina</SelectItem>
+                          <SelectItem value="America/Santiago">Santiago, Chile</SelectItem>
+                          <SelectItem value="America/Bogota">Bogotá, Colombia</SelectItem>
+                          <SelectItem value="America/Lima">Lima, Peru</SelectItem>
+                          
+                          {/* Europe */}
+                          <SelectItem value="Europe/London">London, UK</SelectItem>
+                          <SelectItem value="Europe/Paris">Paris, France</SelectItem>
+                          <SelectItem value="Europe/Berlin">Berlin, Germany</SelectItem>
+                          <SelectItem value="Europe/Rome">Rome, Italy</SelectItem>
+                          <SelectItem value="Europe/Madrid">Madrid, Spain</SelectItem>
+                          <SelectItem value="Europe/Amsterdam">Amsterdam, Netherlands</SelectItem>
+                          <SelectItem value="Europe/Zurich">Zurich, Switzerland</SelectItem>
+                          <SelectItem value="Europe/Stockholm">Stockholm, Sweden</SelectItem>
+                          <SelectItem value="Europe/Helsinki">Helsinki, Finland</SelectItem>
+                          <SelectItem value="Europe/Warsaw">Warsaw, Poland</SelectItem>
+                          <SelectItem value="Europe/Prague">Prague, Czech Republic</SelectItem>
+                          <SelectItem value="Europe/Vienna">Vienna, Austria</SelectItem>
+                          <SelectItem value="Europe/Brussels">Brussels, Belgium</SelectItem>
+                          <SelectItem value="Europe/Dublin">Dublin, Ireland</SelectItem>
+                          <SelectItem value="Europe/Lisbon">Lisbon, Portugal</SelectItem>
+                          <SelectItem value="Europe/Moscow">Moscow, Russia</SelectItem>
+                          <SelectItem value="Europe/Kiev">Kiev, Ukraine</SelectItem>
+                          <SelectItem value="Europe/Istanbul">Istanbul, Turkey</SelectItem>
+                          
+                          {/* Asia */}
+                          <SelectItem value="Asia/Tokyo">Tokyo, Japan</SelectItem>
+                          <SelectItem value="Asia/Shanghai">Shanghai, China</SelectItem>
+                          <SelectItem value="Asia/Hong_Kong">Hong Kong</SelectItem>
+                          <SelectItem value="Asia/Singapore">Singapore</SelectItem>
+                          <SelectItem value="Asia/Seoul">Seoul, South Korea</SelectItem>
+                          <SelectItem value="Asia/Mumbai">Mumbai, India</SelectItem>
+                          <SelectItem value="Asia/Delhi">Delhi, India</SelectItem>
+                          <SelectItem value="Asia/Kolkata">Kolkata, India</SelectItem>
+                          <SelectItem value="Asia/Bangkok">Bangkok, Thailand</SelectItem>
+                          <SelectItem value="Asia/Manila">Manila, Philippines</SelectItem>
+                          <SelectItem value="Asia/Jakarta">Jakarta, Indonesia</SelectItem>
+                          <SelectItem value="Asia/Kuala_Lumpur">Kuala Lumpur, Malaysia</SelectItem>
+                          <SelectItem value="Asia/Karachi">Karachi, Pakistan</SelectItem>
+                          <SelectItem value="Asia/Dubai">Dubai, UAE</SelectItem>
+                          <SelectItem value="Asia/Qatar">Doha, Qatar</SelectItem>
+                          <SelectItem value="Asia/Riyadh">Riyadh, Saudi Arabia</SelectItem>
+                          <SelectItem value="Asia/Tehran">Tehran, Iran</SelectItem>
+                          <SelectItem value="Asia/Baghdad">Baghdad, Iraq</SelectItem>
+                          <SelectItem value="Asia/Tel_Aviv">Tel Aviv, Israel</SelectItem>
+                          
+                          {/* Africa */}
+                          <SelectItem value="Africa/Cairo">Cairo, Egypt</SelectItem>
+                          <SelectItem value="Africa/Lagos">Lagos, Nigeria</SelectItem>
+                          <SelectItem value="Africa/Johannesburg">Johannesburg, South Africa</SelectItem>
+                          <SelectItem value="Africa/Nairobi">Nairobi, Kenya</SelectItem>
+                          <SelectItem value="Africa/Casablanca">Casablanca, Morocco</SelectItem>
+                          <SelectItem value="Africa/Tunis">Tunis, Tunisia</SelectItem>
+                          <SelectItem value="Africa/Algiers">Algiers, Algeria</SelectItem>
+                          
+                          {/* Oceania */}
+                          <SelectItem value="Australia/Sydney">Sydney, Australia</SelectItem>
+                          <SelectItem value="Australia/Melbourne">Melbourne, Australia</SelectItem>
+                          <SelectItem value="Australia/Perth">Perth, Australia</SelectItem>
+                          <SelectItem value="Australia/Brisbane">Brisbane, Australia</SelectItem>
+                          <SelectItem value="Australia/Adelaide">Adelaide, Australia</SelectItem>
+                          <SelectItem value="Pacific/Auckland">Auckland, New Zealand</SelectItem>
+                          <SelectItem value="Pacific/Fiji">Fiji</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-gray-500">
+                        This timezone will be used for all campaign scheduling and analytics
+                      </p>
                     </div>
                   </div>
                   
