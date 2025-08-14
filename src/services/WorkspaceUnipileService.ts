@@ -121,6 +121,12 @@ class WorkspaceUnipileService {
     // Use dedicated IP if available, otherwise use DSN
     const host = config.dedicated_ip || config.dsn || 'api6.unipile.com:13670';
     
+    // Ensure host is defined and is a string
+    if (!host || typeof host !== 'string') {
+      console.warn('Invalid host configuration, using default');
+      return 'https://api6.unipile.com:13670/api/v1';
+    }
+    
     // Ensure proper protocol and port
     if (!host.startsWith('http')) {
       return `https://${host}/api/v1`;

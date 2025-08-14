@@ -86,9 +86,8 @@ export function useLinkedInSync() {
       return;
     }
 
-    // Check user preferences for auto-sync
-    const autoSyncPref = localStorage.getItem(`auto_sync_${user.id}`);
-    const autoSyncEnabled = autoSyncPref !== 'false'; // Default to true
+    // Auto-sync is ALWAYS enabled - no manual sync allowed
+    const autoSyncEnabled = true; // Always true, no user preference
 
     if (autoSyncEnabled && unipileRealTimeSync.isConfigured()) {
       // Get LinkedIn account ID
@@ -102,13 +101,13 @@ export function useLinkedInSync() {
           const result = await backgroundSync.enableBackgroundSync(
             workspaceId,
             accountId,
-            30, // Sync every 30 minutes
+            5, // Sync every 5 minutes for real-time updates
             'both' // Sync both contacts and messages
           );
           
           if (result.success) {
             console.log('☁️ Cloud-based background sync enabled - will continue even when page is closed');
-            toast.success('Cloud sync enabled - messages will sync automatically every 30 minutes', {
+            toast.success('Auto-sync enabled - messages sync every 5 minutes', {
               duration: 5000
             });
           } else {
@@ -122,7 +121,7 @@ export function useLinkedInSync() {
       setSyncState(prev => ({
         ...prev,
         autoSyncEnabled: true,
-        nextSyncTime: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes from now
+        nextSyncTime: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes from now
       }));
     }
   };
@@ -262,7 +261,7 @@ export function useLinkedInSync() {
               const result = await backgroundSync.enableBackgroundSync(
                 workspaceId,
                 accountId,
-                30, // Every 30 minutes
+                5, // Every 5 minutes
                 'both'
               );
               

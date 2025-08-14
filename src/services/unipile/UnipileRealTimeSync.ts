@@ -89,6 +89,19 @@ export class UnipileRealTimeSync {
   }
 
   /**
+   * Configure the sync service with API credentials
+   */
+  configure(config: { apiKey?: string; accountId?: string }) {
+    if (config.apiKey) {
+      this.apiKey = config.apiKey;
+    }
+    // Store accountId if needed for specific operations
+    if (config.accountId) {
+      localStorage.setItem('unipile_account_id', config.accountId);
+    }
+  }
+
+  /**
    * Check if API is properly configured
    */
   isConfigured(): boolean {

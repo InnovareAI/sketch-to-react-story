@@ -552,14 +552,17 @@ export function LinkedInAccountConnection() {
     if (!accountToDisconnect) return;
     
     try {
+      // Check if unipileAccountId exists before using startsWith
+      const accountId = accountToDisconnect.unipileAccountId || '';
+      
       // For direct LinkedIn OAuth accounts, remove from both state and localStorage
-      if (accountToDisconnect.unipileAccountId.startsWith('linkedin_')) {
+      if (accountId && accountId.startsWith('linkedin_')) {
         // This is a direct LinkedIn OAuth account
         const updatedAccounts = accounts.filter(acc => acc.id !== accountToDisconnect.id);
         setAccounts(updatedAccounts);
         localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
         toast.success('LinkedIn account disconnected successfully');
-      } else if (accountToDisconnect.unipileAccountId.startsWith('demo-') || accountToDisconnect.unipileAccountId.startsWith('cpr_')) {
+      } else if (accountId && (accountId.startsWith('demo-') || accountId.startsWith('cpr_'))) {
         // This is a demo or CPR worker account
         const updatedAccounts = accounts.filter(acc => acc.id !== accountToDisconnect.id);
         setAccounts(updatedAccounts);
@@ -598,7 +601,8 @@ export function LinkedInAccountConnection() {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Handle different account types
-      if (account.unipileAccountId.startsWith('demo-') || account.unipileAccountId.startsWith('cpr_')) {
+      const accountId = account.unipileAccountId || '';
+      if (accountId && (accountId.startsWith('demo-') || accountId.startsWith('cpr_'))) {
         // Demo account sync
         toast.success('Demo account data synced successfully!');
       } else {
@@ -724,7 +728,8 @@ export function LinkedInAccountConnection() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // For demo accounts or when external services aren't available, simulate success
-      if (account.unipileAccountId.startsWith('demo-') || account.unipileAccountId.startsWith('cpr_')) {
+      const accountId = account.unipileAccountId || '';
+      if (accountId && (accountId.startsWith('demo-') || accountId.startsWith('cpr_'))) {
         // Simulate demo sync
         const mockResults = {
           contactsSynced: Math.floor(Math.random() * 50) + 10,
