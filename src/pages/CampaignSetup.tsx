@@ -73,6 +73,7 @@ export default function CampaignSetup() {
   const [campaignId, setCampaignId] = useState<string | null>(searchParams.get('id'));
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchUrl, setSearchUrl] = useState<string>("");
   
   const [prospectMethod, setProspectMethod] = useState<"search" | "existing" | "csv">("search");
   const [connectionDegrees, setConnectionDegrees] = useState<string[]>(["2nd", "3rd"]);
@@ -84,6 +85,7 @@ export default function CampaignSetup() {
   const [scheduledDate, setScheduledDate] = useState<string>("");
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [selectedPeople, setSelectedPeople] = useState<any[]>([]);
   const { workspace, workspaceId } = useWorkspace();
   const { user } = useAuth();
   
@@ -308,7 +310,9 @@ export default function CampaignSetup() {
           prospect_method: prospectMethod,
           connection_degrees: connectionDegrees,
           messages: messages,
-          csv_file: csvFile?.name || null
+          csv_file: csvFile?.name || null,
+          search_url: searchUrl || null,
+          selected_people: selectedPeople || []
         }
       };
 
@@ -546,6 +550,23 @@ export default function CampaignSetup() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                      {/* Search URL Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="search-url">LinkedIn or Sales Navigator Search URL</Label>
+                        <Textarea
+                          id="search-url"
+                          value={searchUrl}
+                          onChange={(e) => setSearchUrl(e.target.value)}
+                          placeholder="Paste your LinkedIn or Sales Navigator search URL here...
+Example: https://www.linkedin.com/search/results/people/?keywords=marketing%20manager
+Example: https://www.linkedin.com/sales/search/people?..."
+                          className="min-h-[80px]"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Add your search URL to automatically extract and save prospects from LinkedIn or Sales Navigator
+                        </p>
+                      </div>
+
                       {/* Connection Degrees */}
                       <div className="space-y-3">
                         <Label className="text-base font-medium">For this type of campaign use prospects with:</Label>
