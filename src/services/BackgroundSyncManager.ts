@@ -341,6 +341,7 @@ class BackgroundSyncManager {
 
 // Export singleton instance
 export const backgroundSyncManager = BackgroundSyncManager.getInstance();
+export { BackgroundSyncManager };
 
 // Auto-initialize on page load if user is logged in
 if (typeof window !== 'undefined') {
