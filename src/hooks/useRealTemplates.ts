@@ -95,7 +95,7 @@ export function useRealTemplates() {
             )
           `)
           .eq('workspace_id', workspaceId)
-          .or('status.eq.template,and(not.subject.is.null,status.ne.failed)') // Templates or messages with subjects
+          .or('status.eq.template,status.eq.sent') // Templates or sent messages
           .order('created_at', { ascending: false });
         
         messages = messagesData;
