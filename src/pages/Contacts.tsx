@@ -17,6 +17,7 @@ import { LinkedInConnect } from "@/components/LinkedInConnect";
 import { BackgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { enhancedLinkedInImport } from '@/services/EnhancedLinkedInImport';
 import { toast } from 'sonner';
+import { getUserLinkedInAccounts, getUserWorkspaceId } from '@/utils/userDataStorage';
 import { 
   Mail, 
   Phone, 
@@ -66,7 +67,7 @@ export default function Contacts() {
   const [filterEngagement, setFilterEngagement] = useState<string>("all");
   const [filterTags, setFilterTags] = useState<string[]>([]);
   
-  // Get dynamic workspace ID
+  // Get dynamic workspace ID (synchronous version for immediate use)
   const getCurrentWorkspaceId = (): string => {
     const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
     if (authProfile.workspace_id) return authProfile.workspace_id;
@@ -74,8 +75,12 @@ export default function Contacts() {
     const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
     if (bypassUser.workspace_id) return bypassUser.workspace_id;
     
-    const workspaceId = localStorage.getItem('workspace_id');
-    if (workspaceId) return workspaceId;
+    // Try to get from user-specific storage (if user is known)
+    const { data: { user } } = { data: { user: null } }; // Sync check
+    if (user) {
+      const workspaceId = localStorage.getItem(`user_${user.id}_workspace_id`);
+      if (workspaceId) return workspaceId;
+    }
     
     const userEmail = localStorage.getItem('user_email') || 'default';
     const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -313,7 +318,7 @@ export default function Contacts() {
   useEffect(() => {
     const checkSyncStatus = async () => {
       const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
-      const workspaceId = userProfile.workspace_id || localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID;
+      const workspaceId = userProfile.workspace_id || await getUserWorkspaceId() || DEFAULT_WORKSPACE_ID;
       
       try {
         const syncManager = BackgroundSyncManager.getInstance();
@@ -322,7 +327,7 @@ export default function Contacts() {
         
         // Automatically enable cloud sync if not already enabled
         if (!status?.isEnabled) {
-          const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+          const accounts = await getUserLinkedInAccounts();
           if (accounts.length > 0) {
             const account = accounts[0];
             const accountId = account.unipileAccountId || account.id || account.account_id;

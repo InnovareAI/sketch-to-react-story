@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGate from "@/components/AuthGate";
 import { globalAutoSync } from "@/services/GlobalAutoSync";
 import { migrateLinkedInAccountsToUserStorage } from "@/utils/migrateLinkedInAccounts";
+import { initializeDataMigration } from "@/utils/completeDataMigration";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -59,7 +60,10 @@ const App: React.FC = () => {
   // Initialize global auto-sync and migrate data when app starts
   useEffect(() => {
     const initialize = async () => {
-      // First migrate LinkedIn accounts to user-specific storage
+      // Run comprehensive data migration to user-specific storage
+      await initializeDataMigration();
+      
+      // First migrate LinkedIn accounts to user-specific storage (backward compatibility)
       await migrateLinkedInAccountsToUserStorage();
       
       // Then initialize auto-sync

@@ -50,14 +50,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true); // Start with loading true for proper auth check
 
-  // Check for bypass user on mount
+  // Check for bypass user on mount (still shared for development)
   const checkBypassUser = (): UserProfile | null => {
     const bypassAuth = localStorage.getItem('bypass_auth');
     const bypassUserData = localStorage.getItem('bypass_user');
     
     if (bypassAuth === 'true' && bypassUserData) {
       try {
-        return JSON.parse(bypassUserData) as UserProfile;
+        const profile = JSON.parse(bypassUserData) as UserProfile;
+        // Store user-specific workspace ID when bypassing
+        if (profile.workspace_id) {
+          localStorage.setItem(`user_${profile.id}_workspace_id`, profile.workspace_id);
+        }
+        return profile;
       } catch (error) {
         console.error('Error parsing bypass user data:', error);
         localStorage.removeItem('bypass_auth');

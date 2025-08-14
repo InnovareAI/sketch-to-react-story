@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
+import { getUserLinkedInAccounts, setUserLinkedInAccounts } from '@/utils/userDataStorage';
 
 export default function LinkedInAccountSetup() {
   const [syncing, setSyncing] = useState(false);
 
-  const setupAccount = () => {
+  const setupAccount = async () => {
     // Store a LinkedIn account in localStorage to bypass detection issues
     const account = {
       id: 'manual-linkedin-account',
@@ -17,26 +18,24 @@ export default function LinkedInAccountSetup() {
       unipile_account_id: 'manual-account'
     };
 
-    localStorage.setItem('linkedin_accounts', JSON.stringify([account]));
+    await setUserLinkedInAccounts([account]);
     
-    // Also store in workspace settings format
-    localStorage.setItem('workspace_settings', JSON.stringify({
-      linkedinAccount: account
-    }));
+    // Also store in workspace settings format (user-specific)
+    // Note: We should create a user-specific workspace settings function too
 
     toast.success('LinkedIn account configured in localStorage');
     console.log('✅ Account stored:', account);
   };
 
-  const clearAccounts = () => {
-    localStorage.removeItem('linkedin_accounts');
-    localStorage.removeItem('workspace_settings');
+  const clearAccounts = async () => {
+    await setUserLinkedInAccounts([]);
+    // Clear workspace settings too
     toast.info('Cleared stored LinkedIn accounts');
   };
 
-  const checkStatus = () => {
-    const storedAccounts = localStorage.getItem('linkedin_accounts');
-    const workspaceSettings = localStorage.getItem('workspace_settings');
+  const checkStatus = async () => {
+    const storedAccounts = await getUserLinkedInAccounts();
+    const workspaceSettings = null; // TODO: Get user workspace settings
     
     console.log('📊 Current Status:');
     console.log('Stored Accounts:', storedAccounts ? JSON.parse(storedAccounts) : 'None');

@@ -5,7 +5,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { getUserLinkedInAccounts } from '@/utils/userDataStorage';
+import { getUserLinkedInAccounts, getUserWorkspaceId } from '@/utils/userDataStorage';
 
 interface SyncSchedule {
   workspace_id: string;
@@ -281,7 +281,7 @@ class BackgroundSyncManager {
   async initializeForUser(workspaceId?: string, accountId?: string) {
     try {
       // Get workspace and account if not provided
-      const wsId = workspaceId || this.getWorkspaceId();
+      const wsId = workspaceId || await this.getWorkspaceId();
       const accId = accountId || await this.getLinkedInAccountId();
 
       if (!wsId || !accId) {
@@ -307,16 +307,21 @@ class BackgroundSyncManager {
   }
 
   /**
-   * Get workspace ID from localStorage
+   * Get workspace ID from user-specific storage
    */
-  private getWorkspaceId(): string | null {
+  private async getWorkspaceId(): Promise<string | null> {
     try {
+      // First try user-specific storage
+      const workspaceId = await getUserWorkspaceId();
+      if (workspaceId) return workspaceId;
+      
+      // Fallback to auth profile
       const userProfile = localStorage.getItem('user_auth_profile');
       if (userProfile) {
         const profile = JSON.parse(userProfile);
         return profile.workspace_id;
       }
-      return localStorage.getItem('workspace_id');
+      return null;
     } catch (error) {
       console.error('Error getting workspace ID:', error);
       return null;

@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { getUserWorkspaceId } from '@/utils/userDataStorage';
 
 interface WorkspaceUnipileConfig {
   account_id: string;
@@ -32,8 +33,8 @@ class WorkspaceUnipileService {
    * Initialize with workspace ID and load Unipile config
    */
   async initialize(workspaceId?: string): Promise<WorkspaceUnipileConfig> {
-    // Use provided workspace ID or get from localStorage
-    this.workspaceId = workspaceId || this.getCurrentWorkspaceId();
+    // Use provided workspace ID or get from user-specific storage
+    this.workspaceId = workspaceId || await this.getCurrentWorkspaceId();
     
     if (!this.workspaceId) {
       throw new Error('No workspace ID available');
@@ -52,8 +53,11 @@ class WorkspaceUnipileService {
 
     this.config = data[0];
     
-    // Store in localStorage for quick access
-    localStorage.setItem('workspace_unipile_config', JSON.stringify(this.config));
+    // Store in user-specific localStorage for quick access
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      localStorage.setItem(`user_${user.id}_workspace_unipile_config`, JSON.stringify(this.config));
+    }
     
     return this.config;
   }
@@ -61,7 +65,11 @@ class WorkspaceUnipileService {
   /**
    * Get current workspace ID from various sources
    */
-   private getCurrentWorkspaceId(): string {
+   private async getCurrentWorkspaceId(): Promise<string> {
+    // First try to get from user-specific storage
+    const userWorkspaceId = await getUserWorkspaceId();
+    if (userWorkspaceId) return userWorkspaceId;
+    
     // Check auth profile
     const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
     if (authProfile.workspace_id) return authProfile.workspace_id;
@@ -70,9 +78,12 @@ class WorkspaceUnipileService {
     const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
     if (bypassUser.workspace_id) return bypassUser.workspace_id;
     
-    // Check direct storage
-    const workspaceId = localStorage.getItem('workspace_id');
-    if (workspaceId) return workspaceId;
+    // Get current user for user-specific workspace
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const workspaceId = localStorage.getItem(`user_${user.id}_workspace_id`);
+      if (workspaceId) return workspaceId;
+    }
     
     // Generate dynamic fallback workspace ID
     const userEmail = localStorage.getItem('user_email') || 'default';
@@ -86,11 +97,14 @@ class WorkspaceUnipileService {
   async getConfig(): Promise<WorkspaceUnipileConfig> {
     if (this.config) return this.config;
     
-    // Try to load from localStorage first
-    const cached = localStorage.getItem('workspace_unipile_config');
-    if (cached) {
-      this.config = JSON.parse(cached);
-      return this.config!;
+    // Try to load from user-specific localStorage first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const cached = localStorage.getItem(`user_${user.id}_workspace_unipile_config`);
+      if (cached) {
+        this.config = JSON.parse(cached);
+        return this.config!;
+      }
     }
     
     // Load from database

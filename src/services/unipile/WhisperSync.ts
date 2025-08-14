@@ -6,6 +6,7 @@
 
 import { contactMessageSync } from './ContactMessageSync';
 import { supabase } from '@/integrations/supabase/client';
+import { getUserLinkedInAccounts } from '@/utils/userDataStorage';
 
 interface WhisperSyncConfig {
   enabled: boolean;
@@ -38,7 +39,7 @@ class WhisperSyncService {
     console.log('WhisperSync: Starting background sync service...');
     
     // Load config from localStorage or database
-    this.loadConfig();
+    await this.loadConfig();
     
     if (!this.config.enabled) {
       console.log('WhisperSync: Service is disabled');
@@ -49,7 +50,7 @@ class WhisperSyncService {
     this.stop();
 
     // Get workspace and account if not provided
-    const wsId = workspaceId || this.getWorkspaceId();
+    const wsId = workspaceId || await this.getWorkspaceId();
     const accId = accountId || await this.getLinkedInAccountId();
 
     if (!wsId || !accId) {
@@ -129,7 +130,7 @@ class WhisperSyncService {
       if (error.message?.includes('rate limit')) {
         this.config.intervalMinutes = Math.min(120, this.config.intervalMinutes * 2);
         console.log(`WhisperSync: Rate limited, increasing interval to ${this.config.intervalMinutes} minutes`);
-        this.saveConfig();
+        await this.saveConfig();
         
         // Restart with new interval
         this.start(workspaceId, accountId);
@@ -175,14 +176,19 @@ class WhisperSyncService {
   /**
    * Get workspace ID from localStorage or auth
    */
-  private getWorkspaceId(): string | null {
+  private async getWorkspaceId(): Promise<string | null> {
     try {
       const userProfile = localStorage.getItem('user_auth_profile');
       if (userProfile) {
         const profile = JSON.parse(userProfile);
         return profile.workspace_id;
       }
-      return localStorage.getItem('workspace_id');
+      // Get user-specific workspace ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        return localStorage.getItem(`user_${user.id}_workspace_id`);
+      }
+      return null;
     } catch (error) {
       console.error('WhisperSync: Error getting workspace ID:', error);
       return null;
@@ -194,7 +200,8 @@ class WhisperSyncService {
    */
   private async getLinkedInAccountId(): Promise<string | null> {
     try {
-      const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+      // Use the centralized user data storage
+      const accounts = await getUserLinkedInAccounts();
       if (accounts.length > 0) {
         return accounts[0].unipileAccountId || accounts[0].id;
       }
@@ -208,9 +215,12 @@ class WhisperSyncService {
   /**
    * Load configuration from localStorage
    */
-  private loadConfig() {
+  private async loadConfig() {
     try {
-      const saved = localStorage.getItem('whisper_sync_config');
+      // Get user-specific config
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const saved = localStorage.getItem(`user_${user.id}_whisper_sync_config`);
       if (saved) {
         this.config = { ...this.config, ...JSON.parse(saved) };
       }
@@ -222,9 +232,12 @@ class WhisperSyncService {
   /**
    * Save configuration to localStorage
    */
-  private saveConfig() {
+  private async saveConfig() {
     try {
-      localStorage.setItem('whisper_sync_config', JSON.stringify(this.config));
+      // Save user-specific config
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      localStorage.setItem(`user_${user.id}_whisper_sync_config`, JSON.stringify(this.config));
     } catch (error) {
       console.error('WhisperSync: Error saving config:', error);
     }
@@ -233,9 +246,9 @@ class WhisperSyncService {
   /**
    * Update configuration
    */
-  updateConfig(config: Partial<WhisperSyncConfig>) {
+  async updateConfig(config: Partial<WhisperSyncConfig>) {
     this.config = { ...this.config, ...config };
-    this.saveConfig();
+    await this.saveConfig();
     
     // Restart if enabled state changed
     if (config.enabled !== undefined) {

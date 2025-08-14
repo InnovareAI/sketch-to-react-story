@@ -6,6 +6,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { unipileService } from '@/services/unipile/UnipileService';
 import { toast } from 'sonner';
+import { getUserLinkedInAccounts } from '@/utils/userDataStorage';
 
 export class LinkedInDataSync {
   private static instance: LinkedInDataSync;
@@ -52,10 +53,9 @@ export class LinkedInDataSync {
    */
   private async getConnectedAccounts(userId: string): Promise<any[]> {
     try {
-      // Check localStorage for accounts
-      const storedAccounts = localStorage.getItem('linkedin_accounts');
-      if (storedAccounts) {
-        const accounts = JSON.parse(storedAccounts);
+      // Check user-specific storage for accounts
+      const accounts = await getUserLinkedInAccounts();
+      if (accounts && accounts.length > 0) {
         return accounts;
       }
 

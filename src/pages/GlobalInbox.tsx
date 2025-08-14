@@ -4,6 +4,7 @@ import { useLinkedInSync } from '@/hooks/useLinkedInSync';
 import { toast } from 'sonner';
 import { previewSync } from '@/services/unipile/PreviewSync';
 import FollowUpModal from '@/components/FollowUpModal';
+import { getUserLinkedInAccounts } from '@/utils/userDataStorage';
 // import MessageComposer from '@/components/MessageComposer'; // Temporarily disabled
 
 interface Message {
@@ -146,8 +147,8 @@ export default function GlobalInbox() {
       const workspace = await getWorkspace();
       if (!workspace) return;
 
-      // Check if LinkedIn is connected
-      const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+      // Check if LinkedIn is connected using user-specific storage
+      const accounts = await getUserLinkedInAccounts();
       if (accounts.length > 0) {
         const account = accounts[0];
         const accountId = account.unipileAccountId || account.id || account.account_id;
@@ -768,7 +769,7 @@ export default function GlobalInbox() {
                 // Check if configured
                 if (!unipileRealTimeSync.isConfigured()) {
                   console.log('📝 Configuring Unipile...');
-                  const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+                  const accounts = await getUserLinkedInAccounts();
                   if (accounts.length > 0) {
                     const account = accounts[0];
                     const accountId = account.unipileAccountId || account.id || account.account_id;
@@ -799,7 +800,8 @@ export default function GlobalInbox() {
                     messageCount: 0,
                     contactCount: 0
                   };
-                  localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify(syncStatus));
+                  // Store sync status with user-specific key
+                  localStorage.setItem(`user_${user.id}_linkedin_sync`, JSON.stringify(syncStatus));
                   console.log('Sync status saved:', syncStatus);
                 }
                 

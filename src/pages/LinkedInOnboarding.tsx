@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { enhancedLinkedInImport } from '@/services/EnhancedLinkedInImport';
 import { linkedInOAuth } from '@/services/linkedin/LinkedInOAuth';
+import { setUserWorkspaceId } from '@/utils/userDataStorage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -159,7 +160,7 @@ export default function LinkedInOnboarding() {
     try {
       // Use the LinkedIn OAuth service to get the authorization URL
       const state = crypto.randomUUID();
-      localStorage.setItem('linkedin_oauth_state', state);
+      sessionStorage.setItem('linkedin_oauth_state', state);
       
       // Check if we have LinkedIn OAuth credentials configured
       const clientId = import.meta.env.VITE_LINKEDIN_CLIENT_ID;
@@ -233,9 +234,9 @@ export default function LinkedInOnboarding() {
           .eq('id', workspace.id);
       }
 
-      // Store location and workspace in localStorage
+      // Store location and workspace in user-specific storage
       localStorage.setItem('user_location', location);
-      localStorage.setItem('workspace_id', workspace.id);
+      await setUserWorkspaceId(workspace.id);
 
       // Step 1: Import LinkedIn contacts immediately after authentication
       toast.info('🚀 Importing your LinkedIn contacts...');

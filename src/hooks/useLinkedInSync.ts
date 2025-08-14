@@ -43,8 +43,8 @@ export function useLinkedInSync() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Check localStorage for sync status
-    const syncStatus = localStorage.getItem(`linkedin_sync_${user.id}`);
+    // Check user-specific localStorage for sync status
+    const syncStatus = localStorage.getItem(`user_${user.id}_linkedin_sync`);
     if (syncStatus) {
       const status = JSON.parse(syncStatus);
       setSyncState(prev => ({
@@ -143,7 +143,7 @@ export function useLinkedInSync() {
           messageCount: status.messagessynced,
           contactCount: status.contactsSynced
         };
-        localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify(syncData));
+        localStorage.setItem(`user_${user.id}_linkedin_sync`, JSON.stringify(syncData));
       }
 
       setSyncState(prev => ({
@@ -185,7 +185,7 @@ export function useLinkedInSync() {
       // Update sync status
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const currentStatus = localStorage.getItem(`linkedin_sync_${user.id}`);
+        const currentStatus = localStorage.getItem(`user_${user.id}_linkedin_sync`);
         const statusData = currentStatus ? JSON.parse(currentStatus) : {};
         
         const updatedStatus = {
@@ -195,7 +195,7 @@ export function useLinkedInSync() {
           contactCount: status.contactsSynced
         };
         
-        localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify(updatedStatus));
+        localStorage.setItem(`user_${user.id}_linkedin_sync`, JSON.stringify(updatedStatus));
       }
 
       setSyncState(prev => ({
