@@ -34,9 +34,17 @@ export default function SimpleLoginModal({ isOpen, onClose, onSuccess, onSignupC
       // Simple delay for UX
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Generate simple IDs without any complex logic
-      const userId = `user-${Date.now()}`;
-      const workspaceId = `workspace-${Date.now()}`;
+      // Generate proper UUIDs
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+      
+      const userId = generateUUID();
+      const workspaceId = generateUUID();
       
       const userData = {
         id: userId,

@@ -48,15 +48,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSignupClick }
         }
       } else {
         // Create new user data for demo
-        let userId, workspaceId;
-        try {
-          userId = generateUUID();
-          workspaceId = generateUUID();
-        } catch (e) {
-          // Fallback to simple ID generation
-          userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          workspaceId = `workspace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        }
+        // Always use proper UUID generation
+        const userId = generateUUID();
+        const workspaceId = generateUUID();
         
         userData = {
           id: userId,
