@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import SimpleLoginModal from '@/components/auth/SimpleLoginModal';
 import SignupModal from '@/components/auth/SignupModal';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,26 @@ export default function AuthGate({ children }: AuthGateProps) {
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  
+  // Define public routes that don't require authentication
+  const publicRoutes = [
+    '/follow-ups-public',
+    '/test-inbox',
+    '/inbox-direct',
+    '/simple-inbox',
+    '/linkedin-setup',
+    '/linkedin-manager',
+    '/linkedin-diagnostic',
+    '/linkedin-onboarding',
+    '/onboarding',
+    '/login',
+    '/auth/login',
+    '/admin/login'
+  ];
+  
+  // Check if current route is public
+  const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route));
   
   useEffect(() => {
     checkAuth();
@@ -46,6 +66,11 @@ export default function AuthGate({ children }: AuthGateProps) {
   const handleAuthSuccess = () => {
     checkAuth();
   };
+  
+  // Allow public routes to bypass authentication entirely
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
   
   if (loading) {
     return (
