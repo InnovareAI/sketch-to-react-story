@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { clearAllBadUUIDs } from '@/utils/clearBadUUIDs';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -31,6 +32,9 @@ export default function SimpleLoginModal({ isOpen, onClose, onSuccess, onSignupC
     setLoading(true);
     
     try {
+      // Clear any bad UUIDs first
+      clearAllBadUUIDs();
+      
       // Simple delay for UX
       await new Promise(resolve => setTimeout(resolve, 500));
       

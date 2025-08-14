@@ -9,6 +9,7 @@ import AuthGate from "@/components/AuthGate";
 import { globalAutoSync } from "@/services/GlobalAutoSync";
 import { migrateLinkedInAccountsToUserStorage } from "@/utils/migrateLinkedInAccounts";
 import { initializeDataMigration } from "@/utils/completeDataMigration";
+import "@/utils/clearBadUUIDs"; // Auto-runs to clean bad UUIDs
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -60,6 +61,9 @@ const App: React.FC = () => {
   // Initialize global auto-sync and migrate data when app starts
   useEffect(() => {
     const initialize = async () => {
+      // Clean any bad UUIDs first (already auto-ran via import)
+      console.log('🚀 Starting app initialization...');
+      
       // Run comprehensive data migration to user-specific storage
       await initializeDataMigration();
       
