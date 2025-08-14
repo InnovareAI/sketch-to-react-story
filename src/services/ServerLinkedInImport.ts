@@ -87,45 +87,30 @@ export class ServerLinkedInImport {
         progress: 10
       });
 
-      // Call the Supabase Edge Function
+      // Call the Supabase Edge Function using the correct method
+      console.log('🔄 Calling edge function via supabase.functions.invoke...');
+
       const { data, error } = await supabase.functions.invoke('linkedin-import', {
-        body: {},
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Pass parameters via URL query string
-        method: 'GET',
-        // Use search params in the function URL
-      });
-
-      // Build URL with query parameters
-      const params = new URLSearchParams({
-        workspace_id: this.workspaceId,
-        limit: limit.toString(),
-        method: method,
-        import_id: this.importId
-      });
-
-      console.log('🔄 Calling edge function with params:', params.toString());
-
-      // Make direct fetch call to edge function with query params
-      const functionUrl = `${supabase.supabaseUrl}/functions/v1/linkedin-import?${params.toString()}`;
-      
-      const response = await fetch(functionUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-          'apikey': supabase.supabaseKey,
+        body: {
+          workspaceId: this.workspaceId,
+          options: {
+            limit: limit,
+            method: method,
+            importId: this.importId
+          }
         }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Server import failed: ${response.status} ${response.statusText} - ${errorText}`);
+      if (error) {
+        console.error('❌ Supabase function invoke error:', error);
+        throw new Error(`Server import failed: ${error.message}`);
       }
 
-      const result: ServerImportResult = await response.json();
+      if (!data) {
+        throw new Error('No data returned from server import function');
+      }
+
+      const result: ServerImportResult = data;
 
       console.log('📊 Server import completed:', result);
 
@@ -240,17 +225,20 @@ export class ServerLinkedInImport {
         return { available: false, error: 'Authentication required' };
       }
 
-      // Test edge function availability
-      const testUrl = `${supabase.supabaseUrl}/functions/v1/linkedin-import`;
-      const response = await fetch(testUrl, {
-        method: 'OPTIONS', // CORS preflight
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': supabase.supabaseKey,
-        }
+      // Test edge function availability with a minimal test call
+      const { error } = await supabase.functions.invoke('linkedin-import', {
+        body: { test: true }
       });
 
-      return { available: response.ok };
+      if (error) {
+        // If it's an authentication error, the function is available but needs proper auth
+        if (error.message.includes('JWT') || error.message.includes('auth')) {
+          return { available: true };
+        }
+        return { available: false, error: error.message };
+      }
+
+      return { available: true };
 
     } catch (error) {
       return { 

@@ -61,17 +61,62 @@ serve(async (req) => {
 
     console.log('✅ User authenticated:', user.email);
 
-    // Get request parameters
-    const { searchParams } = new URL(req.url);
-    const workspaceId = searchParams.get('workspace_id');
-    const limit = parseInt(searchParams.get('limit') || '500');
-    const method = searchParams.get('method') || 'both';
+    // Get request parameters from body or query params
+    let workspaceId: string | null = null;
+    let limit = 500;
+    let method = 'both';
+    let importId = '';
+    let isTest = false;
+
+    // Try to get parameters from JSON body first
+    try {
+      const body = await req.json();
+      console.log('📝 Request body:', body);
+      
+      if (body.test) {
+        isTest = true;
+      }
+      
+      if (body.workspaceId) {
+        workspaceId = body.workspaceId;
+        limit = body.options?.limit || 500;
+        method = body.options?.method || 'both';
+        importId = body.options?.importId || '';
+      }
+    } catch (bodyError) {
+      console.log('📋 No JSON body, checking URL params...');
+      
+      // Fallback to URL parameters
+      const { searchParams } = new URL(req.url);
+      workspaceId = searchParams.get('workspace_id');
+      limit = parseInt(searchParams.get('limit') || '500');
+      method = searchParams.get('method') || 'both';
+      importId = searchParams.get('import_id') || '';
+    }
 
     console.log('📊 Import Configuration:');
     console.log(`   • User: ${user.email}`);
     console.log(`   • Workspace ID: ${workspaceId}`);
     console.log(`   • Limit: ${limit}`);
     console.log(`   • Method: ${method}`);
+    console.log(`   • Import ID: ${importId}`);
+    console.log(`   • Is Test: ${isTest}`);
+
+    // Handle test requests
+    if (isTest) {
+      console.log('🧪 Test request detected - returning success');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Edge function is available',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     if (!workspaceId) {
       return new Response(
