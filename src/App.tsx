@@ -4,6 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Login from "./pages/Login";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -28,32 +31,114 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/agent" element={<Agent />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/accounts" element={<Accounts />} />
-            <Route path="/campaigns" element={<Campaigns />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/inbox" element={<GlobalInbox />} />
-            <Route path="/message-queue" element={<MessageQueue />} />
-            <Route path="/global-inbox" element={<GlobalInbox />} />
-            <Route path="/templates" element={<Templates />} />
-            <Route path="/requests" element={<Requests />} />
-            <Route path="/placeholders" element={<Placeholders />} />
-            <Route path="/company-profile" element={<Members />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/roles" element={<Roles />} />
-            <Route path="/workspace-settings" element={<WorkspaceSettings />} />
-            <Route path="/linkedin" element={<LinkedInIntegration />} />
-            <Route path="/linkedin-integration" element={<LinkedInIntegration />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              
+              {/* Protected routes */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/agent" element={
+                <ProtectedRoute>
+                  <Agent />
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/accounts" element={
+                <ProtectedRoute>
+                  <Accounts />
+                </ProtectedRoute>
+              } />
+              <Route path="/campaigns" element={
+                <ProtectedRoute>
+                  <Campaigns />
+                </ProtectedRoute>
+              } />
+              <Route path="/contacts" element={
+                <ProtectedRoute>
+                  <Contacts />
+                </ProtectedRoute>
+              } />
+              <Route path="/search" element={
+                <ProtectedRoute>
+                  <Search />
+                </ProtectedRoute>
+              } />
+              <Route path="/inbox" element={
+                <ProtectedRoute>
+                  <GlobalInbox />
+                </ProtectedRoute>
+              } />
+              <Route path="/message-queue" element={
+                <ProtectedRoute>
+                  <MessageQueue />
+                </ProtectedRoute>
+              } />
+              <Route path="/global-inbox" element={
+                <ProtectedRoute>
+                  <GlobalInbox />
+                </ProtectedRoute>
+              } />
+              <Route path="/templates" element={
+                <ProtectedRoute>
+                  <Templates />
+                </ProtectedRoute>
+              } />
+              <Route path="/requests" element={
+                <ProtectedRoute>
+                  <Requests />
+                </ProtectedRoute>
+              } />
+              <Route path="/placeholders" element={
+                <ProtectedRoute>
+                  <Placeholders />
+                </ProtectedRoute>
+              } />
+              <Route path="/company-profile" element={
+                <ProtectedRoute>
+                  <Members />
+                </ProtectedRoute>
+              } />
+              <Route path="/members" element={
+                <ProtectedRoute>
+                  <Members />
+                </ProtectedRoute>
+              } />
+              <Route path="/roles" element={
+                <ProtectedRoute>
+                  <Roles />
+                </ProtectedRoute>
+              } />
+              <Route path="/workspace-settings" element={
+                <ProtectedRoute>
+                  <WorkspaceSettings />
+                </ProtectedRoute>
+              } />
+              <Route path="/linkedin" element={
+                <ProtectedRoute>
+                  <LinkedInIntegration />
+                </ProtectedRoute>
+              } />
+              <Route path="/linkedin-integration" element={
+                <ProtectedRoute>
+                  <LinkedInIntegration />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

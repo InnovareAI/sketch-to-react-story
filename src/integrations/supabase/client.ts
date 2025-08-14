@@ -13,5 +13,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    // 2-week session duration for InnovareAI team
+    refreshThreshold: 600, // Refresh 10 minutes before expiry
+    detectSessionInUrl: true
   }
 });
