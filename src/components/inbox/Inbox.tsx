@@ -556,7 +556,13 @@ export function Inbox({ className }: InboxProps) {
                   >
                     <Archive className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      toast.info('More options: Export, Block, Report, etc.');
+                    }}
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
@@ -660,10 +666,22 @@ export function Inbox({ className }: InboxProps) {
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        toast.info('Attachment feature coming soon!');
+                      }}
+                    >
                       <Paperclip className="h-3 w-3" />
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        toast.info('Calendar scheduling coming soon!');
+                      }}
+                    >
                       <Calendar className="h-3 w-3" />
                     </Button>
                   </div>

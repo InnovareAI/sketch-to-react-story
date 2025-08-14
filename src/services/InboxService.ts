@@ -5,6 +5,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { getUserWorkspaceId } from '@/utils/userDataStorage';
+import { getDemoWorkspaceId, initSimpleAuth } from '@/utils/simpleAuth';
 
 export interface InboxConversation {
   id: string;
@@ -48,9 +49,13 @@ class InboxService {
    */
   async loadConversations(): Promise<InboxConversation[]> {
     try {
-      const workspaceId = await getUserWorkspaceId();
+      // Initialize demo auth if needed
+      await initSimpleAuth();
+      
+      // Try to get workspace ID, fallback to demo workspace
+      let workspaceId = await getUserWorkspaceId();
       if (!workspaceId) {
-        throw new Error('No workspace ID found');
+        workspaceId = getDemoWorkspaceId();
       }
 
       const { data, error } = await supabase
@@ -108,9 +113,13 @@ class InboxService {
    */
   async getInboxStats(): Promise<InboxStats> {
     try {
-      const workspaceId = await getUserWorkspaceId();
+      // Initialize demo auth if needed
+      await initSimpleAuth();
+      
+      // Try to get workspace ID, fallback to demo workspace
+      let workspaceId = await getUserWorkspaceId();
       if (!workspaceId) {
-        throw new Error('No workspace ID found');
+        workspaceId = getDemoWorkspaceId();
       }
 
       // Get conversation stats
@@ -333,9 +342,13 @@ class InboxService {
    */
   async triggerSync(): Promise<void> {
     try {
-      const workspaceId = await getUserWorkspaceId();
+      // Initialize demo auth if needed
+      await initSimpleAuth();
+      
+      // Try to get workspace ID, fallback to demo workspace
+      let workspaceId = await getUserWorkspaceId();
       if (!workspaceId) {
-        throw new Error('No workspace ID found');
+        workspaceId = getDemoWorkspaceId();
       }
 
       // Call the edge function to trigger background sync
