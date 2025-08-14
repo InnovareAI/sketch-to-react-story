@@ -27,16 +27,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddPeopleTab } from './AddPeopleTab';
-
-interface CampaignStep {
-  id: string;
-  type: 'connection' | 'message' | 'inmail' | 'follow_up';
-  name: string;
-  content: string;
-  delay?: number;
-  delayUnit?: 'hours' | 'days' | 'weeks';
-  variants?: string[];
-}
+import { campaignService, type Campaign, type CampaignStep } from '@/services/campaignService';
+import { campaignMessageSender } from '@/services/CampaignMessageSender';
 
 const placeholders = [
   { value: '{first_name}', label: 'First Name', icon: User },
@@ -52,8 +44,14 @@ export default function CampaignSetupFlow() {
   const campaignType = searchParams.get('type') || 'connector';
   const campaignId = searchParams.get('id');
   
+  // Use existing workspace and user IDs from auth context
+  const WORKSPACE_ID = 'df5d730f-1915-4269-bd5a-9534478b17af';
+  const TENANT_ID = '367b6c5c-43d7-4546-96d4-4f5f22641de1'; // InnovareAI tenant
+  const USER_ID = '03ca8428-384a-482d-8371-66928fee1063'; // CL user
+  
   const [activeTab, setActiveTab] = useState('name');
   const [campaignName, setCampaignName] = useState('');
+  const [campaignDescription, setCampaignDescription] = useState('');
   const [campaignSteps, setCampaignSteps] = useState<CampaignStep[]>([]);
   const [selectedPeople, setSelectedPeople] = useState<any[]>([]);
   const [campaignSettings, setCampaignSettings] = useState({
@@ -68,50 +66,88 @@ export default function CampaignSetupFlow() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
+  const [existingCampaign, setExistingCampaign] = useState<Campaign | null>(null);
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
+  // Load existing campaign data if editing
   useEffect(() => {
-    // Initialize default steps based on campaign type
-    if (campaignType === 'connector') {
-      setCampaignSteps([
-        {
-          id: '1',
-          type: 'connection',
-          name: 'Connection Request',
-          content: 'Hi {first_name}, I noticed you work at {company_name} as a {job_title}. I\'d love to connect and share insights about our industry.',
-          variants: []
-        },
-        {
-          id: '2',
-          type: 'follow_up',
-          name: 'Follow-up Message',
-          content: 'Thanks for connecting, {first_name}! I wanted to reach out because...',
-          delay: 2,
-          delayUnit: 'days',
-          variants: []
+    const loadExistingCampaign = async () => {
+      if (campaignId) {
+        setIsLoading(true);
+        try {
+          const campaign = await campaignService.getCampaign(campaignId);
+          if (campaign) {
+            setExistingCampaign(campaign);
+            setCampaignName(campaign.name);
+            setCampaignDescription(campaign.description || '');
+            setCampaignSteps(campaign.messaging_sequence || []);
+            
+            // Update settings
+            setCampaignSettings(prev => ({
+              ...prev,
+              dailyLimit: campaign.max_leads_per_day || 50,
+              timezone: 'America/New_York' // Default since not stored in DB
+            }));
+            
+            setIsDraft(campaign.status === 'draft');
+          }
+        } catch (error) {
+          console.error('Error loading campaign:', error);
+          alert('Failed to load campaign data');
+        } finally {
+          setIsLoading(false);
         }
-      ]);
-    } else if (campaignType === 'messenger') {
-      setCampaignSteps([
-        {
-          id: '1',
-          type: 'message',
-          name: 'Initial Message',
-          content: 'Hi {first_name}, I hope this message finds you well...',
-          variants: []
-        }
-      ]);
-    } else if (campaignType === 'open-inmail') {
-      setCampaignSteps([
-        {
-          id: '1',
-          type: 'inmail',
-          name: 'InMail Message',
-          content: 'Hi {first_name}, I came across your profile and was impressed by...',
-          variants: []
-        }
-      ]);
+      }
+    };
+
+    loadExistingCampaign();
+  }, [campaignId]);
+
+  // Initialize default steps for new campaigns
+  useEffect(() => {
+    if (!campaignId && campaignSteps.length === 0) {
+      if (campaignType === 'connector') {
+        setCampaignSteps([
+          {
+            id: '1',
+            type: 'connection',
+            name: 'Connection Request',
+            content: 'Hi {first_name}, I noticed you work at {company_name} as a {job_title}. I\'d love to connect and share insights about our industry.',
+            variants: []
+          },
+          {
+            id: '2',
+            type: 'follow_up',
+            name: 'Follow-up Message',
+            content: 'Thanks for connecting, {first_name}! I wanted to reach out because...',
+            delay: 2,
+            delayUnit: 'days',
+            variants: []
+          }
+        ]);
+      } else if (campaignType === 'messenger') {
+        setCampaignSteps([
+          {
+            id: '1',
+            type: 'message',
+            name: 'Initial Message',
+            content: 'Hi {first_name}, I hope this message finds you well...',
+            variants: []
+          }
+        ]);
+      } else if (campaignType === 'open-inmail') {
+        setCampaignSteps([
+          {
+            id: '1',
+            type: 'inmail',
+            name: 'InMail Message',
+            content: 'Hi {first_name}, I came across your profile and was impressed by...',
+            variants: []
+          }
+        ]);
+      }
     }
-  }, [campaignType]);
+  }, [campaignType, campaignId, campaignSteps.length]);
 
   const addStep = () => {
     const newStep: CampaignStep = {
@@ -149,10 +185,54 @@ export default function CampaignSetupFlow() {
   const insertPlaceholder = (stepId: string, placeholder: string) => {
     const step = campaignSteps.find(s => s.id === stepId);
     if (step) {
-      // Insert placeholder at cursor position or append
-      updateStep(stepId, { 
-        content: step.content + ' ' + placeholder 
-      });
+      // Try to insert at cursor position, fallback to append
+      const textarea = document.querySelector(`textarea[data-step-id="${stepId}"]`) as HTMLTextAreaElement;
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const newContent = step.content.substring(0, start) + placeholder + step.content.substring(end);
+        updateStep(stepId, { content: newContent });
+        
+        // Restore cursor position after placeholder
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + placeholder.length;
+          textarea.focus();
+        }, 0);
+      } else {
+        // Fallback to append
+        updateStep(stepId, { 
+          content: step.content + (step.content ? ' ' : '') + placeholder 
+        });
+      }
+    }
+  };
+
+  const sendTestMessage = async (stepId: string) => {
+    if (!existingCampaign) {
+      alert('Please save the campaign first before testing messages');
+      return;
+    }
+
+    const step = campaignSteps.find(s => s.id === stepId);
+    if (!step) {
+      alert('Step not found');
+      return;
+    }
+
+    setIsSendingTest(true);
+    try {
+      const result = await campaignMessageSender.sendTestMessage(existingCampaign.id!);
+      
+      if (result.success) {
+        alert(`✅ Test message sent successfully!\n\nContent: ${result.content}\nSent at: ${result.sentAt}`);
+      } else {
+        alert(`❌ Failed to send test message: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending test message:', error);
+      alert('Failed to send test message. Please check your Unipile configuration.');
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -175,24 +255,78 @@ export default function CampaignSetupFlow() {
     setIsLoading(true);
     
     try {
-      const campaignData = {
-        name: campaignName,
-        type: campaignType,
-        steps: campaignSteps,
-        people: selectedPeople,
-        settings: campaignSettings,
-        status: status,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      // Map campaign type to database values
+      const mapCampaignType = (type: string): string => {
+        switch (type) {
+          case 'connector':
+            return 'connection_request';
+          case 'messenger':
+            return 'message';
+          case 'open-inmail':
+            return 'inmail';
+          default:
+            return 'connection_request';
+        }
       };
 
-      // TODO: Save to Supabase database
-      console.log(`${status === 'draft' ? 'Saving as draft' : 'Activating'} campaign:`, campaignData);
+      const campaignData: Omit<Campaign, 'id' | 'created_at' | 'updated_at'> = {
+        workspace_id: WORKSPACE_ID,
+        tenant_id: TENANT_ID,
+        user_id: USER_ID,
+        name: campaignName,
+        description: campaignDescription,
+        type: mapCampaignType(campaignType),
+        status: status,
+        messaging_sequence: campaignSteps,
+        max_leads_per_day: campaignSettings.dailyLimit,
+        daily_connection_limit: campaignSettings.dailyLimit,
+        target_audience: 'general',
+        
+        // Initialize counters
+        current_leads_today: 0,
+        current_leads_total: 0,
+        total_sent: 0,
+        total_responses: 0,
+        total_connections: 0,
+        success_rate: 0.00,
+        
+        // Additional settings
+        settings: {
+          personalization_enabled: true,
+          track_opens: campaignSettings.trackOpens,
+          track_clicks: campaignSettings.trackClicks,
+          stop_on_reply: campaignSettings.stopOnReply,
+          working_days: campaignSettings.workingDays,
+          working_hours: campaignSettings.workingHours,
+          timezone: campaignSettings.timezone
+        },
+        
+        // Features
+        profile_visit_enabled: false,
+        company_follow_enabled: false,
+        requires_2fa: false,
+        follow_up_days: [1, 3, 7]
+      };
+
+      let savedCampaign: Campaign;
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (existingCampaign) {
+        // Update existing campaign
+        savedCampaign = await campaignService.updateCampaign(existingCampaign.id!, campaignData);
+        console.log(`Updated campaign "${savedCampaign.name}" with status: ${status}`);
+      } else {
+        // Create new campaign
+        savedCampaign = await campaignService.createCampaign(campaignData);
+        console.log(`Created new campaign "${savedCampaign.name}" with status: ${status}`);
+      }
+
+      // If activating, make sure to set proper activation timestamp
+      if (status === 'active' && savedCampaign.status !== 'active') {
+        savedCampaign = await campaignService.activateCampaign(savedCampaign.id!);
+      }
       
-      setIsDraft(status === 'draft');
+      setIsDraft(savedCampaign.status === 'draft');
+      setExistingCampaign(savedCampaign);
       
       if (status === 'active') {
         alert('Campaign activated successfully!');
@@ -204,7 +338,8 @@ export default function CampaignSetupFlow() {
       return true;
     } catch (error) {
       console.error('Error saving campaign:', error);
-      alert('Failed to save campaign. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to save campaign: ${errorMessage}`);
       return false;
     } finally {
       setIsLoading(false);
@@ -302,6 +437,8 @@ export default function CampaignSetupFlow() {
                   <Label htmlFor="campaign-description">Description (Optional)</Label>
                   <Textarea
                     id="campaign-description"
+                    value={campaignDescription}
+                    onChange={(e) => setCampaignDescription(e.target.value)}
                     placeholder="Describe the goal and target audience for this campaign..."
                     className="mt-1"
                     rows={4}
@@ -400,14 +537,26 @@ export default function CampaignSetupFlow() {
                         <span className="text-xs text-gray-500">
                           {step.type === 'connection' ? '275' : '1000'} characters remaining
                         </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addVariant(step.id)}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add Variant
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => sendTestMessage(step.id)}
+                            disabled={isSendingTest || !step.content.trim()}
+                            className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            {isSendingTest ? 'Sending...' : 'Send Test'}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addVariant(step.id)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Variant
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
@@ -687,6 +836,46 @@ export default function CampaignSetupFlow() {
                       : 'Please complete all required fields above before activating your campaign.'}
                   </p>
                 </div>
+
+                {/* Quick Send Option */}
+                {existingCampaign && selectedPeople.length > 0 && campaignSteps.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-900 mb-2">🚀 Quick Send Messages</h4>
+                    <p className="text-sm text-blue-700 mb-3">
+                      Send campaign messages to all {selectedPeople.length} selected people using your message templates.
+                    </p>
+                    <Button
+                      onClick={async () => {
+                        setIsSendingTest(true);
+                        try {
+                          // Mock recipients for demo
+                          const recipients = selectedPeople.map((person, index) => ({
+                            linkedInUrl: person.linkedinUrl || `https://linkedin.com/in/demo-user-${index + 1}`,
+                            name: person.name || `Person ${index + 1}`,
+                            stepIndex: 0
+                          }));
+
+                          const result = await campaignMessageSender.sendBulkMessages(
+                            existingCampaign.id!,
+                            recipients,
+                            25 // Rate limit: 25 messages per hour
+                          );
+
+                          alert(`📧 Bulk send completed!\n\n✅ Sent: ${result.summary.successful}\n❌ Failed: ${result.summary.failed}\n⏱️  Time: ${result.summary.estimatedTime}`);
+                        } catch (error) {
+                          alert('Failed to send bulk messages. Please check your configuration.');
+                        } finally {
+                          setIsSendingTest(false);
+                        }
+                      }}
+                      disabled={isSendingTest}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      {isSendingTest ? 'Sending Messages...' : `Send to All ${selectedPeople.length} People`}
+                    </Button>
+                  </div>
+                )}
 
                 <div className="flex justify-between pt-4">
                   <Button variant="outline" onClick={() => setActiveTab('settings')}>
