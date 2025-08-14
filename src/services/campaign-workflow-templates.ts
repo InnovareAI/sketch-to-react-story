@@ -36,15 +36,13 @@ class CampaignWorkflowTemplates {
   getTemplate(campaignType: string): WorkflowTemplate | null {
     const templates = {
       connector: this.createConnectorTemplate(),
-      mobile_connector: this.createMobileConnectorTemplate(),
       messenger: this.createMessengerTemplate(),
       open_inmail: this.createOpenInMailTemplate(),
       event_invite: this.createEventInviteTemplate(),
       company_follow_invite: this.createCompanyFollowTemplate(),
       group: this.createGroupTemplate(),
       inbound: this.createInboundTemplate(),
-      event_participants: this.createEventParticipantsTemplate(),
-      recovery: this.createRecoveryTemplate()
+      event_participants: this.createEventParticipantsTemplate()
     };
 
     return templates[campaignType as keyof typeof templates] || null;
@@ -467,15 +465,6 @@ class CampaignWorkflowTemplates {
     };
   }
 
-  private createMobileConnectorTemplate(): WorkflowTemplate {
-    return {
-      ...this.createConnectorTemplate(),
-      id: 'mobile-connector-template',
-      name: 'LinkedIn Mobile Connector Campaign',
-      description: 'Mobile-optimized connection requests',
-      campaign_type: 'mobile_connector'
-    };
-  }
 
   private createEventInviteTemplate(): WorkflowTemplate {
     return {
@@ -606,22 +595,6 @@ class CampaignWorkflowTemplates {
     };
   }
 
-  private createRecoveryTemplate(): WorkflowTemplate {
-    return {
-      id: 'recovery-template',
-      name: 'Recovery Campaign',
-      description: 'Re-engagement with cold prospects',
-      campaign_type: 'recovery',
-      settings: {
-        daily_limit: 30,
-        priority: 'low',
-        working_hours: { start: '09:00', end: '17:00', days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] }
-      },
-      variables: {},
-      nodes: [],
-      connections: {}
-    };
-  }
 
   /**
    * Get all available templates
@@ -629,15 +602,13 @@ class CampaignWorkflowTemplates {
   getAllTemplates(): WorkflowTemplate[] {
     return [
       this.createConnectorTemplate(),
-      this.createMobileConnectorTemplate(),
       this.createMessengerTemplate(),
       this.createOpenInMailTemplate(),
       this.createEventInviteTemplate(),
       this.createCompanyFollowTemplate(),
       this.createGroupTemplate(),
       this.createInboundTemplate(),
-      this.createEventParticipantsTemplate(),
-      this.createRecoveryTemplate()
+      this.createEventParticipantsTemplate()
     ];
   }
 

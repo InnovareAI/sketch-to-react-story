@@ -56,17 +56,6 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
   const campaignTypes = [
     {
       id: 1,
-      name: "Mobile Connector",
-      type: "mobile_connector",
-      description: "Send additional ~10-15 connection requests per day",
-      requirements: "LinkedIn 2FA Required",
-      icon: "📱",
-      category: "Connection",
-      features: ["Automated connection requests", "Daily limits", "2FA security"],
-      recommended: false
-    },
-    {
-      id: 2,
       name: "Connector",
       type: "connector",
       description: "Reach out to 2nd and 3rd+ degree connections with personalised connection requests and follow-ups",
@@ -77,7 +66,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
       recommended: true
     },
     {
-      id: 3,
+      id: 2,
       name: "Messenger",
       type: "messenger",
       description: "Send direct messages to contacts that approved your request",
@@ -88,7 +77,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
       recommended: true
     },
     {
-      id: 4,
+      id: 3,
       name: "Open In-Mail",
       type: "open_inmail",
       description: "Send messages to your prospects without using a connection request",
@@ -99,7 +88,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
       recommended: false
     },
     {
-      id: 5,
+      id: 4,
       name: "Event Invite",
       type: "event_invite",
       description: "Invite your first-degree connections to attend a LinkedIn event",
@@ -110,7 +99,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
       recommended: false
     },
     {
-      id: 6,
+      id: 5,
       name: "Company Follow Invite",
       type: "company_follow_invite",
       description: "Invite 1st degree connections to follow your company",
@@ -121,7 +110,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
       recommended: false
     },
     {
-      id: 7,
+      id: 6,
       name: "Group",
       type: "group",
       description: "Send message requests to fellow LinkedIn group members",
@@ -132,7 +121,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
       recommended: false
     },
     {
-      id: 8,
+      id: 7,
       name: "Inbound",
       type: "inbound",
       description: "Outreach the users who have viewed your profile",
@@ -143,7 +132,7 @@ export function NewCampaignDialog({ open, onOpenChange }: NewCampaignDialogProps
       recommended: false
     },
     {
-      id: 9,
+      id: 8,
       name: "Event Participants",
       type: "event_participants",
       description: "Send message requests to participants of LinkedIn events",

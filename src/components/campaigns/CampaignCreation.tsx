@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  Smartphone, 
   Users, 
   MessageSquare, 
   Mail, 
@@ -21,7 +20,6 @@ import {
   UserPlus,
   TrendingUp,
   Users as GroupIcon,
-  RotateCcw,
   ArrowRight,
   Info,
   Zap,
@@ -44,17 +42,6 @@ interface CampaignType {
 }
 
 const campaignTypes: CampaignType[] = [
-  {
-    id: 'mobile_connector',
-    name: 'Mobile Connector',
-    description: 'Send additional ~10-15 connection requests per day',
-    icon: Smartphone,
-    dailyLimit: 15,
-    requirements: ['LinkedIn 2FA Required'],
-    connectionDegree: ['1st', '2nd', '3rd'],
-    twoFARequired: true,
-    features: ['Mobile-only sending', 'Connection note required', 'Lower daily limits']
-  },
   {
     id: 'connector',
     name: 'Connector', 
@@ -137,16 +124,6 @@ const campaignTypes: CampaignType[] = [
     connectionDegree: ['Any'],
     features: ['Event networking', 'Shared experience', 'Targeted outreach']
   },
-  {
-    id: 'recovery',
-    name: 'Recovery',
-    description: 'Recover contacts and last message that was sent to them',
-    icon: RotateCcw,
-    dailyLimit: 20,
-    requirements: ['Previous contact history'],
-    connectionDegree: ['Any'],
-    features: ['Contact recovery', 'Previous conversations', 'Re-engagement']
-  }
 ];
 
 interface CampaignCreationProps {

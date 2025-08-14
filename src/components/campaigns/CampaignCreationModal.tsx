@@ -11,10 +11,7 @@ import {
   Users,
   Building2,
   UserCheck,
-  RefreshCw,
   Globe,
-  Smartphone,
-  Hammer,
   ChevronRight,
   X
 } from 'lucide-react';
@@ -33,29 +30,11 @@ interface CampaignType {
 
 const campaignTypes: CampaignType[] = [
   {
-    id: 'mobile-connector',
-    name: 'Mobile Connector',
-    icon: Smartphone,
-    description: 'Send connection requests from mobile devices with higher acceptance rates',
-    requirements: ['Mobile app installed', 'LinkedIn Sales Navigator'],
-    tag: 'Premium',
-    available: true
-  },
-  {
     id: 'connector',
     name: 'Connector',
     icon: UserPlus,
     description: 'Automated connection requests with personalized messages',
     requirements: ['LinkedIn account connected'],
-    available: true
-  },
-  {
-    id: 'builder',
-    name: 'Builder',
-    icon: Hammer,
-    description: 'Build relationships through strategic engagement before connecting',
-    requirements: ['LinkedIn account connected', 'Content strategy'],
-    tag: 'Advanced',
     available: true
   },
   {
@@ -114,15 +93,6 @@ const campaignTypes: CampaignType[] = [
     icon: Globe,
     description: 'Connect with attendees from events you participated in',
     requirements: ['Event attendance history'],
-    available: true
-  },
-  {
-    id: 'recovery',
-    name: 'Recovery',
-    icon: RefreshCw,
-    description: 'Re-engage with cold or unresponsive connections',
-    requirements: ['Historical campaign data'],
-    tag: 'Re-engagement',
     available: true
   }
 ];

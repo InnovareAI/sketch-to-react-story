@@ -32,13 +32,6 @@ class PremiumValidationService {
   
   // Campaign type requirements mapping
   private readonly campaignRequirements: Record<string, CampaignTypeRequirements> = {
-    mobile_connector: {
-      premium_required: false,
-      sales_navigator_required: false,
-      two_factor_required: true,
-      verified_account_required: true,
-      minimum_premium_level: 'basic'
-    },
     connector: {
       premium_required: false,
       sales_navigator_required: false,
@@ -95,13 +88,6 @@ class PremiumValidationService {
       verified_account_required: true,
       minimum_premium_level: 'basic'
     },
-    recovery: {
-      premium_required: false,
-      sales_navigator_required: false,
-      two_factor_required: false,
-      verified_account_required: true,
-      minimum_premium_level: 'basic'
-    }
   };
 
   static getInstance(): PremiumValidationService {
@@ -320,7 +306,7 @@ class PremiumValidationService {
     let recommendedLimit = dailyLimit;
 
     // Check based on campaign type
-    if (['connector', 'mobile_connector'].includes(campaignType)) {
+    if (['connector'].includes(campaignType)) {
       if (dailyLimit > accountLimits.connections) {
         warnings.push(`Daily limit exceeds your account limit of ${accountLimits.connections} connections/day`);
         recommendedLimit = accountLimits.connections;
