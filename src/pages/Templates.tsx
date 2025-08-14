@@ -136,6 +136,10 @@ export default function Templates() {
                   <Button 
                     onClick={async () => {
                       try {
+                        if (!newTemplate.name || !newTemplate.content) {
+                          alert('Please fill in template name and content');
+                          return;
+                        }
                         await createTemplate({
                           name: newTemplate.name,
                           type: newTemplate.type,
@@ -143,8 +147,10 @@ export default function Templates() {
                           content: newTemplate.content,
                         });
                         setNewTemplate({ name: "", type: "email", subject: "", content: "" });
+                        alert('Template created successfully!');
                       } catch (error) {
                         console.error('Failed to create template:', error);
+                        alert(`Failed to create template: ${error.message}`);
                       }
                     }}
                   >

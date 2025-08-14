@@ -321,6 +321,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           user_metadata: { full_name: mockUser.full_name }
         } as User;
         
+        // Load user's actual workspace from database
+        try {
+          const userProfile = await loadUserProfile(mockUser.id);
+          if (userProfile && userProfile.workspace_id) {
+            mockUser.workspace_id = userProfile.workspace_id;
+            mockUser.workspace_name = userProfile.workspace_name;
+          }
+        } catch (error) {
+          console.log('Could not load workspace for bypass user, will use default');
+        }
+        
         // Store bypass data in localStorage
         localStorage.setItem('bypass_user', JSON.stringify(mockUser));
         localStorage.setItem('bypass_auth', 'true');
@@ -404,6 +415,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const bypassUser = checkBypassUser();
         if (bypassUser) {
           console.log('🚀 Found bypass user on initialization:', bypassUser.email);
+          
+          // Load latest profile data from database if workspace_id is missing
+          if (!bypassUser.workspace_id) {
+            try {
+              const userProfile = await loadUserProfile(bypassUser.id);
+              if (userProfile && userProfile.workspace_id) {
+                bypassUser.workspace_id = userProfile.workspace_id;
+                bypassUser.workspace_name = userProfile.workspace_name;
+                localStorage.setItem('bypass_user', JSON.stringify(bypassUser));
+              }
+            } catch (error) {
+              console.log('Could not load workspace for bypass user');
+            }
+          }
+          
           setUser(bypassUser);
           // Ensure user_auth_profile is also set
           localStorage.setItem('user_auth_profile', JSON.stringify(bypassUser));
