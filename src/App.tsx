@@ -53,6 +53,7 @@ import ContactSyncTest from "./pages/ContactSyncTest";
 import Onboarding from "./pages/Onboarding";
 import OnboardingCallback from "./pages/OnboardingCallback";
 import UserSetup from "./pages/UserSetup";
+import FollowUps from "./pages/FollowUps";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -122,6 +123,7 @@ const App: React.FC = () => {
                 <Route path="contacts-old" element={<Contacts />} />
                 <Route path="test-sync" element={<ContactSyncTest />} />
                 <Route path="inbox" element={<GlobalInbox />} />
+                <Route path="follow-ups" element={<FollowUps />} />
                 <Route path="templates" element={<TemplatesEnhanced />} />
                 <Route path="analytics" element={<Dashboard />} /> {/* Analytics redirects to Dashboard */}
                 

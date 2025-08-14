@@ -19,6 +19,7 @@ import {
   Folder,
   Search,
   Shield,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SAMBranding } from '@/components/branding/SAMBranding';
@@ -32,6 +33,7 @@ const mainNavItems = [
   { title: "Search", url: "/search", icon: Search },
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Inbox", url: "/inbox", icon: Mail },
+  { title: "Follow-ups", url: "/follow-ups", icon: Calendar },
   { title: "Templates", url: "/templates", icon: FileText },
 ];
 
@@ -54,7 +56,7 @@ const superAdminItems = [
 
 // Agent Mode Navigation
 const agentNavItems = [
-  { title: "AI Agents", url: "/agent/team", icon: Bot },
+  { title: "AI Agents", url: "/agent", icon: Bot },
   { title: "Training", url: "/agent/train", icon: GraduationCap },
 ];
 
@@ -64,7 +66,7 @@ const agentDocumentItems = [
   { title: "Offers", url: "/agent/offer", icon: Gift },
   { title: "Messaging", url: "/agent/messaging", icon: MessageSquare },
   { title: "CTAs", url: "/agent/cta", icon: MousePointer },
-  { title: "Meetings", url: "/agent/meeting", icon: Video },
+  { title: "Meetings", url: "/agent/meeting", icon: Calendar },
   { title: "Documents", url: "/agent/documents", icon: Folder },
 ];
 
@@ -78,6 +80,9 @@ export function WorkspaceSidebar({
   const location = useLocation();
   const currentPath = location.pathname;
   const isTeamMember = true;
+  
+  // Determine if we're in agent mode based on current path
+  const isAgentMode = currentPath.startsWith('/agent');
 
   // Simple navigation item component with no complex interactions
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
@@ -101,7 +106,7 @@ export function WorkspaceSidebar({
   return (
     <aside className={cn(
       "w-64 border-r sticky top-0 h-screen flex-shrink-0 overflow-hidden",
-      isConversational ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
+      isAgentMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
     )}>
       <div className="h-full flex flex-col">
         {/* SAM Branding Header */}
@@ -117,7 +122,7 @@ export function WorkspaceSidebar({
                 to="/"
                 className={({ isActive }) => cn(
                   "flex-1 px-3 py-1.5 text-xs font-normal rounded-md text-center transition-all",
-                  !isConversational 
+                  !isAgentMode 
                     ? "bg-white text-blue-600 shadow-sm border border-gray-200" 
                     : "text-gray-600 hover:text-gray-900"
                 )}
@@ -125,10 +130,10 @@ export function WorkspaceSidebar({
                 Work
               </NavLink>
               <NavLink
-                to="/agent/team"
+                to="/agent"
                 className={({ isActive }) => cn(
                   "flex-1 px-3 py-1.5 text-xs font-normal rounded-md text-center transition-all",
-                  isConversational 
+                  isAgentMode 
                     ? "bg-white text-gray-900 shadow-sm border border-gray-200" 
                     : "text-gray-600 hover:text-gray-900"
                 )}
@@ -143,7 +148,7 @@ export function WorkspaceSidebar({
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
             {/* Main Navigation */}
-            {!isConversational && (
+            {!isAgentMode && (
               <nav className="space-y-1 mb-6">
                 {mainNavItems.map((item) => (
                   <NavItem
@@ -156,7 +161,7 @@ export function WorkspaceSidebar({
             )}
 
             {/* Agent Mode Navigation */}
-            {isConversational && (
+            {isAgentMode && (
               <nav className="space-y-1 mb-6">
                 {agentNavItems.map((item) => (
                   <NavItem
@@ -169,11 +174,11 @@ export function WorkspaceSidebar({
             )}
 
             {/* Team Section */}
-            {!isConversational && isTeamMember && (
+            {!isAgentMode && isTeamMember && (
               <div className="mb-6">
                 <h3 className={cn(
                   "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
-                  isConversational ? "text-gray-400 font-semibold" : "text-gray-400 font-normal"
+                  "text-gray-400 font-normal"
                 )}>
                   Team
                 </h3>
@@ -190,7 +195,7 @@ export function WorkspaceSidebar({
             )}
 
             {/* Agent Documents - Always Expanded */}
-            {isConversational && (
+            {isAgentMode && (
               <div className="mb-6">
                 <h3 className={cn(
                   "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
@@ -216,7 +221,7 @@ export function WorkspaceSidebar({
         <div className="border-t border-gray-100 p-4 bg-gray-50">
           <h3 className={cn(
             "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
-            isConversational ? "text-gray-400 font-semibold" : "text-gray-400 font-normal"
+            "text-gray-400 font-normal"
           )}>
             Settings
           </h3>
