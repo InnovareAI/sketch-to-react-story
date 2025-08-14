@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { emailCalendarSync } from '@/services/unipile/EmailCalendarSync';
 import { workspaceUnipile } from '@/services/WorkspaceUnipileService';
+import { enhancedLinkedInSync } from '@/services/EnhancedLinkedInSync';
 
 interface AutoSyncControlProps {
   workspaceId: string;
@@ -143,10 +144,11 @@ export function AutoSyncControl({ workspaceId, accountId: propAccountId }: AutoS
           return;
         }
         
-        // Sync contacts using workspace's Unipile account (enhanced)
-        const result = await workspaceUnipile.syncContacts(200);
+        // Use comprehensive LinkedIn sync (Unipile + Direct API)
+        enhancedLinkedInSync.initialize(workspaceId);
+        const result = await enhancedLinkedInSync.syncAllContacts();
         
-        if (result.contactsSynced > 0) {
+        if (result.totalContacts > 0) {
           // Show comprehensive sync results
           const details = [];
           if (result.firstDegree > 0) details.push(`${result.firstDegree} 1st degree`);
@@ -155,17 +157,34 @@ export function AutoSyncControl({ workspaceId, accountId: propAccountId }: AutoS
           
           const detailText = details.length > 0 ? ` (${details.join(', ')})` : '';
           
-          toast.success(`🎉 Synced ${result.contactsSynced} LinkedIn contacts${detailText}!`);
+          toast.success(`🎉 Synced ${result.totalContacts} LinkedIn contacts${detailText}!`);
           
-          // Show additional stats if significant numbers
-          if (result.totalFound > result.contactsSynced) {
-            toast.info(`Found ${result.totalFound} total contacts, ${result.withJobTitles} with job titles`);
+          // Show data source breakdown
+          if (result.unipileContacts > 0 && result.linkedinAPIContacts > 0) {
+            toast.info(`📊 Sources: ${result.unipileContacts} from chats, ${result.linkedinAPIContacts} from LinkedIn API`);
+          } else if (result.unipileContacts > 0) {
+            toast.info(`📱 ${result.unipileContacts} contacts from LinkedIn chats/messages`);
+          } else if (result.linkedinAPIContacts > 0) {
+            toast.info(`🔗 ${result.linkedinAPIContacts} contacts from LinkedIn API`);
+          }
+          
+          // Show quality metrics
+          if (result.withJobTitles > 0) {
+            toast.info(`✅ Quality: ${result.withJobTitles} with job titles, ${result.withProfiles} with LinkedIn profiles`);
+          }
+          
+          // Show any errors
+          if (result.errors.length > 0) {
+            console.warn('Sync warnings:', result.errors);
+            toast.warning(`⚠️ ${result.errors.length} warnings during sync (check console for details)`);
           }
         } else {
-          // Fallback to background sync with correct account ID
-          const syncResult = await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
-          if (!syncResult.success) {
-            throw new Error('LinkedIn sync failed');
+          // Fallback to basic Unipile sync
+          const fallbackResult = await workspaceUnipile.syncContacts(200);
+          if (fallbackResult.contactsSynced > 0) {
+            toast.success(`✅ Synced ${fallbackResult.contactsSynced} contacts via fallback method`);
+          } else {
+            throw new Error('No contacts found from any source');
           }
         }
       }
