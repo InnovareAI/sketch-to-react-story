@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const UNIPILE_API_KEY = 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ'
-const UNIPILE_BASE_URL = 'https://api6.unipile.com:13443/api/v1'
+const UNIPILE_API_KEY = Deno.env.get('UNIPILE_API_KEY') || 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU='
+const UNIPILE_BASE_URL = Deno.env.get('UNIPILE_BASE_URL') || 'https://api6.unipile.com:13670/api/v1'
 
 interface SyncRequest {
   workspace_id: string
@@ -24,9 +24,18 @@ serve(async (req) => {
       return new Response('ok', { headers: corsHeaders })
     }
 
-    // Initialize Supabase Admin Client
+    // Skip auth verification for this function - using service role internally
+    // This allows the function to be called without JWT authentication
+
+    console.log('🚀 LinkedIn Background Sync function called')
+    console.log('📊 Headers:', Object.fromEntries(req.headers.entries()))
+
+    // Initialize Supabase Admin Client with service role (bypasses auth)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    console.log('🔧 Using Supabase URL:', supabaseUrl)
+    console.log('🔧 Service key configured:', !!supabaseServiceKey)
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { workspace_id, account_id, sync_type = 'both', sync_emails = false, sync_calendar = false, limit = 500 } = await req.json()
@@ -68,10 +77,10 @@ serve(async (req) => {
     if (sync_type === 'contacts' || sync_type === 'both') {
       try {
         const response = await fetch(
-          `${UNIPILE_BASE_URL}/users/${account_id}/connections?limit=${limit}`,
+          `${UNIPILE_BASE_URL}/chats?account_id=${account_id}&limit=${limit}`,
           {
             headers: {
-              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'X-API-KEY': UNIPILE_API_KEY,
               'Content-Type': 'application/json',
               'Accept': 'application/json'
             }
@@ -80,11 +89,28 @@ serve(async (req) => {
 
         if (response.ok) {
           const data = await response.json()
-          const connections = data.connections || data.items || []
+          const chats = data.items || []
           
-          console.log(`Fetched ${connections.length} connections`)
+          console.log(`Fetched ${chats.length} chats for contact extraction`)
 
-          for (const connection of connections) {
+          // Extract unique contacts from chat participants
+          const uniqueContacts = new Set()
+          const contactsToSync = []
+
+          for (const chat of chats) {
+            if (chat.attendee_provider_id && !uniqueContacts.has(chat.attendee_provider_id)) {
+              uniqueContacts.add(chat.attendee_provider_id)
+              contactsToSync.push({
+                id: chat.attendee_provider_id,
+                name: chat.name || 'LinkedIn Contact',
+                linkedin_url: `https://linkedin.com/in/${chat.attendee_provider_id}`
+              })
+            }
+          }
+
+          console.log(`Found ${contactsToSync.length} unique contacts from chats`)
+
+          for (const connection of contactsToSync) {
             try {
               // Parse and prepare contact data
               const names = (connection.name || '').split(' ')
@@ -156,7 +182,7 @@ serve(async (req) => {
           `${UNIPILE_BASE_URL}/users/${account_id}/chats?limit=${limit}&provider=LINKEDIN`,
           {
             headers: {
-              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'X-API-KEY': UNIPILE_API_KEY,
               'Content-Type': 'application/json',
               'Accept': 'application/json'
             }
@@ -274,7 +300,7 @@ serve(async (req) => {
           `${UNIPILE_BASE_URL}/users/${account_id}/messages?${emailParams}`,
           {
             headers: {
-              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'X-API-KEY': UNIPILE_API_KEY,
               'Accept': 'application/json'
             }
           }
@@ -331,7 +357,7 @@ serve(async (req) => {
           `${UNIPILE_BASE_URL}/users/${account_id}/events?${calendarParams}`,
           {
             headers: {
-              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'X-API-KEY': UNIPILE_API_KEY,
               'Accept': 'application/json'
             }
           }

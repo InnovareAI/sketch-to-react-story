@@ -6,6 +6,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getUserLinkedInAccounts, setUserLinkedInAccounts } from '@/utils/userDataStorage';
+import { getUnipileApiKey, getUnipileBaseUrl, getUnipileHeaders } from '@/config/unipile';
 
 interface SyncStatus {
   isRunning: boolean;
@@ -84,9 +85,9 @@ export class UnipileRealTimeSync {
   };
 
   constructor() {
-    // Use environment variables for configuration
-    this.baseUrl = 'https://api6.unipile.com:13670/api/v1';
-    this.apiKey = import.meta.env.VITE_UNIPILE_API_KEY || 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
+    // Use centralized configuration
+    this.baseUrl = getUnipileBaseUrl();
+    this.apiKey = getUnipileApiKey();
   }
 
   /**

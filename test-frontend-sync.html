@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend Sync</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Test LinkedIn Sync</h1>
+    <button onclick="testSync()">Test Sync</button>
+    <div id="results"></div>
+
+    <script>
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://latxadqrvrrrcvkktrog.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdHhhZHFydnJycmN2a2t0cm9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU3NjMyNjIsImV4cCI6MjA1MTMzOTI2Mn0.BOJJjzPzHWx6Y4qwZiU6mEW0Xsz2kGJjwPe2Ga8v_Js';
+        
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        async function testSync() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '🧪 Testing sync...';
+            
+            try {
+                console.log('🚀 Triggering edge function sync...');
+                
+                const { data, error } = await supabaseClient.functions.invoke('linkedin-background-sync', {
+                    body: {
+                        workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+                        account_id: '4jyMc-EDT1-hE5pOoT7EaQ',
+                        sync_type: 'both',
+                        limit: 10
+                    }
+                });
+                
+                if (error) {
+                    console.error('❌ Sync error:', error);
+                    resultsDiv.innerHTML = `❌ Error: ${JSON.stringify(error)}`;
+                } else {
+                    console.log('✅ Sync successful:', data);
+                    resultsDiv.innerHTML = `✅ Success: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (err) {
+                console.error('💥 Exception:', err);
+                resultsDiv.innerHTML = `💥 Exception: ${err.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

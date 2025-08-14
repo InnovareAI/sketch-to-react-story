@@ -9,6 +9,7 @@ import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { BackgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { toast } from 'sonner';
 import { getUserLinkedInAccounts, getUserWorkspaceId } from '@/utils/userDataStorage';
+import { getUnipileApiKey } from '@/config/unipile';
 
 class GlobalAutoSync {
   private static instance: GlobalAutoSync;
@@ -67,7 +68,7 @@ class GlobalAutoSync {
     // Configure Unipile if needed
     if (!unipileRealTimeSync.isConfigured()) {
       unipileRealTimeSync.configure({
-        apiKey: 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
+        apiKey: getUnipileApiKey(),
         accountId: accountId
       });
     }
