@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Lock, User, Building2, CheckCircle } from 'lucide-react';
-import { generateUUID } from '@/lib/workspace';
+import { generateUUID } from '@/utils/uuid';
 import { toast } from 'sonner';
 
 interface SignupModalProps {

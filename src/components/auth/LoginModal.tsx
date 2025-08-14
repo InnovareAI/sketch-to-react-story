@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Lock, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateUUID } from '@/utils/uuid';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -47,7 +48,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSignupClick }
         }
       } else {
         // Create new user data for demo
-        const { generateUUID } = await import('@/lib/workspace');
         const userId = generateUUID();
         const workspaceId = generateUUID();
         
