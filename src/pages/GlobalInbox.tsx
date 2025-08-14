@@ -121,6 +121,7 @@ export default function GlobalInbox() {
 
   useEffect(() => {
     loadMessages();
+    setupCloudSync();
     
     // Set up real-time updates
     const channel = supabase
@@ -135,6 +136,43 @@ export default function GlobalInbox() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Setup cloud-based background sync
+  const setupCloudSync = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const workspace = await getWorkspace();
+      if (!workspace) return;
+
+      // Check if LinkedIn is connected
+      const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+      if (accounts.length > 0) {
+        const account = accounts[0];
+        const accountId = account.unipileAccountId || account.id || account.account_id;
+        
+        if (accountId) {
+          // Enable cloud sync through BackgroundSyncManager
+          const { BackgroundSyncManager } = await import('@/services/BackgroundSyncManager');
+          const syncManager = BackgroundSyncManager.getInstance();
+          
+          const result = await syncManager.enableBackgroundSync(
+            workspace.id,
+            accountId,
+            30, // Sync every 30 minutes
+            'both' // Sync both contacts and messages
+          );
+          
+          if (result.success) {
+            console.log('☁️ Cloud sync enabled for GlobalInbox - will continue syncing when page is closed');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error setting up cloud sync:', error);
+    }
+  };
 
   const loadMessages = async () => {
     try {
