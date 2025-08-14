@@ -205,30 +205,54 @@ class WorkspaceUnipileService {
   }
 
   /**
-   * Sync LinkedIn contacts using shared credentials
+   * Sync LinkedIn contacts using shared credentials - Enhanced to get maximum contacts
    */
-  async syncContacts(limit: number = 100): Promise<any> {
+  async syncContacts(limit: number = 200): Promise<any> {
     const config = await this.getConfig();
     
     if (!config.linkedin_connected) {
       throw new Error('LinkedIn not connected. Please complete onboarding.');
     }
 
-    // Get LinkedIn chats to find contacts
-    const chatsResponse = await this.request(`/chats?account_id=${config.account_id}&limit=${limit}`);
+    console.log('🔄 Starting enhanced LinkedIn contact sync...');
     
-    if (!chatsResponse.ok) {
-      throw new Error('Failed to fetch LinkedIn chats');
+    const allContacts = new Map(); // Use Map to deduplicate by provider_id
+    
+    // Step 1: Get maximum possible chats
+    let chatsResponse;
+    const tryLimits = [1000, 500, 200, 100];
+    let allChats = [];
+    
+    for (const tryLimit of tryLimits) {
+      try {
+        chatsResponse = await this.request(`/chats?account_id=${config.account_id}&limit=${tryLimit}`);
+        if (chatsResponse.ok) {
+          const chatsData = await chatsResponse.json();
+          allChats = chatsData.items || [];
+          console.log(`✅ Successfully fetched ${allChats.length} chats`);
+          break;
+        }
+      } catch (err) {
+        continue; // Try next limit
+      }
+    }
+    
+    if (allChats.length === 0) {
+      throw new Error('Failed to fetch any LinkedIn chats');
     }
 
-    const chatsData = await chatsResponse.json();
-    const chats = chatsData.items || [];
+    console.log(`📋 Processing ${allChats.length} chats for attendees...`);
     
-    const contacts = [];
-    const processedIds = new Set();
+    // Step 2: Process ALL chats to get attendees
+    let processedChats = 0;
     
-    // Get attendees from each chat (these are LinkedIn contacts)
-    for (const chat of chats.slice(0, 20)) { // Limit to prevent too many API calls
+    for (let i = 0; i < allChats.length; i++) {
+      const chat = allChats[i];
+      
+      if (i % 20 === 0) {
+        console.log(`   Progress: ${i + 1}/${allChats.length} chats (${Math.round((i+1)/allChats.length*100)}%)`);
+      }
+      
       try {
         const attendeesResponse = await this.request(`/chats/${chat.id}/attendees`);
         
@@ -237,45 +261,144 @@ class WorkspaceUnipileService {
           const attendees = attendeesData.items || [];
           
           for (const attendee of attendees) {
-            // Skip self and duplicates
-            if (attendee.is_self || processedIds.has(attendee.provider_id)) continue;
-            processedIds.add(attendee.provider_id);
+            // Skip self and invalid contacts
+            if (attendee.is_self || !attendee.provider_id || !attendee.name) continue;
             
-            // Store contact in database
-            try {
-              const nameParts = (attendee.name || '').split(' ');
-              const first_name = nameParts[0] || '';
-              const last_name = nameParts.slice(1).join(' ') || '';
-              
-              await supabase.from('contacts').upsert({
-                workspace_id: this.workspaceId,
-                email: `${attendee.provider_id}@linkedin.com`, // Use LinkedIn ID as email
-                first_name,
-                last_name,
-                title: attendee.specifics?.occupation || '',
-                linkedin_url: attendee.profile_url || '',
-                metadata: {
-                  ...attendee,
-                  source: 'linkedin_chat',
-                  unipile_account_id: config.account_id,
-                  chat_id: chat.id
-                }
-              }, { 
-                onConflict: 'workspace_id,email' 
-              });
-              
-              contacts.push(attendee);
-            } catch (err) {
-              console.error('Error storing contact:', attendee.name, err);
-            }
+            const existingContact = allContacts.get(attendee.provider_id);
+            
+            // Store contact with comprehensive info
+            allContacts.set(attendee.provider_id, {
+              provider_id: attendee.provider_id,
+              name: attendee.name,
+              profile_url: attendee.profile_url || (existingContact?.profile_url || ''),
+              occupation: attendee.specifics?.occupation || (existingContact?.occupation || ''),
+              network_distance: attendee.specifics?.network_distance || (existingContact?.network_distance || ''),
+              picture_url: attendee.picture_url || (existingContact?.picture_url || ''),
+              member_urn: attendee.specifics?.member_urn || (existingContact?.member_urn || ''),
+              is_company: attendee.specifics?.is_company || false,
+              chat_ids: [...(existingContact?.chat_ids || []), chat.id],
+              chat_names: [...(existingContact?.chat_names || []), chat.name || 'Unnamed Chat'],
+              source: 'linkedin_chat'
+            });
           }
+          processedChats++;
         }
       } catch (err) {
-        console.error('Error processing chat:', chat.id, err);
+        console.error(`Error processing chat ${chat.id}:`, err.message);
+      }
+      
+      // Small delay to be nice to the API
+      if (i % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    }
+
+    // Step 3: Also get contacts from messages
+    try {
+      const messagesResponse = await this.request(`/messages?account_id=${config.account_id}&limit=1000`);
+      
+      if (messagesResponse.ok) {
+        const messagesData = await messagesResponse.json();
+        const messages = messagesData.items || [];
+        
+        console.log(`📨 Processing ${messages.length} messages for additional contacts...`);
+        
+        for (const message of messages) {
+          if (message.from && message.from.provider_id && message.from.name && !message.from.is_self) {
+            const senderId = message.from.provider_id;
+            const existingContact = allContacts.get(senderId);
+            
+            // Merge with existing or create new
+            allContacts.set(senderId, {
+              provider_id: senderId,
+              name: message.from.name,
+              profile_url: message.from.profile_url || (existingContact?.profile_url || ''),
+              occupation: message.from.specifics?.occupation || (existingContact?.occupation || ''),
+              picture_url: message.from.picture_url || (existingContact?.picture_url || ''),
+              network_distance: message.from.specifics?.network_distance || (existingContact?.network_distance || ''),
+              member_urn: message.from.specifics?.member_urn || (existingContact?.member_urn || ''),
+              is_company: message.from.specifics?.is_company || false,
+              chat_ids: existingContact?.chat_ids || [],
+              chat_names: existingContact?.chat_names || [],
+              source: existingContact ? 'linkedin_chat_and_message' : 'linkedin_message',
+              last_message_text: message.text ? message.text.substring(0, 100) + '...' : '',
+              last_message_date: message.created_at || message.date
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.log('Warning: Could not fetch messages for additional contacts:', err.message);
+    }
+    
+    // Step 4: Store all contacts in database
+    const contactsArray = Array.from(allContacts.values());
+    let storedCount = 0;
+    
+    console.log(`💾 Storing ${contactsArray.length} unique contacts in database...`);
+    
+    for (const contact of contactsArray) {
+      try {
+        const nameParts = contact.name.split(' ');
+        const first_name = nameParts[0] || '';
+        const last_name = nameParts.slice(1).join(' ') || '';
+        
+        await supabase.from('contacts').upsert({
+          workspace_id: this.workspaceId,
+          email: `${contact.provider_id}@linkedin.com`,
+          first_name,
+          last_name,
+          title: contact.occupation || '',
+          linkedin_url: contact.profile_url || '',
+          phone: '', // LinkedIn doesn't provide phone numbers
+          department: contact.is_company ? 'Company' : '',
+          engagement_score: contact.network_distance === 'DISTANCE_1' ? 80 : 
+                           contact.network_distance === 'DISTANCE_2' ? 60 : 40,
+          tags: [
+            contact.network_distance || 'unknown_distance',
+            contact.source,
+            ...(contact.is_company ? ['company'] : ['person'])
+          ],
+          metadata: {
+            provider_id: contact.provider_id,
+            member_urn: contact.member_urn,
+            network_distance: contact.network_distance,
+            picture_url: contact.picture_url,
+            chat_ids: contact.chat_ids,
+            chat_names: contact.chat_names,
+            source: contact.source,
+            unipile_account_id: config.account_id,
+            is_company: contact.is_company,
+            last_message_text: contact.last_message_text,
+            last_message_date: contact.last_message_date,
+            synced_at: new Date().toISOString()
+          }
+        }, { 
+          onConflict: 'workspace_id,email' 
+        });
+        
+        storedCount++;
+      } catch (err) {
+        console.error('Error storing contact:', contact.name, err);
       }
     }
     
-    return { contactsSynced: contacts.length };
+    console.log(`✅ Successfully stored ${storedCount} LinkedIn contacts`);
+    
+    // Return comprehensive stats
+    return { 
+      contactsSynced: storedCount,
+      totalFound: contactsArray.length,
+      chatsProcessed: processedChats,
+      fromChats: contactsArray.filter(c => c.source === 'linkedin_chat').length,
+      fromMessages: contactsArray.filter(c => c.source === 'linkedin_message').length,
+      fromBoth: contactsArray.filter(c => c.source === 'linkedin_chat_and_message').length,
+      firstDegree: contactsArray.filter(c => c.network_distance === 'DISTANCE_1').length,
+      secondDegree: contactsArray.filter(c => c.network_distance === 'DISTANCE_2').length,
+      thirdDegree: contactsArray.filter(c => c.network_distance === 'DISTANCE_3').length,
+      withJobTitles: contactsArray.filter(c => c.occupation).length,
+      withProfiles: contactsArray.filter(c => c.profile_url).length
+    };
   }
 
   /**

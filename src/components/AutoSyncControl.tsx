@@ -143,11 +143,24 @@ export function AutoSyncControl({ workspaceId, accountId: propAccountId }: AutoS
           return;
         }
         
-        // Sync contacts using workspace's Unipile account
-        const result = await workspaceUnipile.syncContacts(100);
+        // Sync contacts using workspace's Unipile account (enhanced)
+        const result = await workspaceUnipile.syncContacts(200);
         
         if (result.contactsSynced > 0) {
-          toast.success(`Synced ${result.contactsSynced} real LinkedIn contacts!`);
+          // Show comprehensive sync results
+          const details = [];
+          if (result.firstDegree > 0) details.push(`${result.firstDegree} 1st degree`);
+          if (result.secondDegree > 0) details.push(`${result.secondDegree} 2nd degree`);
+          if (result.thirdDegree > 0) details.push(`${result.thirdDegree} 3rd degree`);
+          
+          const detailText = details.length > 0 ? ` (${details.join(', ')})` : '';
+          
+          toast.success(`🎉 Synced ${result.contactsSynced} LinkedIn contacts${detailText}!`);
+          
+          // Show additional stats if significant numbers
+          if (result.totalFound > result.contactsSynced) {
+            toast.info(`Found ${result.totalFound} total contacts, ${result.withJobTitles} with job titles`);
+          }
         } else {
           // Fallback to background sync with correct account ID
           const syncResult = await backgroundSyncManager.triggerManualSync(workspaceId, accountId);
