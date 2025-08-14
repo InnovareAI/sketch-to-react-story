@@ -47,7 +47,7 @@ async function testUnipileAPI() {
           const chatId = chatsData.items[0].id;
           console.log('📡 Testing messages for chat:', chatId);
           
-          const messagesResponse = await fetch(`${UNIPILE_BASE_URL}/users/${ACCOUNT_ID}/chats/${chatId}/messages?limit=3`, {
+          const messagesResponse = await fetch(`${UNIPILE_BASE_URL}/chats/${chatId}/messages?limit=3`, {
             method: 'GET',
             headers: {
               'X-API-KEY': UNIPILE_API_KEY,

@@ -22,7 +22,7 @@ async function testCloudSync() {
         'apikey': YOUR_JWT_KEY
       },
       body: JSON.stringify({
-        workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+        workspace_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
         account_id: '4jyMc-EDT1-hE5pOoT7EaQ',
         sync_type: 'both',
         limit: 10 // Small limit for testing
