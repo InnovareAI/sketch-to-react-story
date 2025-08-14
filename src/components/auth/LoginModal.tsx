@@ -64,10 +64,16 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSignupClick }
       
       // Store auth data
       localStorage.setItem('user_auth_profile', JSON.stringify(userData));
-      localStorage.setItem('app_workspace_id', userData.workspace_id);
-      localStorage.setItem('workspace_id', userData.workspace_id);
       localStorage.setItem('user_email', formData.email);
       localStorage.setItem('is_authenticated', 'true');
+      
+      // Store user-specific workspace data
+      localStorage.setItem(`user_${userData.id}_workspace_id`, userData.workspace_id);
+      localStorage.setItem(`user_${userData.id}_app_workspace_id`, userData.workspace_id);
+      
+      // Keep legacy keys for backward compatibility during transition
+      localStorage.setItem('app_workspace_id', userData.workspace_id);
+      localStorage.setItem('workspace_id', userData.workspace_id);
       
       toast.success('Welcome back!');
       

@@ -28,7 +28,8 @@ export default function AuthGate({ children }: AuthGateProps) {
         const profile = JSON.parse(userProfile);
         if (profile.id && profile.workspace_id) {
           setIsAuthenticated(true);
-          initializeWorkspace();
+          // Initialize workspace asynchronously
+          initializeWorkspace().catch(console.error);
         } else {
           setIsAuthenticated(false);
         }

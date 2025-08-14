@@ -74,11 +74,18 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
       };
       localStorage.setItem('user_workspaces', JSON.stringify([workspace]));
       
+      // Store auth data
       localStorage.setItem('user_auth_profile', JSON.stringify(userData));
-      localStorage.setItem('app_workspace_id', workspaceId);
-      localStorage.setItem('workspace_id', workspaceId);
       localStorage.setItem('user_email', formData.email);
       localStorage.setItem('is_authenticated', 'true');
+      
+      // Store user-specific workspace data
+      localStorage.setItem(`user_${userId}_workspace_id`, workspaceId);
+      localStorage.setItem(`user_${userId}_app_workspace_id`, workspaceId);
+      
+      // Keep legacy keys for backward compatibility during transition
+      localStorage.setItem('app_workspace_id', workspaceId);
+      localStorage.setItem('workspace_id', workspaceId);
       
       // Show success
       setStep('success');
