@@ -45,9 +45,17 @@ export default function CampaignSetupFlow() {
   const campaignId = searchParams.get('id');
   
   // Get dynamic workspace and user IDs from auth context
-  // Always use the shared workspace ID
   const getCurrentWorkspaceId = (): string => {
-    return 'a0000000-0000-0000-0000-000000000000';
+    // Get workspace from authenticated user profile
+    const workspaceId = localStorage.getItem('app_workspace_id') || localStorage.getItem('workspace_id');
+    
+    if (workspaceId && workspaceId !== 'a0000000-0000-0000-0000-000000000000') {
+      return workspaceId;
+    }
+    
+    // Generate new workspace if needed
+    const { getWorkspaceId } = require('@/lib/workspace');
+    return getWorkspaceId();
   };
 
   const getCurrentUserId = (): string => {

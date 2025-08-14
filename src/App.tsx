@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import AuthGate from "@/components/AuthGate";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -57,25 +58,26 @@ const App: React.FC = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              {/* Public/Auth Routes */}
-              <Route path="/login" element={<UserLogin />} />
-              <Route path="/auth/login" element={<UserLogin />} />
-              <Route path="/admin/login" element={<SuperAdminLogin />} />
-              <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
-              <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
-              <Route path="/test-inbox" element={<TestInbox />} />
-              <Route path="/inbox-direct" element={<InboxDirect />} />
-              <Route path="/simple-inbox" element={<TestInbox />} />
-              <Route path="/linkedin-setup" element={<LinkedInAccountSetup />} />
-              <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
-              <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
-              <Route path="/linkedin-onboarding" element={<LinkedInOnboarding />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/onboarding/callback" element={<OnboardingCallback />} />
-              
-              {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
-              <Route 
+            <AuthGate>
+              <Routes>
+                {/* Public/Auth Routes */}
+                <Route path="/login" element={<UserLogin />} />
+                <Route path="/auth/login" element={<UserLogin />} />
+                <Route path="/admin/login" element={<SuperAdminLogin />} />
+                <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
+                <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
+                <Route path="/test-inbox" element={<TestInbox />} />
+                <Route path="/inbox-direct" element={<InboxDirect />} />
+                <Route path="/simple-inbox" element={<TestInbox />} />
+                <Route path="/linkedin-setup" element={<LinkedInAccountSetup />} />
+                <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
+                <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
+                <Route path="/linkedin-onboarding" element={<LinkedInOnboarding />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding/callback" element={<OnboardingCallback />} />
+                
+                {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
+                <Route 
                 path="/" 
                 element={<WorkspaceLayout />}
               >
@@ -139,7 +141,8 @@ const App: React.FC = () => {
               </Route>
               
               <Route path="*" element={<NotFound />} />
-            </Routes>
+              </Routes>
+            </AuthGate>
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>

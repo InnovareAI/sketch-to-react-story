@@ -30,14 +30,16 @@ export function useCampaigns() {
   const [error, setError] = useState<string | null>(null);
 
   const getCurrentWorkspaceId = (): string => {
-    // ALWAYS use the shared workspace for all users
-    const SHARED_WORKSPACE = 'a0000000-0000-0000-0000-000000000000';
+    // Get workspace from authenticated user profile
+    const workspaceId = localStorage.getItem('app_workspace_id') || localStorage.getItem('workspace_id');
     
-    // Store it for consistency
-    localStorage.setItem('workspace_id', SHARED_WORKSPACE);
+    if (workspaceId && workspaceId !== 'a0000000-0000-0000-0000-000000000000') {
+      return workspaceId;
+    }
     
-    console.log('✅ Using shared workspace:', SHARED_WORKSPACE);
-    return SHARED_WORKSPACE;
+    // Generate new workspace if needed
+    const { getWorkspaceId } = require('@/lib/workspace');
+    return getWorkspaceId();
   };
 
   const fetchCampaigns = async () => {
