@@ -211,11 +211,54 @@ export default function Contacts() {
 
   const processLinkedInImport = async () => {
     setLinkedinImporting(true);
+    console.log('🔍 DEBUG: Starting LinkedIn Import Process');
+    console.log('═'.repeat(60));
+    
     try {
+      // Enhanced debugging for production
+      console.log('📊 Import Configuration:');
+      console.log(`   • Workspace ID: ${DEFAULT_WORKSPACE_ID}`);
+      console.log(`   • Timestamp: ${new Date().toISOString()}`);
+      console.log(`   • User Agent: ${navigator.userAgent}`);
+      console.log(`   • Current URL: ${window.location.href}`);
+      
+      // Check user authentication first
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('❌ User authentication failed:', userError);
+        toast.error('Please sign in to import contacts');
+        return;
+      }
+      console.log('✅ User authenticated:', user.email);
+      
+      // Test basic database connectivity
+      console.log('🔄 Testing database connectivity...');
+      const { count: existingContactCount } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', DEFAULT_WORKSPACE_ID);
+      
+      console.log(`✅ Database accessible - existing contacts: ${existingContactCount || 0}`);
+      
       toast.info('🚀 Starting Enhanced LinkedIn contact import...');
+      console.log('🔄 Initializing enhanced LinkedIn import service...');
       
       // Initialize enhanced LinkedIn import service
       enhancedLinkedInImport.initialize(DEFAULT_WORKSPACE_ID);
+      console.log('✅ Enhanced LinkedIn import service initialized');
+      
+      // Test connections before starting import
+      console.log('🔄 Testing LinkedIn integration connections...');
+      const connectionTests = await enhancedLinkedInImport.testConnections();
+      console.log('📊 Connection test results:', connectionTests);
+      
+      if (!connectionTests.unipile.connected && !connectionTests.linkedinAPI.connected) {
+        console.error('❌ No LinkedIn connections available');
+        toast.error('No LinkedIn integrations are available. Please check your configuration.');
+        return;
+      }
+      
+      console.log('🚀 Starting enhanced LinkedIn contact import...');
       
       // Use enhanced import with both Unipile and LinkedIn API fallback
       const result = await enhancedLinkedInImport.importContacts({
@@ -225,10 +268,19 @@ export default function Contacts() {
         useLinkedInAPI: true
       });
       
+      console.log('📊 Import completed - results:', result);
+      
       if (result.success) {
         // Use the enhanced service's built-in result display
         enhancedLinkedInImport.showImportResults(result);
+        
+        // Additional success logging
+        console.log('✅ LinkedIn import successful!');
+        console.log(`   • Total contacts: ${result.totalContacts}`);
+        console.log(`   • Processing time: ${result.processingTime}ms`);
+        console.log(`   • Sources used: ${Object.keys(result.sources).filter(key => result.sources[key] > 0).join(', ')}`);
       } else {
+        console.error('❌ Import failed:', result.errors);
         toast.error(`❌ Import failed: ${result.errors.join(', ')}`);
       }
 
@@ -236,10 +288,17 @@ export default function Contacts() {
       await refreshData(); // Refresh the contacts list
       
     } catch (error) {
-      console.error('Enhanced LinkedIn import error:', error);
+      console.error('❌ LinkedIn import error:', error);
+      console.error('🔍 Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString(),
+        workspaceId: DEFAULT_WORKSPACE_ID
+      });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(`Failed to import LinkedIn contacts: ${errorMessage}`);
+      toast.error(`Failed to import LinkedIn contacts: ${errorMessage}. Check browser console for detailed error information.`);
     } finally {
+      console.log('🏁 LinkedIn import process completed');
       setLinkedinImporting(false);
     }
   };

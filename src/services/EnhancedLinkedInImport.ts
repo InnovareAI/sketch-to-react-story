@@ -74,6 +74,15 @@ export class EnhancedLinkedInImport {
     console.log(`   • Preferred Method: ${preferredMethod}`);
     console.log(`   • Use Unipile: ${useUnipile}`);
     console.log(`   • Use LinkedIn API: ${useLinkedInAPI}`);
+    console.log(`   • Timestamp: ${new Date().toISOString()}`);
+    
+    // Enhanced debugging for production
+    if (!this.workspaceId) {
+      const error = 'Enhanced LinkedIn Import not initialized with workspace ID';
+      console.error('❌ CRITICAL:', error);
+      result.errors.push(error);
+      return result;
+    }
 
     try {
       // Method 1: Unipile API (Primary - most comprehensive)
@@ -182,26 +191,51 @@ export class EnhancedLinkedInImport {
    */
   private async importViaUnipile(limit: number) {
     console.log('   🔄 Initializing Unipile workspace service...');
-    const config = await workspaceUnipile.initialize(this.workspaceId);
+    console.log(`   🔄 Workspace ID: ${this.workspaceId}`);
     
-    if (!config.linkedin_connected) {
-      throw new Error('LinkedIn not connected in Unipile. Please complete onboarding.');
-    }
-
-    console.log('   🔄 Fetching LinkedIn contacts via Unipile...');
-    const unipileResult = await workspaceUnipile.syncContacts(limit);
-    
-    return {
-      contactsSynced: unipileResult.contactsSynced,
-      quality: {
-        firstDegree: unipileResult.firstDegree || 0,
-        secondDegree: unipileResult.secondDegree || 0,
-        thirdDegree: unipileResult.thirdDegree || 0,
-        withJobTitles: unipileResult.withJobTitles || 0,
-        withProfiles: unipileResult.withProfiles || 0,
-        withCompanies: 0 // Will be calculated from job titles
+    try {
+      const config = await workspaceUnipile.initialize(this.workspaceId);
+      console.log('   ✅ Unipile service initialized');
+      console.log('   📊 Config:', JSON.stringify(config, null, 2));
+      
+      if (!config.linkedin_connected) {
+        const errorMsg = 'LinkedIn not connected in Unipile. Please complete onboarding.';
+        console.error('   ❌', errorMsg);
+        console.log('   💡 Check Unipile dashboard: https://app.unipile.com/accounts');
+        throw new Error(errorMsg);
       }
-    };
+
+      console.log('   🔄 Fetching LinkedIn contacts via Unipile...');
+      console.log(`   🔄 Contact limit: ${limit}`);
+      
+      const unipileResult = await workspaceUnipile.syncContacts(limit);
+      console.log('   📊 Unipile sync result:', JSON.stringify(unipileResult, null, 2));
+      
+      const result = {
+        contactsSynced: unipileResult.contactsSynced,
+        quality: {
+          firstDegree: unipileResult.firstDegree || 0,
+          secondDegree: unipileResult.secondDegree || 0,
+          thirdDegree: unipileResult.thirdDegree || 0,
+          withJobTitles: unipileResult.withJobTitles || 0,
+          withProfiles: unipileResult.withProfiles || 0,
+          withCompanies: 0 // Will be calculated from job titles
+        }
+      };
+      
+      console.log('   ✅ Unipile import completed:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('   ❌ Unipile import error:', error);
+      console.error('   🔍 Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        workspaceId: this.workspaceId,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
   }
 
   /**
