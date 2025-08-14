@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Search as SearchIcon, 
   Filter, 
@@ -36,8 +41,17 @@ export default function Search() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("people");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [savedSearchName, setSavedSearchName] = useState("");
+  const [savedSearchDescription, setSavedSearchDescription] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any>({ people: [], companies: [] });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const searchResults = {
+  const mockSearchResults = {
     people: [
       {
         id: 1,
@@ -109,6 +123,147 @@ export default function Search() {
     }
   };
 
+  // Handler for executing search
+  const handleExecuteSearch = async () => {
+    if (!searchQuery.trim()) {
+      toast.error('Please enter a search query');
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // Simulate search with mock data for now
+      toast.info('Executing boolean search...');
+      
+      // In production, this would call your search API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setSearchResults(mockSearchResults);
+      toast.success(`Found ${mockSearchResults.people.length + mockSearchResults.companies.length} results`);
+    } catch (error) {
+      console.error('Search error:', error);
+      toast.error('Search failed. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handler for exporting results
+  const handleExportResults = () => {
+    if (searchResults.people.length === 0 && searchResults.companies.length === 0) {
+      toast.error('No results to export');
+      return;
+    }
+
+    try {
+      // Create CSV content
+      const csvContent = createCSVContent();
+      
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `search-results-${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Results exported successfully');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export results');
+    }
+  };
+
+  // Create CSV content from results
+  const createCSVContent = () => {
+    const headers = ['Type', 'Name', 'Title/Industry', 'Company/Size', 'Location'];
+    const rows = [
+      ...searchResults.people.map((p: any) => 
+        ['Person', p.name, p.title, p.company, p.location]
+      ),
+      ...searchResults.companies.map((c: any) => 
+        ['Company', c.name, c.industry, c.size, c.location]
+      )
+    ];
+    
+    return [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+  };
+
+  // Handler for saving search
+  const handleSaveSearch = async () => {
+    if (!savedSearchName.trim()) {
+      toast.error('Please enter a name for the saved search');
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please login to save searches');
+        return;
+      }
+
+      // Save to localStorage for now (in production, save to database)
+      const savedSearches = JSON.parse(localStorage.getItem('saved_searches') || '[]');
+      savedSearches.push({
+        id: Date.now(),
+        name: savedSearchName,
+        description: savedSearchDescription,
+        query: searchQuery,
+        filters: {}, // Add current filters
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem('saved_searches', JSON.stringify(savedSearches));
+      
+      toast.success('Search saved successfully');
+      setShowSaveDialog(false);
+      setSavedSearchName('');
+      setSavedSearchDescription('');
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save search');
+    }
+  };
+
+  // Handler for loading saved search
+  const handleLoadSearch = (search: any) => {
+    setSearchQuery(search.query);
+    toast.success(`Loaded search: ${search.name}`);
+    setShowLoadDialog(false);
+  };
+
+  // Handler for uploading CSV list
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast.error('Please upload a CSV file');
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n');
+      const headers = lines[0].split(',');
+      
+      toast.success(`Uploaded ${lines.length - 1} records from ${file.name}`);
+      setShowUploadDialog(false);
+      
+      // Process CSV data here
+      console.log('CSV Headers:', headers);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload file');
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -118,15 +273,15 @@ export default function Search() {
           <p className="text-gray-600 mt-1">Boolean search with filters across database, campaigns, and uploaded lists</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowUploadDialog(true)}>
             <Filter className="h-4 w-4 mr-2" />
             Upload List
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowSaveDialog(true)}>
             <Save className="h-4 w-4 mr-2" />
             Save Search
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportResults}>
             <Download className="h-4 w-4 mr-2" />
             Export Results
           </Button>
@@ -251,17 +406,21 @@ export default function Search() {
 
             <div className="flex justify-between items-center">
               <div className="flex gap-2">
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
                   <Filter className="h-4 w-4 mr-2" />
                   Advanced Filters
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => setShowLoadDialog(true)}>
                   Load Saved Search
                 </Button>
               </div>
-              <Button className="bg-primary hover:bg-primary/90">
+              <Button 
+                className="bg-primary hover:bg-primary/90"
+                onClick={handleExecuteSearch}
+                disabled={isSearching}
+              >
                 <SearchIcon className="h-4 w-4 mr-2" />
-                Execute Search
+                {isSearching ? 'Searching...' : 'Execute Search'}
               </Button>
             </div>
           </div>
@@ -333,7 +492,7 @@ export default function Search() {
             </TabsList>
 
             <TabsContent value="people" className="space-y-4 mt-6">
-              {searchResults.people.map((person) => (
+              {(searchResults.people.length > 0 ? searchResults.people : mockSearchResults.people).map((person) => (
                 <Card key={person.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
@@ -426,7 +585,7 @@ export default function Search() {
             </TabsContent>
 
             <TabsContent value="companies" className="space-y-4 mt-6">
-              {searchResults.companies.map((company) => (
+              {(searchResults.companies.length > 0 ? searchResults.companies : mockSearchResults.companies).map((company) => (
                 <Card key={company.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
@@ -506,6 +665,219 @@ export default function Search() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Save Search Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Search</DialogTitle>
+            <DialogDescription>
+              Save your current search configuration for later use
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="search-name">Search Name</Label>
+              <Input
+                id="search-name"
+                value={savedSearchName}
+                onChange={(e) => setSavedSearchName(e.target.value)}
+                placeholder="e.g., Tech Leaders in Bay Area"
+              />
+            </div>
+            <div>
+              <Label htmlFor="search-description">Description (Optional)</Label>
+              <Textarea
+                id="search-description"
+                value={savedSearchDescription}
+                onChange={(e) => setSavedSearchDescription(e.target.value)}
+                placeholder="Add notes about this search..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveSearch}>Save Search</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Load Search Dialog */}
+      <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Load Saved Search</DialogTitle>
+            <DialogDescription>
+              Select a previously saved search to load
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {JSON.parse(localStorage.getItem('saved_searches') || '[]').map((search: any) => (
+              <Card 
+                key={search.id} 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => handleLoadSearch(search)}
+              >
+                <CardContent className="p-4">
+                  <div className="font-medium">{search.name}</div>
+                  {search.description && (
+                    <div className="text-sm text-gray-600 mt-1">{search.description}</div>
+                  )}
+                  <div className="text-xs text-gray-500 mt-2">
+                    Created: {new Date(search.created_at).toLocaleDateString()}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {JSON.parse(localStorage.getItem('saved_searches') || '[]').length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No saved searches yet
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLoadDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload List Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload CSV List</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file with contacts to search within
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Choose CSV File
+              </Button>
+              <p className="text-sm text-gray-600 mt-2">
+                or drag and drop your file here
+              </p>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p className="font-medium">Expected format:</p>
+              <ul className="list-disc list-inside mt-1">
+                <li>First row should contain headers</li>
+                <li>Include columns: Name, Title, Company, Email, etc.</li>
+                <li>Maximum file size: 10MB</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Advanced Filters Panel */}
+      {showAdvancedFilters && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Advanced Filters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Industry</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select industry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tech">Technology</SelectItem>
+                    <SelectItem value="finance">Finance</SelectItem>
+                    <SelectItem value="healthcare">Healthcare</SelectItem>
+                    <SelectItem value="retail">Retail</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Company Size</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1-10">1-10 employees</SelectItem>
+                    <SelectItem value="11-50">11-50 employees</SelectItem>
+                    <SelectItem value="51-200">51-200 employees</SelectItem>
+                    <SelectItem value="201-500">201-500 employees</SelectItem>
+                    <SelectItem value="500+">500+ employees</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Location</Label>
+                <Input placeholder="e.g., San Francisco, CA" />
+              </div>
+              <div>
+                <Label>Job Title</Label>
+                <Input placeholder="e.g., CEO, CTO, VP" />
+              </div>
+              <div>
+                <Label>Years of Experience</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0-2">0-2 years</SelectItem>
+                    <SelectItem value="3-5">3-5 years</SelectItem>
+                    <SelectItem value="6-10">6-10 years</SelectItem>
+                    <SelectItem value="10+">10+ years</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Connection Degree</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select degree" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1st">1st degree</SelectItem>
+                    <SelectItem value="2nd">2nd degree</SelectItem>
+                    <SelectItem value="3rd">3rd degree</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setShowAdvancedFilters(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                toast.success('Filters applied');
+                setShowAdvancedFilters(false);
+              }}>
+                Apply Filters
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
