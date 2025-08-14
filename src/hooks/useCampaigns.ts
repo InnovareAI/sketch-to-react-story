@@ -29,70 +29,15 @@ export function useCampaigns() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getCurrentWorkspaceId = (): string | null => {
-    try {
-      console.log('🔍 DEBUG: Getting workspace ID...');
-      
-      // Primary: Check auth profile first
-      const userAuthProfile = localStorage.getItem('user_auth_profile');
-      if (userAuthProfile) {
-        try {
-          const profile = JSON.parse(userAuthProfile);
-          if (profile?.workspace_id) {
-            console.log('✅ Found workspace_id in user_auth_profile:', profile.workspace_id);
-            return profile.workspace_id;
-          }
-        } catch (parseError) {
-          console.warn('Failed to parse user_auth_profile:', parseError);
-        }
-      }
-      
-      // Secondary: Check bypass user data
-      const bypassUser = localStorage.getItem('bypass_user');
-      if (bypassUser) {
-        try {
-          const userData = JSON.parse(bypassUser);
-          if (userData?.workspace_id) {
-            console.log('✅ Found workspace_id in bypass_user:', userData.workspace_id);
-            return userData.workspace_id;
-          }
-        } catch (parseError) {
-          console.warn('Failed to parse bypass_user:', parseError);
-        }
-      }
-      
-      // Tertiary: Check direct storage
-      const workspaceId = localStorage.getItem('workspace_id');
-      if (workspaceId && workspaceId !== 'null' && workspaceId !== 'undefined') {
-        console.log('✅ Found direct workspace_id:', workspaceId);
-        return workspaceId;
-      }
-      
-      // Fallback: Generate workspace ID for authenticated users
-      const userEmail = localStorage.getItem('user_email');
-      if (userEmail && userEmail !== 'null') {
-        const innovareEmails = ['cl@innovareai.com', 'cs@innovareai.com', 'tl@innovareai.com'];
-        if (innovareEmails.includes(userEmail.toLowerCase())) {
-          const sharedWorkspace = 'workspace-innovareai-shared-team';
-          console.log('✅ Using shared InnovareAI workspace:', sharedWorkspace);
-          localStorage.setItem('workspace_id', sharedWorkspace);
-          return sharedWorkspace;
-        }
-        
-        // Generate user-specific workspace
-        const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const fallbackWorkspace = `workspace-${emailHash}-${Date.now().toString().slice(-6)}`;
-        console.log('✅ Generated fallback workspace:', fallbackWorkspace);
-        localStorage.setItem('workspace_id', fallbackWorkspace);
-        return fallbackWorkspace;
-      }
-      
-      console.log('❌ No workspace ID sources available');
-      return null;
-    } catch (err) {
-      console.error('❌ Error getting workspace ID:', err);
-      return null;
-    }
+  const getCurrentWorkspaceId = (): string => {
+    // ALWAYS use the shared workspace for all users
+    const SHARED_WORKSPACE = 'a0000000-0000-0000-0000-000000000000';
+    
+    // Store it for consistency
+    localStorage.setItem('workspace_id', SHARED_WORKSPACE);
+    
+    console.log('✅ Using shared workspace:', SHARED_WORKSPACE);
+    return SHARED_WORKSPACE;
   };
 
   const fetchCampaigns = async () => {
@@ -101,11 +46,6 @@ export function useCampaigns() {
       setError(null);
 
       const workspaceId = getCurrentWorkspaceId();
-      console.log('🔍 DEBUG: Final workspaceId result:', workspaceId);
-      if (!workspaceId) {
-        console.log('❌ CAMPAIGNS ERROR: No workspace ID found');
-        throw new Error('No workspace found. Please ensure you are logged in.');
-      }
       console.log('✅ CAMPAIGNS: Using workspaceId:', workspaceId);
 
       // Get current user's workspace campaigns
@@ -131,9 +71,6 @@ export function useCampaigns() {
   const createCampaign = async (name: string, status: string = 'draft') => {
     try {
       const workspaceId = getCurrentWorkspaceId();
-      if (!workspaceId) {
-        throw new Error('No workspace found. Please ensure you are logged in.');
-      }
 
       // Get current user ID from localStorage (development mode)
       let userId = null;

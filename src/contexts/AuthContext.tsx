@@ -282,7 +282,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         
         // All InnovareAI team members share the same workspace
-        const INNOVARE_WORKSPACE_ID = 'workspace-innovareai-shared-team';
+        const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
         
         const userId = generateUserIdFromEmail(userEmail);
         const workspaceId = INNOVARE_WORKSPACE_ID;
@@ -458,7 +458,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 localStorage.setItem('bypass_user', JSON.stringify(bypassUser));
               } else {
                 // All InnovareAI team members share the same workspace
-                const INNOVARE_WORKSPACE_ID = 'workspace-innovareai-shared-team';
+                const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
                 
                 bypassUser.workspace_id = INNOVARE_WORKSPACE_ID;
                 bypassUser.workspace_name = 'InnovareAI Workspace';
@@ -471,7 +471,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } catch (error) {
               console.log('Could not load workspace for bypass user, using shared workspace');
               // Use shared InnovareAI workspace as fallback
-              const INNOVARE_WORKSPACE_ID = 'workspace-innovareai-shared-team';
+              const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
               
               bypassUser.workspace_id = INNOVARE_WORKSPACE_ID;
               bypassUser.workspace_name = 'InnovareAI Workspace';

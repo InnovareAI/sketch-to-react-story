@@ -46,18 +46,14 @@ export function useRealTemplates() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getCurrentWorkspaceId = (): string | null => {
-    try {
-      const userAuthProfile = localStorage.getItem('user_auth_profile');
-      if (userAuthProfile) {
-        const profile = JSON.parse(userAuthProfile);
-        return profile.workspace_id;
-      }
-      return null;
-    } catch (err) {
-      console.error('Error getting workspace ID:', err);
-      return null;
-    }
+  const getCurrentWorkspaceId = (): string => {
+    // ALWAYS use the shared workspace for all users
+    const SHARED_WORKSPACE = 'a0000000-0000-0000-0000-000000000000';
+    
+    // Store it for consistency
+    localStorage.setItem('workspace_id', SHARED_WORKSPACE);
+    
+    return SHARED_WORKSPACE;
   };
 
   const fetchTemplates = async () => {
@@ -66,9 +62,6 @@ export function useRealTemplates() {
       setError(null);
 
       const workspaceId = getCurrentWorkspaceId();
-      if (!workspaceId) {
-        throw new Error('No workspace found. Please ensure you are logged in.');
-      }
 
       // Get message templates (reusable messages)
       // First, try to get templates from a dedicated templates table if it exists
@@ -215,9 +208,6 @@ export function useRealTemplates() {
   }) => {
     try {
       const workspaceId = getCurrentWorkspaceId();
-      if (!workspaceId) {
-        throw new Error('No workspace found. Please ensure you are logged in.');
-      }
 
       const { data, error } = await supabase
         .from('messages')
