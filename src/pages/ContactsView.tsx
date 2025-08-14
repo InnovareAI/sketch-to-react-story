@@ -17,7 +17,8 @@ import {
   RefreshCw,
   MoreVertical,
   CheckCircle,
-  XCircle
+  XCircle,
+  FileUp
 } from "lucide-react";
 
 interface Contact {
@@ -370,6 +371,157 @@ export default function ContactsView() {
     toast.success(`Exported ${filteredContacts.length} contacts`);
   };
 
+  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast.error('Please upload a CSV file');
+      return;
+    }
+
+    setLoading(true);
+    toast.info('Processing CSV file...');
+    
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast.error('CSV file is empty or has no data rows');
+        return;
+      }
+      
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
+      
+      // Get workspace
+      const { data: { user } } = await supabase.auth.getUser();
+      let workspace: any;
+      
+      if (user) {
+        const { data: ws } = await supabase
+          .from('workspaces')
+          .select('id')
+          .eq('owner_id', user.id)
+          .single();
+        workspace = ws;
+      }
+      
+      if (!workspace) {
+        // Create default workspace
+        const workspaceId = `ws-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        workspace = { id: workspaceId };
+      }
+
+      const contactsToImport = [];
+      let skippedCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        
+        const contact: any = {
+          workspace_id: workspace.id,
+          first_name: '',
+          last_name: '',
+          email: '',
+          title: '',
+          department: '',
+          linkedin_url: '',
+          engagement_score: 50,
+          tags: [],
+          metadata: {}
+        };
+
+        // Map CSV columns to contact fields
+        headers.forEach((header, index) => {
+          const value = values[index] || '';
+          
+          if (header.includes('first') && header.includes('name')) {
+            contact.first_name = value;
+          } else if (header.includes('last') && header.includes('name')) {
+            contact.last_name = value;
+          } else if (header.includes('email')) {
+            contact.email = value;
+          } else if (header.includes('title') || header.includes('position')) {
+            contact.title = value;
+          } else if (header.includes('company')) {
+            contact.metadata.company = value;
+          } else if (header.includes('department')) {
+            contact.department = value;
+          } else if (header.includes('linkedin')) {
+            contact.linkedin_url = value;
+          } else if (header.includes('phone')) {
+            contact.metadata.phone = value;
+          }
+        });
+
+        // Skip if no identifying information
+        if (!contact.email && !contact.first_name && !contact.last_name) {
+          skippedCount++;
+          continue;
+        }
+
+        // Generate email if missing
+        if (!contact.email && (contact.first_name || contact.last_name)) {
+          const fname = contact.first_name.toLowerCase().replace(/\s+/g, '');
+          const lname = contact.last_name.toLowerCase().replace(/\s+/g, '');
+          contact.email = `${fname}${fname && lname ? '.' : ''}${lname}@imported.contact`;
+        }
+
+        contactsToImport.push(contact);
+      }
+
+      if (contactsToImport.length === 0) {
+        toast.error('No valid contacts found in CSV');
+        return;
+      }
+
+      // Import contacts in batches
+      const batchSize = 50;
+      let importedCount = 0;
+      let failedCount = 0;
+
+      for (let i = 0; i < contactsToImport.length; i += batchSize) {
+        const batch = contactsToImport.slice(i, i + batchSize);
+        
+        const { data, error } = await supabase
+          .from('contacts')
+          .upsert(batch, { 
+            onConflict: 'workspace_id,email'
+          });
+
+        if (error) {
+          console.error('Batch import error:', error);
+          failedCount += batch.length;
+        } else {
+          importedCount += batch.length;
+        }
+      }
+
+      // Show results
+      if (importedCount > 0) {
+        toast.success(`Successfully imported ${importedCount} contacts`);
+        await loadContacts(); // Refresh the list
+      }
+      
+      if (failedCount > 0) {
+        toast.warning(`Failed to import ${failedCount} contacts`);
+      }
+      
+      if (skippedCount > 0) {
+        toast.info(`Skipped ${skippedCount} invalid rows`);
+      }
+      
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Failed to import CSV file: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setLoading(false);
+      // Reset file input
+      event.target.value = '';
+    }
+  };
+
   // Filter and sort contacts
   const filteredContacts = contacts
     .filter(contact => {
@@ -412,6 +564,16 @@ export default function ContactsView() {
           </p>
         </div>
         <div className="flex gap-3">
+          <label className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2 cursor-pointer">
+            <Upload className="h-4 w-4" />
+            Import CSV
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImportCSV}
+              className="hidden"
+            />
+          </label>
           <button
             onClick={handleExport}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
