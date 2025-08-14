@@ -27,7 +27,7 @@ export interface CalendarProvider {
 
 class ApifyCalendarService {
   private readonly baseUrl = 'https://api.apify.com/v2/acts';
-  private readonly apiKey = process.env.APIFY_API_KEY || '';
+  private readonly apiKey = import.meta.env.VITE_APIFY_API_KEY || '';
 
   /**
    * Extract calendar events using Apify actors

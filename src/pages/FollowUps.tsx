@@ -108,17 +108,26 @@ export default function FollowUps() {
       await initSimpleAuth();
       const workspaceId = getDemoWorkspaceId();
 
+      console.log('Loading follow-ups for workspace:', workspaceId);
+
       const { data, error } = await supabase
         .from('follow_ups')
         .select('*')
         .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Follow-ups loaded:', data?.length || 0);
       setFollowUps(data || []);
     } catch (error) {
       console.error('Error loading follow-ups:', error);
       toast.error('Failed to load follow-ups');
+      // Set empty array so the page still renders
+      setFollowUps([]);
     } finally {
       setLoading(false);
     }
@@ -149,7 +158,9 @@ export default function FollowUps() {
       toast.success(`Calendar synced: ${transformedEvents.length} events loaded`);
     } catch (error) {
       console.error('Error loading calendar events:', error);
-      toast.error('Failed to sync calendar events');
+      // Don't show error toast for calendar since it's using mock data
+      // Just set empty array so the page still renders
+      setCalendarEvents([]);
     }
   };
 
