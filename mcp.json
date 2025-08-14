@@ -1,0 +1,207 @@
+{
+  "mcpServers": {
+    "apify": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-apify"
+      ],
+      "env": {
+        "APIFY_API_TOKEN": "${APIFY_API_TOKEN}"
+      },
+      "description": "PRIMARY: Apify MCP server for LinkedIn URL extraction - handles search URLs directly",
+      "priority": 1,
+      "capabilities": [
+        "actors",
+        "datasets", 
+        "runs",
+        "linkedin-scraper",
+        "sales-navigator",
+        "url-processing"
+      ]
+    },
+    "apollo": {
+      "command": "npx", 
+      "args": [
+        "@modelcontextprotocol/server-apollo"
+      ],
+      "env": {
+        "APOLLO_API_KEY": "${APOLLO_API_KEY}"
+      },
+      "description": "BACKUP: Apollo MCP server for B2B prospect data - superior data quality fallback",
+      "priority": 2,
+      "capabilities": [
+        "people-search",
+        "company-search", 
+        "email-verification",
+        "data-enrichment",
+        "keyword-search"
+      ]
+    },
+    "brightdata": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-brightdata"
+      ],
+      "env": {
+        "BRIGHTDATA_USERNAME": "${BRIGHTDATA_USERNAME}",
+        "BRIGHTDATA_PASSWORD": "${BRIGHTDATA_PASSWORD}",
+        "BRIGHTDATA_ZONE": "${BRIGHTDATA_ZONE}"
+      },
+      "description": "FALLBACK: Bright Data MCP server for custom proxy-based scraping",
+      "priority": 3,
+      "capabilities": [
+        "proxies",
+        "scraping", 
+        "residential-ips",
+        "custom-extraction"
+      ]
+    }
+  },
+  "tools": [
+    {
+      "name": "extract_linkedin_profiles",
+      "description": "Extract LinkedIn profiles from search URLs using Apify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "searchUrl": {
+            "type": "string",
+            "description": "LinkedIn search URL to extract profiles from"
+          },
+          "maxResults": {
+            "type": "number",
+            "default": 100,
+            "description": "Maximum number of profiles to extract"
+          },
+          "extractEmails": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to extract email addresses"
+          },
+          "extractPhones": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to extract phone numbers"
+          }
+        },
+        "required": ["searchUrl"]
+      },
+      "server": "apify"
+    },
+    {
+      "name": "validate_linkedin_url",
+      "description": "Validate LinkedIn URL format and type",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "LinkedIn URL to validate"
+          }
+        },
+        "required": ["url"]
+      },
+      "server": "apify"
+    },
+    {
+      "name": "estimate_extraction_cost",
+      "description": "Estimate cost and time for LinkedIn extraction",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "searchUrl": {
+            "type": "string",
+            "description": "LinkedIn search URL"
+          },
+          "maxResults": {
+            "type": "number",
+            "default": 100,
+            "description": "Maximum number of profiles"
+          }
+        },
+        "required": ["searchUrl"]
+      },
+      "server": "apify"
+    },
+    {
+      "name": "get_run_status",
+      "description": "Get status of running Apify actor",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "description": "Apify run ID to check"
+          }
+        },
+        "required": ["runId"]
+      },
+      "server": "apify"
+    },
+    {
+      "name": "scrape_with_proxies",
+      "description": "Scrape web pages using Bright Data proxies",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "URLs to scrape"
+          },
+          "proxyType": {
+            "type": "string",
+            "enum": ["residential", "datacenter", "mobile"],
+            "default": "residential",
+            "description": "Type of proxy to use"
+          },
+          "extractData": {
+            "type": "object",
+            "description": "Data extraction configuration"
+          }
+        },
+        "required": ["urls"]
+      },
+      "server": "brightdata"
+    }
+  ],
+  "resources": [
+    {
+      "uri": "apify://actors/linkedin-scraper",
+      "name": "LinkedIn Profile Scraper",
+      "description": "Official Apify LinkedIn scraper actor",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "apify://datasets/linkedin-profiles",
+      "name": "LinkedIn Profiles Dataset",
+      "description": "Dataset containing extracted LinkedIn profiles",
+      "mimeType": "application/json"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "extract_prospects_from_linkedin",
+      "description": "Extract prospects from LinkedIn search with validation",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Extract LinkedIn profiles from this search URL: {searchUrl}\n\nRequirements:\n- Maximum {maxResults} profiles\n- Include email addresses if available\n- Validate all profile data\n- Return structured prospect data\n\nPlease use the extract_linkedin_profiles tool and validate the results."
+        }
+      ],
+      "arguments": [
+        {
+          "name": "searchUrl",
+          "description": "LinkedIn search URL to extract from"
+        },
+        {
+          "name": "maxResults",
+          "description": "Maximum number of profiles to extract",
+          "default": "100"
+        }
+      ]
+    }
+  ]
+}

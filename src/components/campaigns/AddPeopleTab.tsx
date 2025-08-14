@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProspectValidator } from './ProspectValidator';
+import { linkedInExtractor, type ExtractedProspect } from '@/services/linkedinExtractor';
 
 interface Prospect {
   id?: string;
@@ -38,7 +39,7 @@ interface Prospect {
   linkedin_url?: string;
   phone?: string;
   tags?: string[];
-  source: 'csv' | 'contacts' | 'manual';
+  source: 'csv' | 'contacts' | 'manual' | 'search-url';
 }
 
 interface AddPeopleTabProps {
@@ -63,6 +64,8 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
   const [searchUrl, setSearchUrl] = useState('');
   const [isExtractingFromUrl, setIsExtractingFromUrl] = useState(false);
   const [urlExtractionError, setUrlExtractionError] = useState<string | null>(null);
+  const [extractionProgress, setExtractionProgress] = useState<string>('');
+  const [lastExtractionResult, setLastExtractionResult] = useState<{ prospects: number; errors: string[] } | null>(null);
   
   // Manual entry state
   const [manualProspect, setManualProspect] = useState<Partial<Prospect>>({
@@ -243,45 +246,77 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
       return;
     }
 
-    // Validate URL format
-    const isValidLinkedInUrl = searchUrl.includes('linkedin.com') && 
-      (searchUrl.includes('/search/') || searchUrl.includes('/sales/'));
-
-    if (!isValidLinkedInUrl) {
-      setUrlExtractionError('Please enter a valid LinkedIn or Sales Navigator search URL');
-      return;
-    }
-
     setIsExtractingFromUrl(true);
     setUrlExtractionError(null);
+    setExtractionProgress('Validating URL...');
+    setLastExtractionResult(null);
 
     try {
-      // For now, show a placeholder message since this would require backend integration
-      // In a real implementation, this would call a service to extract profiles from the URL
+      // Step 1: Extract prospects from LinkedIn URL
+      setExtractionProgress('Extracting profiles from LinkedIn...');
+      const extractionResult = await linkedInExtractor.extractFromSearchUrl(searchUrl);
+
+      if (!extractionResult.success) {
+        setUrlExtractionError(extractionResult.errors.join(', '));
+        toast.error(`Extraction failed: ${extractionResult.errors[0]}`);
+        return;
+      }
+
+      setExtractionProgress('Processing extracted data...');
+
+      // Step 2: Convert extracted prospects to our format
+      const convertedProspects: Prospect[] = extractionResult.prospects.map((extracted: ExtractedProspect) => ({
+        first_name: extracted.first_name,
+        last_name: extracted.last_name,
+        email: extracted.email,
+        title: extracted.title,
+        company: extracted.company,
+        linkedin_url: extracted.linkedin_url,
+        phone: extracted.phone,
+        source: 'search-url' as const
+      }));
+
+      setExtractionProgress('Checking for duplicates...');
+
+      // Step 3: Filter out duplicates
+      const existingEmails = new Set(selectedPeople.map(p => p.email.toLowerCase()));
+      const newProspects = convertedProspects.filter(p => !existingEmails.has(p.email.toLowerCase()));
       
-      toast.info('URL extraction feature coming soon! For now, please use CSV upload or manual entry.');
-      
-      // Placeholder implementation - in real app this would:
-      // 1. Send URL to backend service
-      // 2. Backend would use browser automation (Puppeteer/Selenium) to scrape results
-      // 3. Extract profile data and return as prospects
-      // 4. Add extracted prospects to the campaign
-      
-      setTimeout(() => {
-        setIsExtractingFromUrl(false);
-        // Example of what would happen:
-        // const extractedProspects = await ProspectService.extractFromLinkedInUrl(searchUrl);
-        // const newProspects = extractedProspects.filter(p => !existingEmails.has(p.email.toLowerCase()));
-        // onPeopleChange([...selectedPeople, ...newProspects]);
-        // toast.success(`Extracted ${newProspects.length} prospects from search`);
-      }, 2000);
+      const duplicateCount = convertedProspects.length - newProspects.length;
+
+      // Step 4: Add new prospects
+      if (newProspects.length > 0) {
+        const updatedPeople = [...selectedPeople, ...newProspects];
+        onPeopleChange(updatedPeople);
+        
+        toast.success(
+          `Successfully extracted ${newProspects.length} new prospects!` +
+          (duplicateCount > 0 ? ` (${duplicateCount} duplicates skipped)` : '')
+        );
+      } else if (duplicateCount > 0) {
+        toast.warning('All extracted prospects are already in your list');
+      } else {
+        toast.warning('No prospects were extracted from the URL');
+      }
+
+      // Step 5: Store extraction results for display
+      setLastExtractionResult({
+        prospects: newProspects.length,
+        errors: extractionResult.errors
+      });
+
+      // Clear the URL after successful extraction
+      setSearchUrl('');
+      setExtractionProgress('Extraction completed!');
 
     } catch (error) {
       console.error('URL extraction error:', error);
-      setUrlExtractionError('Failed to extract prospects from URL. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
+      setUrlExtractionError(`Failed to extract prospects: ${errorMessage}`);
       toast.error('Failed to extract prospects from URL');
     } finally {
       setIsExtractingFromUrl(false);
+      setTimeout(() => setExtractionProgress(''), 3000);
     }
   }, [searchUrl, selectedPeople, onPeopleChange]);
 
@@ -533,10 +568,45 @@ Example: https://www.linkedin.com/sales/search/people?..."
                   </div>
                 </div>
 
+                {/* Extraction Progress */}
+                {isExtractingFromUrl && extractionProgress && (
+                  <Alert>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                    <AlertDescription className="text-blue-800">
+                      {extractionProgress}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Extraction Error */}
                 {urlExtractionError && (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{urlExtractionError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Last Extraction Results */}
+                {lastExtractionResult && !isExtractingFromUrl && (
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      <div className="space-y-1">
+                        <p className="font-medium">
+                          ✅ Extracted {lastExtractionResult.prospects} prospects successfully
+                        </p>
+                        {lastExtractionResult.errors.length > 0 && (
+                          <div className="text-sm">
+                            <p className="text-yellow-700">Warnings:</p>
+                            <ul className="list-disc list-inside">
+                              {lastExtractionResult.errors.map((error, idx) => (
+                                <li key={idx} className="text-yellow-600">{error}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </AlertDescription>
                   </Alert>
                 )}
 
