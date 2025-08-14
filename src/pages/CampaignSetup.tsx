@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   ArrowLeft,
   Target,
@@ -82,6 +83,7 @@ export default function CampaignSetup() {
   const [startImmediately, setStartImmediately] = useState(true);
   const [scheduledDate, setScheduledDate] = useState<string>("");
   const { workspace, workspaceId } = useWorkspace();
+  const { user } = useAuth();
   
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -268,6 +270,12 @@ export default function CampaignSetup() {
       return;
     }
     
+    if (!user?.id) {
+      toast.error('User not found. Please try refreshing the page.');
+      console.error('user is missing:', { user });
+      return;
+    }
+    
     if (!campaignName.trim()) {
       toast.error('Please enter a campaign name');
       return;
@@ -277,9 +285,12 @@ export default function CampaignSetup() {
     try {
       const campaignData = {
         workspace_id: workspaceId,
+        tenant_id: workspaceId, // Required NOT NULL field
+        user_id: user.id, // Required NOT NULL field for RLS policy
         name: campaignName,
         type: campaignType.toLowerCase(),
         status: 'draft',
+        description: `${campaignType} campaign created on ${new Date().toLocaleDateString()}`,
         settings: {
           daily_contact_limit: dailyContactLimit,
           daily_followup_limit: dailyFollowupLimit,
@@ -291,12 +302,6 @@ export default function CampaignSetup() {
           connection_degrees: connectionDegrees,
           messages: messages,
           csv_file: csvFile?.name || null
-        },
-        stats: {
-          total_prospects: 0,
-          sent: 0,
-          accepted: 0,
-          replied: 0
         }
       };
 
