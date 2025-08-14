@@ -82,9 +82,15 @@ export default function Contacts() {
       if (workspaceId) return workspaceId;
     }
     
-    const userEmail = localStorage.getItem('user_email') || 'default';
-    const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+    // Generate proper UUID fallback
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    return generateUUID();
   };
   
   const DEFAULT_WORKSPACE_ID = getCurrentWorkspaceId();
