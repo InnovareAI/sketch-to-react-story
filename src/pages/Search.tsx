@@ -1,14 +1,9 @@
 import { useState } from "react";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
-import { ConversationalInterface } from "@/components/workspace/ConversationalInterface";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
@@ -38,7 +33,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Search() {
-  const [isConversational, setIsConversational] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("people");
@@ -114,35 +108,9 @@ export default function Search() {
       default: return "bg-gray-100 text-gray-800";
     }
   };
-  
-  if (isConversational) {
-    return (
-      <SidebarProvider open={true} onOpenChange={() => {}}>
-        <div className="min-h-screen flex w-full">
-          <WorkspaceSidebar isConversational={isConversational} />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <WorkspaceHeader 
-              isConversational={isConversational}
-              onToggleMode={setIsConversational}
-            />
-            <div className="flex-1 overflow-auto">
-              <ConversationalInterface />
-            </div>
-          </div>
-        </div>
-      </SidebarProvider>
-    );
-  }
 
   return (
-    <SidebarProvider open={true} onOpenChange={() => {}}>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <WorkspaceSidebar isConversational={isConversational} />
-        <div className="flex-1 flex flex-col">
-          <WorkspaceHeader isConversational={isConversational} onToggleMode={setIsConversational} />
-          <main className="flex-1 p-8">
-            <div className="max-w-7xl mx-auto">
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -538,11 +506,6 @@ export default function Search() {
           </Tabs>
         </CardContent>
       </Card>
-      </div>
-            </div>
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+    </div>
   );
 }
