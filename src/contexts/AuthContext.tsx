@@ -274,11 +274,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Create mock user profile based on email
         const isCL = email.toLowerCase() === 'cl@innovareai.com';
         const mockUser: UserProfile = {
-          id: isCL ? 'bypass-user-cl' : 'bypass-user-tl',
+          id: isCL ? 'cc000000-0000-0000-0000-000000000001' : 'cc000000-0000-0000-0000-000000000002',
           email: email.toLowerCase(),
-          full_name: isCL ? 'CL InnovareAI' : 'Thorsten Linz',
+          full_name: isCL ? 'Christopher Lee' : 'Thorsten Linz',
           role: isCL ? 'admin' : 'owner',
-          workspace_id: 'bypass-workspace-id',
+          workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
           workspace_name: 'InnovareAI',
           workspace_plan: 'pro',
           status: 'active',
