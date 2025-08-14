@@ -73,6 +73,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('personal');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   // Data states
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -87,7 +88,8 @@ export default function Settings() {
     avatar_url: '',
     notifications_enabled: true,
     profile_visibility: 'public',
-    data_sharing: false
+    data_sharing: false,
+    personal_timezone: 'UTC'
   });
   
   const [workspaceForm, setWorkspaceForm] = useState({
@@ -137,7 +139,58 @@ export default function Settings() {
   useEffect(() => {
     loadAllData();
   }, [authUser, isAuthenticated]); // Re-run when auth state changes
+
+  // Update clock every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   
+  // Format time in selected timezone
+  const formatTimeInTimezone = (date: Date, timezone: string) => {
+    try {
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: timezone,
+        hour12: true,
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      };
+      return new Intl.DateTimeFormat('en-US', options).format(date);
+    } catch (error) {
+      console.error('Error formatting timezone:', error);
+      return date.toLocaleString();
+    }
+  };
+
+  // Get timezone offset
+  const getTimezoneOffset = (timezone: string) => {
+    try {
+      const now = new Date();
+      const tzDate = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        timeZoneName: 'short'
+      }).format(now);
+      const match = tzDate.match(/[A-Z]{3,4}/);
+      if (match) return match[0];
+      
+      // Calculate offset manually if abbreviation not available
+      const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const tzDateObj = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+      const offset = (tzDateObj.getTime() - utcDate.getTime()) / (1000 * 60 * 60);
+      const sign = offset >= 0 ? '+' : '';
+      return `GMT${sign}${offset}`;
+    } catch (error) {
+      return '';
+    }
+  };
+
   const loadAllData = async () => {
     try {
       setLoading(true);
@@ -869,9 +922,19 @@ export default function Settings() {
                           <SelectItem value="Pacific/Fiji">Fiji</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-gray-500">
-                        This timezone will be used for all campaign scheduling and analytics
-                      </p>
+                      <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <div className="text-sm">
+                            <p className="font-medium text-gray-700">
+                              Current time: {formatTimeInTimezone(currentTime, workspaceForm.timezone)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {getTimezoneOffset(workspaceForm.timezone)} • This timezone will be used for all campaign scheduling and analytics
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   

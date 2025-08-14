@@ -11,6 +11,10 @@ export interface UserQuota {
   remaining: number;
   resetDate: Date;
   monthYear: string;
+  hasOverride?: boolean;
+  overrideType?: 'unlimited' | 'additional' | 'multiplier';
+  overrideReason?: string;
+  isUnlimited?: boolean;
 }
 
 export interface QuotaCheck {
@@ -32,6 +36,7 @@ export interface ExtractionDetails {
 
 export class OrganizationQuotaService {
   private readonly MONTHLY_QUOTA = 3000; // Contacts per user per month
+  private readonly UNLIMITED_QUOTA = 999999; // Effectively unlimited
 
   /**
    * Get current month in YYYY-MM format
@@ -75,12 +80,58 @@ export class OrganizationQuotaService {
   }
 
   /**
+   * Check for active quota override
+   */
+  private async checkQuotaOverride(userId: string): Promise<{
+    hasOverride: boolean;
+    effectiveQuota: number;
+    overrideType?: 'unlimited' | 'additional' | 'multiplier';
+    overrideReason?: string;
+    isUnlimited: boolean;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_effective_quota', {
+          p_user_id: userId,
+          p_base_quota: this.MONTHLY_QUOTA
+        });
+
+      if (error || !data || data.length === 0) {
+        return {
+          hasOverride: false,
+          effectiveQuota: this.MONTHLY_QUOTA,
+          isUnlimited: false
+        };
+      }
+
+      const override = data[0];
+      return {
+        hasOverride: !!override.override_type,
+        effectiveQuota: override.effective_quota || this.MONTHLY_QUOTA,
+        overrideType: override.override_type,
+        overrideReason: override.override_reason,
+        isUnlimited: override.is_unlimited || false
+      };
+    } catch (err) {
+      console.error('Error checking quota override:', err);
+      return {
+        hasOverride: false,
+        effectiveQuota: this.MONTHLY_QUOTA,
+        isUnlimited: false
+      };
+    }
+  }
+
+  /**
    * Get user's current quota information
    */
   async getUserQuota(userId: string): Promise<UserQuota> {
     const currentMonth = this.getCurrentMonth();
     
     try {
+      // Check for quota override first
+      const override = await this.checkQuotaOverride(userId);
+      
       const { data: quota, error } = await supabase
         .from('user_quota_usage')
         .select('*')
@@ -91,34 +142,52 @@ export class OrganizationQuotaService {
       if (error && error.code === 'PGRST116') {
         // No quota record exists, try to create one
         await this.initializeUserQuota(userId, currentMonth);
-        // Return default quota even if initialization fails
+        // Return quota with override if applicable
         return {
-          totalQuota: this.MONTHLY_QUOTA,
+          totalQuota: override.effectiveQuota,
           used: 0,
-          remaining: this.MONTHLY_QUOTA,
+          remaining: override.effectiveQuota,
           resetDate: this.getNextResetDate(),
-          monthYear: currentMonth
+          monthYear: currentMonth,
+          hasOverride: override.hasOverride,
+          overrideType: override.overrideType,
+          overrideReason: override.overrideReason,
+          isUnlimited: override.isUnlimited
         };
       }
 
       if (error) {
         console.error('Error fetching user quota:', error);
-        // Return default quota on error to prevent blocking operations
+        // Return quota with override on error to prevent blocking operations
         return {
-          totalQuota: this.MONTHLY_QUOTA,
+          totalQuota: override.effectiveQuota,
           used: 0,
-          remaining: this.MONTHLY_QUOTA,
+          remaining: override.effectiveQuota,
           resetDate: this.getNextResetDate(),
-          monthYear: currentMonth
+          monthYear: currentMonth,
+          hasOverride: override.hasOverride,
+          overrideType: override.overrideType,
+          overrideReason: override.overrideReason,
+          isUnlimited: override.isUnlimited
         };
       }
 
+      const used = quota?.contacts_extracted || 0;
+      const effectiveTotal = override.effectiveQuota;
+      const remaining = override.isUnlimited 
+        ? this.UNLIMITED_QUOTA 
+        : Math.max(0, effectiveTotal - used);
+
       return {
-        totalQuota: this.MONTHLY_QUOTA,
-        used: quota?.contacts_extracted || 0,
-        remaining: Math.max(0, quota?.contacts_remaining || this.MONTHLY_QUOTA),
+        totalQuota: effectiveTotal,
+        used: used,
+        remaining: remaining,
         resetDate: this.getNextResetDate(),
-        monthYear: currentMonth
+        monthYear: currentMonth,
+        hasOverride: override.hasOverride,
+        overrideType: override.overrideType,
+        overrideReason: override.overrideReason,
+        isUnlimited: override.isUnlimited
       };
     } catch (err) {
       console.error('Unexpected error getting user quota:', err);
