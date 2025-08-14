@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { enhancedLinkedInImport } from '@/services/EnhancedLinkedInImport';
+import { linkedInOAuth } from '@/services/linkedin/LinkedInOAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -20,6 +21,7 @@ import { toast } from 'sonner';
 export default function LinkedInOnboarding() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [autoDetecting, setAutoDetecting] = useState(false);
   const [location, setLocation] = useState('');
   
@@ -42,17 +44,33 @@ export default function LinkedInOnboarding() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Check if user already has LinkedIn accounts synced
-    const { count } = await supabase
-      .from('inbox_conversations')
-      .select('*', { count: 'exact', head: true })
-      .eq('platform', 'linkedin');
+    // First check if we have valid connected accounts
+    const result = await unipileRealTimeSync.testConnection();
+    
+    if (result.success && result.accounts.length > 0) {
+      // We have valid connected accounts - check if they have data
+      const { count } = await supabase
+        .from('inbox_conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('platform', 'linkedin');
 
-    if (count && count > 0) {
-      // Already has data, redirect to inbox
-      navigate('/inbox');
+      if (count && count > 0) {
+        // Has both valid accounts AND data - redirect to inbox
+        navigate('/inbox');
+      } else {
+        // Has accounts but no data yet - continue with setup
+        setStatus(prev => ({
+          ...prev,
+          connected: true,
+          authenticated: true,
+          accountsFound: result.accounts.length
+        }));
+        
+        // Auto-detect location when accounts are found
+        await detectLocation();
+      }
     } else {
-      // Check if accounts are connected via Unipile
+      // No valid accounts - stay on onboarding page
       checkConnectedAccounts();
     }
   };
@@ -136,9 +154,33 @@ export default function LinkedInOnboarding() {
     }
   };
 
-  const handleConnect = () => {
-    // TODO: Implement proper Unipile OAuth flow
-    toast.info('LinkedIn connection feature will be available soon');
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      // Use the LinkedIn OAuth service to get the authorization URL
+      const state = crypto.randomUUID();
+      localStorage.setItem('linkedin_oauth_state', state);
+      
+      // Check if we have LinkedIn OAuth credentials configured
+      const clientId = import.meta.env.VITE_LINKEDIN_CLIENT_ID;
+      if (!clientId) {
+        // Fallback to Unipile OAuth if LinkedIn direct OAuth is not configured
+        toast.info('Redirecting to LinkedIn authorization...');
+        
+        // For now, navigate to the LinkedIn integration page in settings
+        navigate('/linkedin-integration');
+        return;
+      }
+      
+      // Use direct LinkedIn OAuth
+      const authUrl = linkedInOAuth.getAuthorizationUrl(state);
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Error initiating LinkedIn connection:', error);
+      toast.error('Failed to connect to LinkedIn. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleCheckConnection = async () => {
@@ -397,10 +439,20 @@ export default function LinkedInOnboarding() {
                   <Button 
                     size="lg"
                     onClick={handleConnect}
+                    disabled={isConnecting}
                     className="w-full max-w-sm"
                   >
-                    <Link className="h-5 w-5 mr-2" />
-                    Connect LinkedIn Account
+                    {isConnecting ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Link className="h-5 w-5 mr-2" />
+                        Connect LinkedIn Account
+                      </>
+                    )}
                   </Button>
                   
                   <Button 
