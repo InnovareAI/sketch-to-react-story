@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LoginModal from '@/components/auth/LoginModal';
+import SimpleLoginModal from '@/components/auth/SimpleLoginModal';
 import SignupModal from '@/components/auth/SignupModal';
 import { Button } from '@/components/ui/button';
 import { initializeWorkspace } from '@/lib/workspace';
@@ -91,7 +91,7 @@ export default function AuthGate({ children }: AuthGateProps) {
           </div>
         </div>
         
-        <LoginModal
+        <SimpleLoginModal
           isOpen={showLogin}
           onClose={() => setShowLogin(false)}
           onSuccess={handleAuthSuccess}
