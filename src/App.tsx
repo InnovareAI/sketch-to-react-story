@@ -46,6 +46,7 @@ import LinkedInOnboarding from "./pages/LinkedInOnboarding";
 import ContactSyncTest from "./pages/ContactSyncTest";
 import Onboarding from "./pages/Onboarding";
 import OnboardingCallback from "./pages/OnboardingCallback";
+import UserSetup from "./pages/UserSetup";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,7 @@ const App: React.FC = () => {
                 <Route path="/linkedin-onboarding" element={<LinkedInOnboarding />} />
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/onboarding/callback" element={<OnboardingCallback />} />
+                <Route path="/setup/:token" element={<UserSetup />} />
                 
                 {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
                 <Route 
