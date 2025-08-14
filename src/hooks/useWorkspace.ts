@@ -18,9 +18,8 @@ interface WorkspaceData {
 export function useWorkspace() {
   const { user: authUser } = useAuth();
   
-  // Use default workspace ID when user is not authenticated
-  const DEFAULT_WORKSPACE_ID = 'df5d730f-1915-4269-bd5a-9534478b17af';
-  const workspaceId = authUser?.workspace_id || DEFAULT_WORKSPACE_ID;
+  // Get workspace ID from authenticated user profile
+  const workspaceId = authUser?.workspace_id || null;
   
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,13 +80,7 @@ export function useWorkspace() {
         console.error('Supabase workspace query error:', supabaseError);
         
         if (supabaseError.code === 'PGRST116') {
-          // Workspace doesn't exist, create it only if not InnovareAI workspace
-          if (workspaceId === 'df5d730f-1915-4269-bd5a-9534478b17af') {
-            // InnovareAI workspace should exist, something is wrong
-            setError('InnovareAI workspace not found - database connection issue');
-            console.error('InnovareAI workspace missing from database');
-            return;
-          }
+          // Workspace doesn't exist, create a default one
           
           console.log('Workspace not found, creating default workspace...');
           const { data: newWorkspace, error: createError } = await supabase

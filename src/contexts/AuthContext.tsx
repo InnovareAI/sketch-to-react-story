@@ -88,8 +88,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return null;
       }
 
-      // First, check if workspace exists or create default one
-      let workspaceId = 'df5d730f-1915-4269-bd5a-9534478b17af'; // Default workspace
+      // Create a new workspace for this user
+      let workspaceId = crypto.randomUUID();
       
       const { data: workspace, error: workspaceError } = await supabase
         .from('workspaces')
@@ -103,8 +103,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .from('workspaces')
           .insert({
             id: workspaceId,
-            name: 'InnovareAI',
-            slug: 'innovareai',
+            name: `${authUser.email.split('@')[0]}'s Workspace`,
+            slug: authUser.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
             subscription_tier: 'pro'
           })
           .select()
@@ -281,8 +281,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: userEmail,
             full_name: 'Christopher Lee',
             role: 'admin',
-            workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-            workspace_name: 'InnovareAI',
+            workspace_id: null, // Will be set dynamically
+            workspace_name: 'Loading...',
             workspace_plan: 'pro',
             status: 'active',
             avatar_url: null
@@ -293,8 +293,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: userEmail,
             full_name: 'Charissa Saniel',
             role: 'member',
-            workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-            workspace_name: 'InnovareAI',
+            workspace_id: null, // Will be set dynamically
+            workspace_name: 'Loading...',
             workspace_plan: 'pro',
             status: 'active',
             avatar_url: null
@@ -306,8 +306,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: userEmail,
             full_name: 'Thorsten Linz',
             role: 'owner',
-            workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-            workspace_name: 'InnovareAI',
+            workspace_id: null, // Will be set dynamically
+            workspace_name: 'Loading...',
             workspace_plan: 'pro',
             status: 'active',
             avatar_url: null
