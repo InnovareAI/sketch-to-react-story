@@ -43,6 +43,7 @@ import { unipileService, LinkedInAccountData } from '@/services/unipile/UnipileS
 import { linkedInOAuth } from '@/services/linkedin/LinkedInOAuth';
 import { TeamAccountsSupabaseService } from '@/services/accounts/TeamAccountsSupabaseService';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserLinkedInAccounts, setUserLinkedInAccounts } from '@/utils/userDataStorage';
 import { linkedInDataSync } from '@/services/linkedin/LinkedInDataSync';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { previewSync } from '@/services/unipile/PreviewSync';
@@ -221,11 +222,9 @@ export function LinkedInAccountConnection() {
     }
 
     try {
-      // Get existing accounts from localStorage
-      const persistedAccounts = localStorage.getItem('linkedin_accounts');
-      if (!persistedAccounts) return;
-
-      const localAccounts: LinkedInAccountData[] = JSON.parse(persistedAccounts);
+      // Get existing accounts from user-specific storage
+      const localAccounts = await getUserLinkedInAccounts();
+      if (!localAccounts || localAccounts.length === 0) return;
       
       // Get existing Supabase accounts to avoid duplicates
       const supabaseAccounts = await teamAccountsService.getLinkedInAccounts();
@@ -266,7 +265,7 @@ export function LinkedInAccountConnection() {
         
         // Update localStorage if any names were changed
         if (JSON.stringify(accounts) !== JSON.stringify(updatedAccounts)) {
-          localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+          await setUserLinkedInAccounts(updatedAccounts);
           console.log('Updated team member display names in localStorage');
         }
         
@@ -315,7 +314,7 @@ export function LinkedInAccountConnection() {
         const existingAccounts = persistedAccounts ? JSON.parse(persistedAccounts) : [];
         const updatedAccounts = [...existingAccounts, newAccount];
         setAccounts(updatedAccounts);
-        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+        await setUserLinkedInAccounts(updatedAccounts);
         
         // Save to Supabase for team accounts
         await saveToSupabase(newAccount);
@@ -523,7 +522,7 @@ export function LinkedInAccountConnection() {
         // Save to localStorage for persistence
         const existingAccounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
         const updatedAccounts = [...existingAccounts, mockAccount];
-        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+        await setUserLinkedInAccounts(updatedAccounts);
         
         // Save to Supabase for team accounts
         await saveToSupabase(mockAccount);
@@ -560,13 +559,13 @@ export function LinkedInAccountConnection() {
         // This is a direct LinkedIn OAuth account
         const updatedAccounts = accounts.filter(acc => acc.id !== accountToDisconnect.id);
         setAccounts(updatedAccounts);
-        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+        await setUserLinkedInAccounts(updatedAccounts);
         toast.success('LinkedIn account disconnected successfully');
       } else if (accountId && (accountId.startsWith('demo-') || accountId.startsWith('cpr_'))) {
         // This is a demo or CPR worker account
         const updatedAccounts = accounts.filter(acc => acc.id !== accountToDisconnect.id);
         setAccounts(updatedAccounts);
-        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+        await setUserLinkedInAccounts(updatedAccounts);
         toast.success('Account disconnected successfully');
       } else {
         // This is a Unipile account, use the original disconnect method
@@ -627,7 +626,7 @@ export function LinkedInAccountConnection() {
           : acc
       );
       setAccounts(updatedAccounts);
-      localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+      await setUserLinkedInAccounts(updatedAccounts);
       
     } catch (error) {
       console.error('Error syncing account:', error);
@@ -675,7 +674,7 @@ export function LinkedInAccountConnection() {
       );
       
       setAccounts(updatedAccounts);
-      localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+      await setUserLinkedInAccounts(updatedAccounts);
       setShowProxyUpdate(null);
       
       const newLocation = proxyLocations.find(l => l.code === newProxyCode);
@@ -769,7 +768,7 @@ export function LinkedInAccountConnection() {
           : acc
       );
       setAccounts(updatedAccounts);
-      localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+      await setUserLinkedInAccounts(updatedAccounts);
       
     } catch (error) {
       console.error('Manual sync error:', error);
@@ -960,7 +959,7 @@ export function LinkedInAccountConnection() {
                 {import.meta.env.DEV && (
                   <Button 
                     variant="outline"
-                    onClick={() => {
+                    onClick={async () => {
                       const demoAccount: LinkedInAccountData = {
                         id: crypto.randomUUID?.() || `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         provider: 'LINKEDIN',
@@ -980,7 +979,7 @@ export function LinkedInAccountConnection() {
                       
                       console.log('Creating demo account:', demoAccount);
                       setAccounts(prev => [...prev, demoAccount]);
-                      localStorage.setItem('linkedin_accounts', JSON.stringify([...accounts, demoAccount]));
+                      await setUserLinkedInAccounts([...accounts, demoAccount]);
                       toast.success('Demo account created for testing!');
                     }}
                   >
@@ -1171,10 +1170,10 @@ export function LinkedInAccountConnection() {
                         };
                         setAccounts([...accounts, mockAccount]);
                         
-                        // Save to localStorage for persistence
-                        const existingAccounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+                        // Save to user-specific storage for persistence
+                        const existingAccounts = await getUserLinkedInAccounts();
                         const updatedAccounts = [...existingAccounts, mockAccount];
-                        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+                        await setUserLinkedInAccounts(updatedAccounts);
                         
                         // Save to Supabase for team accounts
                         await saveToSupabase(mockAccount);
@@ -1320,11 +1319,11 @@ export function LinkedInAccountConnection() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => {
+                      onClick={async () => {
                         alert('Disconnect clicked for ' + account.name);
                         const updatedAccounts = accounts.filter(acc => acc.id !== account.id);
                         setAccounts(updatedAccounts);
-                        localStorage.setItem('linkedin_accounts', JSON.stringify(updatedAccounts));
+                        await setUserLinkedInAccounts(updatedAccounts);
                         toast.success('Account disconnected (simplified)');
                       }}
                       className="cursor-pointer"
@@ -1771,7 +1770,7 @@ export function LinkedInAccountConnection() {
                 {import.meta.env.DEV && (
                   <Button 
                     variant="outline"
-                    onClick={() => {
+                    onClick={async () => {
                       const demoAccount: LinkedInAccountData = {
                         id: crypto.randomUUID?.() || `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         provider: 'LINKEDIN',
@@ -1791,7 +1790,7 @@ export function LinkedInAccountConnection() {
                       
                       console.log('Creating demo account:', demoAccount);
                       setAccounts([demoAccount]);
-                      localStorage.setItem('linkedin_accounts', JSON.stringify([demoAccount]));
+                      await setUserLinkedInAccounts([demoAccount]);
                       toast.success('Demo account created for testing!');
                     }}
                   >

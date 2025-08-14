@@ -5,6 +5,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getUserLinkedInAccounts, setUserLinkedInAccounts } from '@/utils/userDataStorage';
 
 interface SyncStatus {
   isRunning: boolean;
@@ -327,7 +328,7 @@ export class UnipileRealTimeSync {
             if (thorstenAccount) {
               // Only return Thorsten's account
               const filteredAccounts = [thorstenAccount];
-              localStorage.setItem('linkedin_accounts', JSON.stringify(filteredAccounts));
+              await setUserLinkedInAccounts(filteredAccounts);
               return filteredAccounts;
             }
           }
@@ -356,14 +357,11 @@ export class UnipileRealTimeSync {
       }
 
       // 2. Check specific LinkedIn accounts storage
-      const storedAccounts = localStorage.getItem('linkedin_accounts');
-      if (storedAccounts) {
+      const storedAccounts = await getUserLinkedInAccounts();
+      if (storedAccounts && storedAccounts.length > 0) {
         try {
-          const accounts = JSON.parse(storedAccounts);
-          console.log('✅ Found stored LinkedIn accounts:', accounts);
-          if (accounts.length > 0) {
-            return accounts;
-          }
+          console.log('✅ Found stored LinkedIn accounts:', storedAccounts);
+          return storedAccounts;
         } catch (e) {
           console.log('Could not parse stored accounts');
         }
@@ -388,7 +386,7 @@ export class UnipileRealTimeSync {
         if (dbAccounts && dbAccounts.length > 0) {
           console.log('✅ Found LinkedIn accounts in database:', dbAccounts);
           // Store in localStorage for faster access
-          localStorage.setItem('linkedin_accounts', JSON.stringify(dbAccounts));
+          await setUserLinkedInAccounts(dbAccounts);
           return dbAccounts;
         }
       }
@@ -432,7 +430,7 @@ export class UnipileRealTimeSync {
 
             if (linkedInAccounts.length > 0) {
               // Store for next time
-              localStorage.setItem('linkedin_accounts', JSON.stringify(linkedInAccounts));
+              await setUserLinkedInAccounts(linkedInAccounts);
               return linkedInAccounts;
             }
           } else {
@@ -463,7 +461,7 @@ export class UnipileRealTimeSync {
         };
         
         // Store it for next time
-        localStorage.setItem('linkedin_accounts', JSON.stringify([defaultAccount]));
+        await setUserLinkedInAccounts([defaultAccount]);
         
         return [defaultAccount];
       }

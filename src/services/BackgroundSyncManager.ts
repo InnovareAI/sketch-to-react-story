@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { getUserLinkedInAccounts } from '@/utils/userDataStorage';
 
 interface SyncSchedule {
   workspace_id: string;
@@ -327,7 +328,7 @@ class BackgroundSyncManager {
    */
   private async getLinkedInAccountId(): Promise<string | null> {
     try {
-      const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+      const accounts = await getUserLinkedInAccounts();
       if (accounts.length > 0) {
         return accounts[0].unipileAccountId || accounts[0].id;
       }
