@@ -31,6 +31,7 @@ import { linkedInExtractor, type ExtractedProspect } from '@/services/linkedinEx
 import { OrganizationApolloService } from '@/services/organizationApolloService';
 import { UserQuotaDisplay } from './UserQuotaDisplay';
 import type { UserQuota } from '@/services/organizationQuotaService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Prospect {
   id?: string;
@@ -74,8 +75,14 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
   const [userQuota, setUserQuota] = useState<UserQuota | null>(null);
   const [organizationService] = useState(() => new OrganizationApolloService());
   
-  // Mock user data (in production, get from auth context)
-  const currentUser = { id: 'user-123', workspaceId: 'workspace-456' };
+  // Get real authenticated user data
+  const { user } = useAuth();
+  
+  // Only show quota system if user is authenticated
+  if (!user) {
+    // Fallback for non-authenticated users - hide quota features
+    console.warn('No authenticated user - quota system disabled');
+  }
   
   // Manual entry state
   const [manualProspect, setManualProspect] = useState<Partial<Prospect>>({
@@ -274,9 +281,15 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
       // Step 1: Use Organization Apollo Service for extraction with quota enforcement
       setExtractionProgress('Extracting prospects with Apollo database...');
       
+      // Skip quota system if no authenticated user
+      if (!user) {
+        toast.error('Please log in to use the quota-managed extraction system');
+        return;
+      }
+      
       const extractionResult = await organizationService.extractProspectsForUser(
-        currentUser.id,
-        currentUser.workspaceId,
+        user.id,
+        user.workspace_id,
         searchUrl,
         estimatedCount
       );
@@ -417,12 +430,14 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
 
   return (
     <div className="space-y-6">
-      {/* User Quota Display */}
-      <UserQuotaDisplay 
-        userId={currentUser.id}
-        onQuotaUpdate={setUserQuota}
-        showDetails={true}
-      />
+      {/* User Quota Display - Only show if user is authenticated */}
+      {user && (
+        <UserQuotaDisplay 
+          userId={user.id}
+          onQuotaUpdate={setUserQuota}
+          showDetails={true}
+        />
+      )}
 
       {/* Selected Prospects Summary */}
       {selectedPeople.length > 0 && (
