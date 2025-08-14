@@ -82,6 +82,8 @@ export default function CampaignSetup() {
   const [usePriority, setUsePriority] = useState(false);
   const [startImmediately, setStartImmediately] = useState(true);
   const [scheduledDate, setScheduledDate] = useState<string>("");
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { workspace, workspaceId } = useWorkspace();
   const { user } = useAuth();
   
@@ -262,26 +264,31 @@ export default function CampaignSetup() {
     }
   };
 
-  const handleSaveCampaign = async () => {
+  const handleSaveCampaign = async (isAutoSave = false) => {
     console.log('Attempting to save campaign, workspaceId:', workspaceId);
     if (!workspaceId) {
-      toast.error('No workspace found. Please try refreshing the page.');
+      if (!isAutoSave) toast.error('No workspace found. Please try refreshing the page.');
       console.error('workspaceId is missing:', { workspace, workspaceId });
-      return;
+      return false;
     }
     
     if (!user?.id) {
-      toast.error('User not found. Please try refreshing the page.');
+      if (!isAutoSave) toast.error('User not found. Please try refreshing the page.');
       console.error('user is missing:', { user });
-      return;
+      return false;
     }
     
     if (!campaignName.trim()) {
-      toast.error('Please enter a campaign name');
-      return;
+      if (!isAutoSave) toast.error('Please enter a campaign name');
+      return false;
     }
 
-    setSaving(true);
+    if (isAutoSave) {
+      setAutoSaving(true);
+    } else {
+      setSaving(true);
+    }
+    
     try {
       const campaignData = {
         workspace_id: workspaceId,
@@ -314,7 +321,7 @@ export default function CampaignSetup() {
         
         if (error) throw error;
         
-        toast.success('Campaign updated successfully');
+        if (!isAutoSave) toast.success('Campaign updated successfully');
       } else {
         // Create new campaign
         const { data, error } = await supabase
@@ -333,15 +340,69 @@ export default function CampaignSetup() {
           window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
         }
         
-        toast.success('Campaign created successfully');
+        if (!isAutoSave) toast.success('Campaign created successfully');
       }
+      
+      setLastSaved(new Date());
+      return true;
     } catch (error) {
       console.error('Error saving campaign:', error);
-      toast.error(`Failed to save campaign: ${error.message || 'Unknown error'}`);
+      if (!isAutoSave) toast.error(`Failed to save campaign: ${error.message || 'Unknown error'}`);
+      return false;
     } finally {
-      setSaving(false);
+      if (isAutoSave) {
+        setAutoSaving(false);
+      } else {
+        setSaving(false);
+      }
     }
   };
+
+  // Auto-save function
+  const performAutoSave = async () => {
+    if (!workspaceId || !user?.id || !campaignName.trim()) {
+      return; // Skip auto-save if missing required data
+    }
+    
+    console.log('Performing auto-save...');
+    await handleSaveCampaign(true);
+  };
+
+  // Auto-save effect - save every 30 seconds when there are changes
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      if (campaignName.trim() && workspaceId && user?.id) {
+        performAutoSave();
+      }
+    }, 30000); // Auto-save every 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [campaignName, dailyContactLimit, dailyFollowupLimit, campaignPriority, usePriority, startImmediately, scheduledDate, prospectMethod, connectionDegrees, messages, workspaceId, user?.id]);
+
+  // Auto-save when user leaves the page or switches tabs
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (campaignName.trim() && workspaceId && user?.id) {
+        performAutoSave();
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && campaignName.trim() && workspaceId && user?.id) {
+        performAutoSave();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [campaignName, workspaceId, user?.id]);
 
   const handleActivateCampaign = async () => {
     if (!campaignId) {
@@ -390,11 +451,11 @@ export default function CampaignSetup() {
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
-                    onClick={handleSaveCampaign}
-                    disabled={saving}
+                    onClick={() => handleSaveCampaign(false)}
+                    disabled={saving || autoSaving}
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save'}
+                    {saving ? 'Saving...' : autoSaving ? 'Auto-saving...' : 'Save'}
                   </Button>
                   <Button onClick={handleActivateCampaign}>
                     <Play className="h-4 w-4 mr-2" />
@@ -405,13 +466,37 @@ export default function CampaignSetup() {
 
               {/* Campaign Navigation Tabs */}
               <div className="mb-6">
-                <div className="flex items-center gap-6 text-sm">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Input 
-                      value={campaignName}
-                      onChange={(e) => setCampaignName(e.target.value)}
-                      className="font-medium border-none bg-transparent p-0 h-auto text-lg"
-                    />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Input 
+                        value={campaignName}
+                        onChange={(e) => setCampaignName(e.target.value)}
+                        className="font-medium border-none bg-transparent p-0 h-auto text-lg"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Auto-save Status */}
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    {autoSaving && (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                        <span>Auto-saving...</span>
+                      </>
+                    )}
+                    {lastSaved && !autoSaving && (
+                      <>
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                        <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
+                      </>
+                    )}
+                    {!lastSaved && !autoSaving && campaignName.trim() && (
+                      <>
+                        <Clock className="h-3 w-3 text-orange-500" />
+                        <span>Unsaved changes</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -533,7 +618,7 @@ export default function CampaignSetup() {
                         <Plus className="h-4 w-4 mr-2" />
                         Add follow up
                       </Button>
-                      <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveCampaign}>
+                      <Button className="bg-primary hover:bg-primary/90" onClick={() => handleSaveCampaign(false)}>
                         <Save className="h-4 w-4 mr-2" />
                         Save messages
                       </Button>
@@ -670,7 +755,7 @@ export default function CampaignSetup() {
                       <div>
                         <h3 className="text-lg font-semibold">Set campaign parameters to run the campaign</h3>
                       </div>
-                      <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveCampaign}>
+                      <Button className="bg-primary hover:bg-primary/90" onClick={() => handleSaveCampaign(false)}>
                         <Save className="h-4 w-4 mr-2" />
                         Save
                       </Button>
