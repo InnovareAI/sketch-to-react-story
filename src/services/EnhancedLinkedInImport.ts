@@ -201,7 +201,7 @@ export class EnhancedLinkedInImport {
       if (!config.linkedin_connected) {
         const errorMsg = 'LinkedIn not connected in Unipile. Please complete onboarding.';
         console.error('   ❌', errorMsg);
-        console.log('   💡 Check Unipile dashboard: https://app.unipile.com/accounts');
+        console.log('   💡 LinkedIn connection required via settings');
         throw new Error(errorMsg);
       }
 

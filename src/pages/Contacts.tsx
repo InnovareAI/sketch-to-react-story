@@ -83,8 +83,23 @@ export default function Contacts() {
   const [filterEngagement, setFilterEngagement] = useState<string>("all");
   const [filterTags, setFilterTags] = useState<string[]>([]);
   
-  // Default workspace and profile for dev mode
-  const DEFAULT_WORKSPACE_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+  // Get dynamic workspace ID
+  const getCurrentWorkspaceId = (): string => {
+    const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+    if (authProfile.workspace_id) return authProfile.workspace_id;
+    
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.workspace_id) return bypassUser.workspace_id;
+    
+    const workspaceId = localStorage.getItem('workspace_id');
+    if (workspaceId) return workspaceId;
+    
+    const userEmail = localStorage.getItem('user_email') || 'default';
+    const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+  };
+  
+  const DEFAULT_WORKSPACE_ID = getCurrentWorkspaceId();
   const DEFAULT_ACCOUNT_ID = 'default-account';
   const [isSyncing, setIsSyncing] = useState(false);
   const [backgroundSyncEnabled, setBackgroundSyncEnabled] = useState(false);

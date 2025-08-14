@@ -370,14 +370,16 @@ export default function CampaignSetup() {
 
   // Auto-save effect - save every 30 seconds when there are changes
   useEffect(() => {
+    if (!campaignName.trim() || !workspaceId || !user?.id) {
+      return; // Skip setting up auto-save if required data missing
+    }
+
     const autoSaveInterval = setInterval(() => {
-      if (campaignName.trim() && workspaceId && user?.id) {
-        performAutoSave();
-      }
+      performAutoSave();
     }, 30000); // Auto-save every 30 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [campaignName, dailyContactLimit, dailyFollowupLimit, campaignPriority, usePriority, startImmediately, scheduledDate, prospectMethod, connectionDegrees, messages, workspaceId, user?.id]);
+  }, [campaignName, workspaceId, user?.id]); // Reduced dependencies to prevent frequent re-creation
 
   // Auto-save when user leaves the page or switches tabs
   useEffect(() => {

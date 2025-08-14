@@ -113,8 +113,12 @@ export default function ContactsView() {
         .single();
         
       if (wsError || !workspace) {
-        console.log('⚠️ No workspace found for user, using default');
-        workspace = { id: 'a0000000-0000-0000-0000-000000000000' }; // Default workspace
+        console.log('⚠️ No workspace found for user, generating dynamic workspace');
+        // Generate dynamic workspace ID
+        const userEmail = localStorage.getItem('user_email') || 'default';
+        const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const workspaceId = `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+        workspace = { id: workspaceId };
       }
       
       console.log('✅ Workspace ID:', workspace.id);
@@ -244,8 +248,12 @@ export default function ContactsView() {
         .single();
         
       if (wsError || !workspace) {
-        console.log('⚠️ No workspace found, using default');
-        workspace = { id: 'a0000000-0000-0000-0000-000000000000' };
+        console.log('⚠️ No workspace found, generating dynamic workspace');
+        // Generate dynamic workspace ID
+        const userEmail = localStorage.getItem('user_email') || 'default';
+        const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const workspaceId = `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+        workspace = { id: workspaceId };
       }
       
       console.log('✅ Using workspace:', workspace.id);

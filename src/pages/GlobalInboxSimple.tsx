@@ -51,11 +51,27 @@ export default function GlobalInboxSimple() {
       setLoading(true);
       toast.info('Syncing LinkedIn messages...');
       
+      // Get dynamic workspace ID
+      const getCurrentWorkspaceId = (): string => {
+        const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+        if (authProfile.workspace_id) return authProfile.workspace_id;
+        
+        const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+        if (bypassUser.workspace_id) return bypassUser.workspace_id;
+        
+        const workspaceId = localStorage.getItem('workspace_id');
+        if (workspaceId) return workspaceId;
+        
+        const userEmail = localStorage.getItem('user_email') || 'default';
+        const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+      };
+      
       // Simple sync - just add one test message
       const { error: syncError } = await supabase
         .from('inbox_conversations')
         .upsert({
-          workspace_id: 'a0000000-0000-0000-0000-000000000000',
+          workspace_id: getCurrentWorkspaceId(),
           platform: 'linkedin',
           platform_conversation_id: 'test_sync_' + Date.now(),
           participant_name: 'Sync Test User',

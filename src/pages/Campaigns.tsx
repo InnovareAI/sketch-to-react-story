@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { 
   Target, 
   Mail, 
@@ -75,14 +78,16 @@ export default function Campaigns() {
     }
   };
 
-  // Filter campaigns based on search and filters
-  const filteredCampaigns = campaigns.filter(campaign => {
-    const matchesSearch = searchQuery === "" || 
-      campaign.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || campaign.status === statusFilter;
-    const matchesType = typeFilter === "all" || campaign.type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Memoized filtered campaigns to prevent unnecessary re-computation
+  const filteredCampaigns = useMemo(() => {
+    return campaigns.filter(campaign => {
+      const matchesSearch = searchQuery === "" || 
+        campaign.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || campaign.status === statusFilter;
+      const matchesType = typeFilter === "all" || campaign.type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [campaigns, searchQuery, statusFilter, typeFilter]);
 
   // Empty state component
   const EmptyState = () => (
@@ -121,9 +126,10 @@ export default function Campaigns() {
   };
 
   return (
-    <div className="flex-1 bg-gray-50">
-      <main className="flex-1 p-8">
-            <div className="max-w-7xl mx-auto space-y-6">
+    <ErrorBoundary>
+      <div className="flex-1 bg-gray-50">
+        <main className="flex-1 p-8">
+              <div className="max-w-7xl mx-auto space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -360,7 +366,7 @@ export default function Campaigns() {
                             if (error) throw error;
                             
                             toast.success(`Campaign ${newStatus === 'active' ? 'activated' : 'paused'}`);
-                            refreshData();
+                            refetch();
                           } catch (error) {
                             console.error('Error toggling campaign status:', error);
                             toast.error('Failed to update campaign status');
@@ -529,14 +535,15 @@ export default function Campaigns() {
                   })
                 )}
               </div>
-            </div>
-          </main>
-          
-          {/* Campaign Creation Modal */}
-          <CampaignCreationModal 
-            isOpen={isCreationModalOpen}
-            onClose={() => setIsCreationModalOpen(false)}
-          />
-    </div>
+              </div>
+            </main>
+            
+            {/* Campaign Creation Modal */}
+            <CampaignCreationModal 
+              isOpen={isCreationModalOpen}
+              onClose={() => setIsCreationModalOpen(false)}
+            />
+      </div>
+    </ErrorBoundary>
   );
 }

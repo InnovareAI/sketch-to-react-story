@@ -137,9 +137,8 @@ export default function LinkedInOnboarding() {
   };
 
   const handleConnect = () => {
-    // Open Unipile in new window to connect LinkedIn
-    window.open('https://app.unipile.com/accounts', '_blank');
-    toast.info('Please connect your LinkedIn account in Unipile, then click "Check Connection"');
+    // TODO: Implement proper Unipile OAuth flow
+    toast.info('LinkedIn connection feature will be available soon');
   };
 
   const handleCheckConnection = async () => {

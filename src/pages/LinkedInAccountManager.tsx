@@ -144,9 +144,8 @@ export default function LinkedInAccountManager() {
   };
 
   const handleConnectAccount = () => {
-    // This would open Unipile OAuth flow
-    window.open('https://app.unipile.com/oauth/linkedin', '_blank');
-    toast.info('Complete the LinkedIn connection in the new window');
+    // TODO: Implement proper Unipile OAuth flow
+    toast.info('LinkedIn connection feature coming soon');
   };
 
   const handleSyncNow = async () => {

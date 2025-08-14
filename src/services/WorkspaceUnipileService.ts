@@ -61,17 +61,23 @@ class WorkspaceUnipileService {
   /**
    * Get current workspace ID from various sources
    */
-  private getCurrentWorkspaceId(): string {
+   private getCurrentWorkspaceId(): string {
     // Check auth profile
     const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
     if (authProfile.workspace_id) return authProfile.workspace_id;
+    
+    // Check bypass user data
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.workspace_id) return bypassUser.workspace_id;
     
     // Check direct storage
     const workspaceId = localStorage.getItem('workspace_id');
     if (workspaceId) return workspaceId;
     
-    // Dev mode fallback
-    return 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    // Generate dynamic fallback workspace ID
+    const userEmail = localStorage.getItem('user_email') || 'default';
+    const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
   }
 
   /**

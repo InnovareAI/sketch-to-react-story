@@ -44,10 +44,36 @@ export default function CampaignSetupFlow() {
   const campaignType = searchParams.get('type') || 'connector';
   const campaignId = searchParams.get('id');
   
-  // Use existing workspace and user IDs from auth context
-  const WORKSPACE_ID = 'df5d730f-1915-4269-bd5a-9534478b17af';
-  const TENANT_ID = '367b6c5c-43d7-4546-96d4-4f5f22641de1'; // InnovareAI tenant
-  const USER_ID = '03ca8428-384a-482d-8371-66928fee1063'; // CL user
+  // Get dynamic workspace and user IDs from auth context
+  const getCurrentWorkspaceId = (): string => {
+    const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+    if (authProfile.workspace_id) return authProfile.workspace_id;
+    
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.workspace_id) return bypassUser.workspace_id;
+    
+    const workspaceId = localStorage.getItem('workspace_id');
+    if (workspaceId) return workspaceId;
+    
+    const userEmail = localStorage.getItem('user_email') || 'default';
+    const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+  };
+
+  const getCurrentUserId = (): string => {
+    const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+    if (authProfile.id) return authProfile.id;
+    
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.id) return bypassUser.id;
+    
+    const userEmail = localStorage.getItem('user_email') || 'default';
+    const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return `user-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+  };
+
+  const WORKSPACE_ID = getCurrentWorkspaceId();
+  const USER_ID = getCurrentUserId();
   
   const [activeTab, setActiveTab] = useState('name');
   const [campaignName, setCampaignName] = useState('');

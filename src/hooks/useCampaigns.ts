@@ -31,14 +31,66 @@ export function useCampaigns() {
 
   const getCurrentWorkspaceId = (): string | null => {
     try {
+      console.log('🔍 DEBUG: Getting workspace ID...');
+      
+      // Primary: Check auth profile first
       const userAuthProfile = localStorage.getItem('user_auth_profile');
       if (userAuthProfile) {
-        const profile = JSON.parse(userAuthProfile);
-        return profile.workspace_id;
+        try {
+          const profile = JSON.parse(userAuthProfile);
+          if (profile?.workspace_id) {
+            console.log('✅ Found workspace_id in user_auth_profile:', profile.workspace_id);
+            return profile.workspace_id;
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse user_auth_profile:', parseError);
+        }
       }
+      
+      // Secondary: Check bypass user data
+      const bypassUser = localStorage.getItem('bypass_user');
+      if (bypassUser) {
+        try {
+          const userData = JSON.parse(bypassUser);
+          if (userData?.workspace_id) {
+            console.log('✅ Found workspace_id in bypass_user:', userData.workspace_id);
+            return userData.workspace_id;
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse bypass_user:', parseError);
+        }
+      }
+      
+      // Tertiary: Check direct storage
+      const workspaceId = localStorage.getItem('workspace_id');
+      if (workspaceId && workspaceId !== 'null' && workspaceId !== 'undefined') {
+        console.log('✅ Found direct workspace_id:', workspaceId);
+        return workspaceId;
+      }
+      
+      // Fallback: Generate workspace ID for authenticated users
+      const userEmail = localStorage.getItem('user_email');
+      if (userEmail && userEmail !== 'null') {
+        const innovareEmails = ['cl@innovareai.com', 'cs@innovareai.com', 'tl@innovareai.com'];
+        if (innovareEmails.includes(userEmail.toLowerCase())) {
+          const sharedWorkspace = 'workspace-innovareai-shared-team';
+          console.log('✅ Using shared InnovareAI workspace:', sharedWorkspace);
+          localStorage.setItem('workspace_id', sharedWorkspace);
+          return sharedWorkspace;
+        }
+        
+        // Generate user-specific workspace
+        const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const fallbackWorkspace = `workspace-${emailHash}-${Date.now().toString().slice(-6)}`;
+        console.log('✅ Generated fallback workspace:', fallbackWorkspace);
+        localStorage.setItem('workspace_id', fallbackWorkspace);
+        return fallbackWorkspace;
+      }
+      
+      console.log('❌ No workspace ID sources available');
       return null;
     } catch (err) {
-      console.error('Error getting workspace ID:', err);
+      console.error('❌ Error getting workspace ID:', err);
       return null;
     }
   };
@@ -49,9 +101,12 @@ export function useCampaigns() {
       setError(null);
 
       const workspaceId = getCurrentWorkspaceId();
+      console.log('🔍 DEBUG: Final workspaceId result:', workspaceId);
       if (!workspaceId) {
+        console.log('❌ CAMPAIGNS ERROR: No workspace ID found');
         throw new Error('No workspace found. Please ensure you are logged in.');
       }
+      console.log('✅ CAMPAIGNS: Using workspaceId:', workspaceId);
 
       // Get current user's workspace campaigns
       const { data, error: campaignError } = await supabase
@@ -81,13 +136,25 @@ export function useCampaigns() {
       }
 
       // Get current user ID from localStorage (development mode)
-      const userAuthUser = localStorage.getItem('user_auth_user');
+      let userId = null;
       
-      if (!userAuthUser) {
+      // Check regular auth user
+      const userAuthUser = localStorage.getItem('user_auth_user');
+      if (userAuthUser) {
+        const user = JSON.parse(userAuthUser);
+        userId = user.id;
+      } else {
+        // Check bypass user
+        const bypassUser = localStorage.getItem('bypass_user');
+        if (bypassUser) {
+          const userData = JSON.parse(bypassUser);
+          userId = userData.id;
+        }
+      }
+      
+      if (!userId) {
         throw new Error('User not authenticated');
       }
-
-      const user = JSON.parse(userAuthUser);
 
       const { data, error } = await supabase
         .from('campaigns')
@@ -96,7 +163,7 @@ export function useCampaigns() {
           status,
           type: 'email', // Default type
           workspace_id: workspaceId,
-          created_by: user.id,
+          created_by: userId,
           target_audience: {},
           linkedin_sequence_config: {},
           apify_actor_config: {},

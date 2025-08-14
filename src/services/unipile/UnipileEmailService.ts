@@ -371,11 +371,14 @@ export class UnipileEmailService {
    */
   async syncAccountToSupabase(account: EmailAccountData): Promise<boolean> {
     try {
+      // Get current workspace ID from auth context
+      const workspaceId = this.getCurrentWorkspaceId();
+      
       const { error } = await supabase
         .from('email_accounts')
         .upsert({
           id: account.id,
-          workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+          workspace_id: workspaceId,
           account_name: account.name,
           email: account.email,
           provider: account.provider.toLowerCase(),
@@ -397,6 +400,28 @@ export class UnipileEmailService {
       console.error('Error syncing email account:', error);
       return false;
     }
+  }
+
+  /**
+   * Get current workspace ID from various sources
+   */
+  private getCurrentWorkspaceId(): string {
+    // Check auth profile
+    const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+    if (authProfile.workspace_id) return authProfile.workspace_id;
+    
+    // Check bypass user data
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.workspace_id) return bypassUser.workspace_id;
+    
+    // Check direct storage
+    const workspaceId = localStorage.getItem('workspace_id');
+    if (workspaceId) return workspaceId;
+    
+    // Generate dynamic fallback workspace ID
+    const userEmail = localStorage.getItem('user_email') || 'default';
+    const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
   }
 }
 

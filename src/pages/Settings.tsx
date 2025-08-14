@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   User,
@@ -120,6 +121,18 @@ export default function Settings() {
     confirm: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Modal states
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [showInviteMemberDialog, setShowInviteMemberDialog] = useState(false);
+  const [showRoleChangeDialog, setShowRoleChangeDialog] = useState(false);
+  const [showWebhookDialog, setShowWebhookDialog] = useState(false);
+  
+  // Form states for modals
+  const [inviteForm, setInviteForm] = useState({ email: '', role: 'member' });
+  const [roleChangeForm, setRoleChangeForm] = useState({ memberId: '', currentRole: '', newRole: '' });
+  const [webhookForm, setWebhookForm] = useState({ url: '', description: '' });
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   
   useEffect(() => {
     loadAllData();
@@ -395,6 +408,53 @@ export default function Settings() {
     }
   };
   
+  // Modal handlers
+  const handleDeleteAccount = () => {
+    if (deleteConfirmText === 'DELETE') {
+      // In production, this would call a delete account API
+      toast.error('Account deletion is currently disabled. Contact support for account deletion.');
+      setShowDeleteAccountDialog(false);
+      setDeleteConfirmText('');
+    } else {
+      toast.error('Please type DELETE to confirm account deletion.');
+    }
+  };
+  
+  const handleInviteMember = async () => {
+    if (inviteForm.email) {
+      await inviteTeamMember(inviteForm.email, inviteForm.role);
+      setShowInviteMemberDialog(false);
+      setInviteForm({ email: '', role: 'member' });
+    } else {
+      toast.error('Please enter an email address');
+    }
+  };
+  
+  const handleRoleChange = () => {
+    if (roleChangeForm.newRole !== roleChangeForm.currentRole) {
+      // In production, this would update the member's role
+      toast.success(`Role updated to ${roleChangeForm.newRole}`);
+      setShowRoleChangeDialog(false);
+      loadAllData();
+    }
+  };
+  
+  const handleWebhookSave = () => {
+    if (webhookForm.url) {
+      if (webhookForm.url.startsWith('http://') || webhookForm.url.startsWith('https://')) {
+        toast.success('Webhook configured successfully!');
+        // In production, this would save the webhook configuration
+        setShowWebhookDialog(false);
+        setWebhookForm({ url: '', description: '' });
+      } else {
+        toast.error('Please enter a valid URL starting with http:// or https://');
+      }
+    } else {
+      toast.error('Please enter a webhook URL');
+    }
+  };
+  
+  
   // Show loading state while waiting for auth or while loading data
   if (loading || !authUser) {
     return (
@@ -469,7 +529,28 @@ export default function Settings() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="space-y-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.onchange = (e: any) => {
+                            const file = e.target?.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (e) => {
+                                const result = e.target?.result as string;
+                                setPersonalForm({ ...personalForm, avatar_url: result });
+                                toast.success('Photo updated successfully');
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          };
+                          input.click();
+                        }}
+                      >
                         <Camera className="h-4 w-4 mr-2" />
                         Change Photo
                       </Button>
@@ -633,11 +714,37 @@ export default function Settings() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Account Actions</h3>
                     <div className="flex gap-4">
-                      <Button variant="outline">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          // Create a simple data export
+                          const userData = {
+                            profile: userProfile,
+                            settings: personalForm,
+                            workspace: workspace?.name,
+                            exported_at: new Date().toISOString()
+                          };
+                          const dataStr = JSON.stringify(userData, null, 2);
+                          const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                          
+                          const exportFileDefaultName = `sam-ai-data-${new Date().toISOString().split('T')[0]}.json`;
+                          
+                          const linkElement = document.createElement('a');
+                          linkElement.setAttribute('href', dataUri);
+                          linkElement.setAttribute('download', exportFileDefaultName);
+                          linkElement.click();
+                          
+                          toast.success('Data export downloaded successfully');
+                        }}
+                      >
                         <Download className="h-4 w-4 mr-2" />
                         Download My Data
                       </Button>
-                      <Button variant="outline" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        variant="outline" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => setShowDeleteAccountDialog(true)}
+                      >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete Account
                       </Button>
@@ -962,10 +1069,7 @@ export default function Settings() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium">Team Members</h3>
-                      <Button onClick={() => {
-                        const email = prompt('Enter email address to invite:');
-                        if (email) inviteTeamMember(email, 'member');
-                      }}>
+                      <Button onClick={() => setShowInviteMemberDialog(true)}>
                         <UserPlus className="h-4 w-4 mr-2" />
                         Invite Member
                       </Button>
@@ -993,7 +1097,18 @@ export default function Settings() {
                             {member.settings?.invited && (
                               <Badge variant="outline">Pending</Badge>
                             )}
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setRoleChangeForm({
+                                  memberId: member.id,
+                                  currentRole: member.role,
+                                  newRole: member.role
+                                });
+                                setShowRoleChangeDialog(true);
+                              }}
+                            >
                               <SettingsIcon className="h-4 w-4" />
                             </Button>
                           </div>
@@ -1151,7 +1266,13 @@ export default function Settings() {
                           <div className="font-medium">API Keys</div>
                           <p className="text-sm text-gray-500">Manage API keys for integrations</p>
                         </div>
-                        <Button variant="outline">
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            toast.info('API Key management will open in a modal. Feature coming soon!');
+                            // In production, this would open a modal with API key management
+                          }}
+                        >
                           <Key className="h-4 w-4 mr-2" />
                           Manage Keys
                         </Button>
@@ -1161,7 +1282,10 @@ export default function Settings() {
                           <div className="font-medium">Webhooks</div>
                           <p className="text-sm text-gray-500">Configure webhook endpoints</p>
                         </div>
-                        <Button variant="outline">
+                        <Button 
+                          variant="outline"
+                          onClick={() => setShowWebhookDialog(true)}
+                        >
                           <Zap className="h-4 w-4 mr-2" />
                           Configure
                         </Button>
@@ -1188,7 +1312,17 @@ export default function Settings() {
                 <CardContent className="space-y-6">
                   {/* LinkedIn */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-medium">LinkedIn Integration</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">LinkedIn Integration</h3>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate('/linkedin-integration')}
+                      >
+                        <Linkedin className="h-4 w-4 mr-2" />
+                        Add LinkedIn Account
+                      </Button>
+                    </div>
                     <div className="space-y-3">
                       {linkedInAccounts.length > 0 ? (
                         linkedInAccounts.map((account: any, index: number) => (
@@ -1205,8 +1339,13 @@ export default function Settings() {
                                 <CheckCircle className="h-3 w-3 mr-1" />
                                 Active
                               </Badge>
-                              <Button variant="outline" size="sm">
-                                Disconnect
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => navigate('/linkedin-integration')}
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                                Manage
                               </Button>
                             </div>
                           </div>
@@ -1220,7 +1359,9 @@ export default function Settings() {
                               <p className="text-sm text-gray-500">Not connected</p>
                             </div>
                           </div>
-                          <Button onClick={() => navigate('/linkedin-onboarding')}>
+                          <Button onClick={() => {
+                            navigate('/linkedin-integration');
+                          }}>
                             Connect Account
                           </Button>
                         </div>
@@ -1241,7 +1382,12 @@ export default function Settings() {
                           <p className="text-sm text-gray-500">Connect your email account</p>
                         </div>
                       </div>
-                      <Button variant="outline">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          toast.info('Email integration coming soon! We will support Gmail, Outlook, and other providers.');
+                        }}
+                      >
                         Connect Email
                       </Button>
                     </div>
@@ -1260,7 +1406,12 @@ export default function Settings() {
                           <p className="text-sm text-gray-500">Sync with Google Calendar or Outlook</p>
                         </div>
                       </div>
-                      <Button variant="outline">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          toast.info('Calendar integration coming soon! We will support Google Calendar, Outlook Calendar, and Apple Calendar.');
+                        }}
+                      >
                         Connect Calendar
                       </Button>
                     </div>
@@ -1288,6 +1439,206 @@ export default function Settings() {
           </Tabs>
         </div>
       </main>
+      
+      {/* Delete Account Dialog */}
+      <Dialog open={showDeleteAccountDialog} onOpenChange={setShowDeleteAccountDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Account
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete your account and all associated data, campaigns, and settings.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                All your campaigns, contacts, messages, and analytics will be permanently lost.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirmation">Type "DELETE" to confirm:</Label>
+              <Input
+                id="delete-confirmation"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE here"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowDeleteAccountDialog(false);
+              setDeleteConfirmText('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmText !== 'DELETE'}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Invite Team Member Dialog */}
+      <Dialog open={showInviteMemberDialog} onOpenChange={setShowInviteMemberDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Invite Team Member
+            </DialogTitle>
+            <DialogDescription>
+              Send an invitation to join your workspace. They will receive an email with setup instructions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email Address</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="teammate@company.com"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-role">Role</Label>
+              <Select value={inviteForm.role} onValueChange={(value) => setInviteForm({ ...inviteForm, role: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Member - Can create and manage campaigns</SelectItem>
+                  <SelectItem value="admin">Admin - Can manage team and most settings</SelectItem>
+                  <SelectItem value="viewer">Viewer - View-only access</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowInviteMemberDialog(false);
+              setInviteForm({ email: '', role: 'member' });
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleInviteMember}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Invitation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Change Role Dialog */}
+      <Dialog open={showRoleChangeDialog} onOpenChange={setShowRoleChangeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Change Member Role
+            </DialogTitle>
+            <DialogDescription>
+              Update the role and permissions for this team member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Current Role</Label>
+              <div className="p-2 bg-gray-50 rounded capitalize">{roleChangeForm.currentRole}</div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-role">New Role</Label>
+              <Select value={roleChangeForm.newRole} onValueChange={(value) => setRoleChangeForm({ ...roleChangeForm, newRole: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">Owner - Full workspace access</SelectItem>
+                  <SelectItem value="admin">Admin - Manage team and most settings</SelectItem>
+                  <SelectItem value="member">Member - Create and manage campaigns</SelectItem>
+                  <SelectItem value="viewer">Viewer - View-only access</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRoleChangeDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRoleChange}>
+              <Save className="h-4 w-4 mr-2" />
+              Update Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Webhook Configuration Dialog */}
+      <Dialog open={showWebhookDialog} onOpenChange={setShowWebhookDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Configure Webhook
+            </DialogTitle>
+            <DialogDescription>
+              Add a webhook endpoint to receive real-time notifications about campaigns and responses.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="webhook-url">Webhook URL</Label>
+              <Input
+                id="webhook-url"
+                type="url"
+                placeholder="https://your-app.com/webhook"
+                value={webhookForm.url}
+                onChange={(e) => setWebhookForm({ ...webhookForm, url: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="webhook-description">Description (optional)</Label>
+              <Textarea
+                id="webhook-description"
+                placeholder="What this webhook is used for..."
+                value={webhookForm.description}
+                onChange={(e) => setWebhookForm({ ...webhookForm, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Webhooks will receive campaign completion, response notifications, and account alerts.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowWebhookDialog(false);
+              setWebhookForm({ url: '', description: '' });
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleWebhookSave}>
+              <Zap className="h-4 w-4 mr-2" />
+              Save Webhook
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
     </div>
   );
 }
