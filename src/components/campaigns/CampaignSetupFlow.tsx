@@ -45,19 +45,9 @@ export default function CampaignSetupFlow() {
   const campaignId = searchParams.get('id');
   
   // Get dynamic workspace and user IDs from auth context
+  // Always use the shared workspace ID
   const getCurrentWorkspaceId = (): string => {
-    const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
-    if (authProfile.workspace_id) return authProfile.workspace_id;
-    
-    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
-    if (bypassUser.workspace_id) return bypassUser.workspace_id;
-    
-    const workspaceId = localStorage.getItem('workspace_id');
-    if (workspaceId) return workspaceId;
-    
-    const userEmail = localStorage.getItem('user_email') || 'default';
-    const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+    return 'a0000000-0000-0000-0000-000000000000';
   };
 
   const getCurrentUserId = (): string => {
@@ -67,9 +57,19 @@ export default function CampaignSetupFlow() {
     const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
     if (bypassUser.id) return bypassUser.id;
     
-    const userEmail = localStorage.getItem('user_email') || 'default';
-    const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return `user-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+    // Generate a proper UUID if no user ID found
+    const generateUUID = (): string => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    
+    // Store the generated UUID for consistency
+    const newUserId = generateUUID();
+    localStorage.setItem('temp_user_id', newUserId);
+    return newUserId;
   };
 
   const WORKSPACE_ID = getCurrentWorkspaceId();
@@ -295,10 +295,25 @@ export default function CampaignSetupFlow() {
         }
       };
 
+      // Get workspace ID from localStorage
+      const workspaceId = localStorage.getItem('workspace_id') || 'a0000000-0000-0000-0000-000000000000';
+      
+      // Get user ID from localStorage
+      let userId = null;
+      const bypassUser = localStorage.getItem('bypass_user');
+      if (bypassUser) {
+        try {
+          const userData = JSON.parse(bypassUser);
+          userId = userData.id;
+        } catch (e) {
+          console.error('Failed to parse bypass user:', e);
+        }
+      }
+      
       const campaignData: Omit<Campaign, 'id' | 'created_at' | 'updated_at'> = {
-        workspace_id: WORKSPACE_ID,
-        tenant_id: TENANT_ID,
-        user_id: USER_ID,
+        workspace_id: workspaceId,
+        tenant_id: workspaceId, // Use workspace_id as tenant_id
+        user_id: userId,
         name: campaignName,
         description: campaignDescription,
         type: mapCampaignType(campaignType),

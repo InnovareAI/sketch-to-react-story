@@ -275,16 +275,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userEmail = email.toLowerCase();
         let mockUser: UserProfile;
         
-        // Generate consistent but dynamic user/workspace IDs based on email
-        const generateUserIdFromEmail = (email: string): string => {
-          const emailHash = email.toLowerCase().replace(/[^a-z0-9]/g, '');
-          return `user-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+        // Generate a proper UUID v4 format
+        const generateUUID = (): string => {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
         };
         
         // All InnovareAI team members share the same workspace
         const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
         
-        const userId = generateUserIdFromEmail(userEmail);
+        // Use consistent UUIDs for each user (stored in localStorage for persistence)
+        const userIdKey = `${userEmail}_uuid`;
+        let userId = localStorage.getItem(userIdKey);
+        if (!userId) {
+          userId = generateUUID();
+          localStorage.setItem(userIdKey, userId);
+        }
         const workspaceId = INNOVARE_WORKSPACE_ID;
         
         if (userEmail === 'cl@innovareai.com') {
