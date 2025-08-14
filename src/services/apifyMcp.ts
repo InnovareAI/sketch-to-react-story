@@ -80,7 +80,7 @@ interface LinkedInSearchInput {
   maxProfilesPerPage?: number;
 }
 
-class ApifyMcpService {
+export class ApifyMcpService {
   private mcpEndpoint = '/api/mcp/apify'; // MCP endpoint for Apify
   
   // Enterprise actor configuration based on cost-effectiveness and daily limits
