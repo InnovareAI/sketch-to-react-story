@@ -413,49 +413,6 @@ export default function ContactsView() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={handleServerSync}
-            disabled={syncing}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Server Sync LinkedIn
-          </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Browser Sync LinkedIn
-          </button>
-          <button
-            onClick={async () => {
-              console.log('🔄 Starting detailed sync test...');
-              setSyncing(true);
-              try {
-                // Test the sync with detailed logging
-                const testScript = document.createElement('script');
-                testScript.src = '/test-unipile-sync-now.js';
-                document.body.appendChild(testScript);
-                testScript.onload = async () => {
-                  if (window.testUnipileContactSync) {
-                    await window.testUnipileContactSync();
-                    await loadContacts(); // Reload contacts after sync
-                  }
-                };
-              } catch (error) {
-                console.error('Test failed:', error);
-              } finally {
-                setSyncing(false);
-              }
-            }}
-            disabled={syncing}
-            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Test Sync (Console)
-          </button>
-          <button
             onClick={handleExport}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
           >
@@ -533,24 +490,8 @@ export default function ContactsView() {
           <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
           <p className="text-gray-600 mb-4">
-            {searchTerm ? 'Try adjusting your search criteria' : 'Click "Server Sync LinkedIn" for reliable background import'}
+            {searchTerm ? 'Try adjusting your search criteria' : 'Your LinkedIn contacts will appear here automatically'}
           </p>
-          {!searchTerm && (
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={handleServerSync}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-              >
-                Server Sync LinkedIn
-              </button>
-              <button
-                onClick={handleSync}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                Browser Sync LinkedIn
-              </button>
-            </div>
-          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
