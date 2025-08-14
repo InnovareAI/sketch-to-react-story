@@ -26,6 +26,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AddPeopleTab } from './AddPeopleTab';
 
 interface CampaignStep {
   id: string;
@@ -54,7 +55,7 @@ export default function CampaignSetupFlow() {
   const [activeTab, setActiveTab] = useState('name');
   const [campaignName, setCampaignName] = useState('');
   const [campaignSteps, setCampaignSteps] = useState<CampaignStep[]>([]);
-  const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
+  const [selectedPeople, setSelectedPeople] = useState<any[]>([]);
   const [campaignSettings, setCampaignSettings] = useState({
     dailyLimit: 50,
     timezone: 'America/New_York',
@@ -392,37 +393,22 @@ export default function CampaignSetupFlow() {
 
           {/* Add People Tab */}
           <TabsContent value="people" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Add People to Campaign</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No people added yet</h3>
-                  <p className="text-gray-600 mb-4">Add people from your contacts or import a CSV</p>
-                  <div className="flex gap-3 justify-center">
-                    <Button variant="outline">
-                      Import CSV
-                    </Button>
-                    <Button>
-                      Select from Contacts
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={() => setActiveTab('steps')}>
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Previous
-                  </Button>
-                  <Button onClick={() => setActiveTab('settings')}>
-                    Next: Settings
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <AddPeopleTab 
+              selectedPeople={selectedPeople}
+              onPeopleChange={setSelectedPeople}
+              campaignType={campaignType}
+            />
+            
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => setActiveTab('steps')}>
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Previous
+              </Button>
+              <Button onClick={() => setActiveTab('settings')}>
+                Next: Settings
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
           </TabsContent>
 
           {/* Settings Tab */}
