@@ -1,0 +1,9 @@
+First Name,Last Name,Email,Title,Department,Phone,LinkedIn URL
+John,Smith,john.smith@example.com,Software Engineer,Engineering,(555) 123-4567,https://linkedin.com/in/johnsmith
+Sarah,"Johnson, Jr.",sarah.johnson@company.com,"Senior Product Manager",Product,+1-555-987-6543,https://linkedin.com/in/sarahjohnson
+Michael,Chen,mike.chen@startup.io,CTO,Technology,,https://linkedin.com/in/mikechen
+"Emma ""The Expert"" Wilson",emma.wilson@consultancy.com,Business Consultant,Consulting,(555) 444-3333,
+David,Park,david@park-investments.com,Managing Partner,Finance,(555) 777-8888,https://linkedin.com/in/davidpark
+Invalid,Row,not-an-email,Test User,Marketing,,
+,Missing,missing.first@test.com,Quality Assurance,QA,,
+Lisa,Rodriguez,lisa.rodriguez@corp.com,"Director of Sales & Marketing","Sales, Marketing",(555) 222-1111,https://linkedin.com/in/lisarodriguez

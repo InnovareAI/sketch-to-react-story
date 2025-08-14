@@ -304,56 +304,185 @@ export default function Contacts() {
     if (!csvFile) return;
     
     setImporting(true);
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+    
     try {
       const text = await csvFile.text();
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      const lines = text.split('\n').filter(line => line.trim()); // Remove empty lines
       
-      // Parse CSV and create contacts
-      const newContacts = [];
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
-        if (values.length >= 3 && values[2]) { // Must have email
-          const contact = {
-            first_name: values[0] || null,
-            last_name: values[1] || null,
-            email: values[2],
-            title: values[3] || null,
-            department: values[4] || null,
-            phone: values[5] || null,
-            linkedin_url: values[6] || null,
-          };
-          newContacts.push(contact);
-        }
+      if (lines.length < 2) {
+        throw new Error('CSV file must have at least a header row and one data row');
       }
 
+      // Parse CSV header (handle quoted values properly)
+      const headers = parseCSVLine(lines[0]);
+      console.log('CSV Headers detected:', headers);
+      
       // Get current workspace ID with fallback
       const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
       const workspaceId = userProfile.workspace_id || DEFAULT_WORKSPACE_ID;
+      
+      if (!workspaceId) {
+        throw new Error('No workspace ID available for contact import');
+      }
 
-      // Insert contacts into database
-      for (const contact of newContacts) {
+      // Parse CSV and create contacts
+      const newContacts = [];
+      for (let i = 1; i < lines.length; i++) {
         try {
-          await supabase
-            .from('contacts')
-            .insert({
-              ...contact,
-              workspace_id: workspaceId,
-            });
-        } catch (error) {
-          console.error('Error inserting contact:', error);
-          // Continue with other contacts even if one fails
+          const values = parseCSVLine(lines[i]);
+          
+          // Skip if row is empty or missing required email
+          if (values.length < 3 || !values[2]?.trim()) {
+            console.warn(`Skipping row ${i + 1}: Missing or invalid email`);
+            continue;
+          }
+
+          const contact = {
+            first_name: values[0]?.trim() || null,
+            last_name: values[1]?.trim() || null,
+            email: values[2]?.trim(),
+            title: values[3]?.trim() || null,
+            department: values[4]?.trim() || null,
+            phone: values[5]?.trim() || null,
+            linkedin_url: values[6]?.trim() || null,
+          };
+
+          // Validate email format
+          if (contact.email && !validateEmail(contact.email)) {
+            errors.push(`Row ${i + 1}: Invalid email format "${contact.email}"`);
+            continue;
+          }
+
+          newContacts.push(contact);
+        } catch (rowError) {
+          errors.push(`Row ${i + 1}: ${rowError instanceof Error ? rowError.message : 'Parse error'}`);
+          errorCount++;
         }
+      }
+
+      if (newContacts.length === 0) {
+        throw new Error('No valid contacts found in CSV file');
+      }
+
+      toast.info(`Processing ${newContacts.length} contacts...`);
+
+      // Insert contacts into database with batch processing
+      const batchSize = 10;
+      for (let i = 0; i < newContacts.length; i += batchSize) {
+        const batch = newContacts.slice(i, i + batchSize);
+        
+        for (const contact of batch) {
+          try {
+            const { data, error } = await supabase
+              .from('contacts')
+              .insert({
+                ...contact,
+                workspace_id: workspaceId,
+                engagement_score: 50, // Default engagement score
+                tags: [], // Default empty tags
+                metadata: { 
+                  source: 'csv_import',
+                  imported_at: new Date().toISOString(),
+                  file_name: csvFile.name
+                }
+              });
+
+            if (error) {
+              // Handle specific database errors
+              if (error.code === '23505') { // Unique constraint violation
+                errors.push(`Contact "${contact.email}" already exists`);
+              } else {
+                errors.push(`Contact "${contact.email}": ${error.message}`);
+              }
+              errorCount++;
+            } else {
+              successCount++;
+            }
+          } catch (insertError) {
+            const errorMsg = insertError instanceof Error ? insertError.message : 'Database error';
+            errors.push(`Contact "${contact.email}": ${errorMsg}`);
+            errorCount++;
+          }
+        }
+        
+        // Add small delay between batches to prevent overwhelming the database
+        if (i + batchSize < newContacts.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Show results
+      if (successCount > 0) {
+        toast.success(`Successfully imported ${successCount} contacts!`);
+      }
+      
+      if (errorCount > 0) {
+        const errorSummary = errors.length > 5 
+          ? `${errors.slice(0, 5).join('\n')}\n... and ${errors.length - 5} more errors`
+          : errors.join('\n');
+        
+        toast.error(`${errorCount} contacts failed to import:\n${errorSummary}`);
+        console.error('Import errors:', errors);
       }
 
       setImportModalOpen(false);
       setCsvFile(null);
-      refreshData();
+      
+      // Refresh contacts list
+      await refreshData();
+      
     } catch (error) {
-      console.error('Error importing contacts:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown import error';
+      console.error('CSV import error:', error);
+      toast.error(`Import failed: ${errorMsg}`);
     } finally {
       setImporting(false);
     }
+  };
+
+  // Helper function to parse CSV lines with proper quote handling
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    let i = 0;
+    
+    while (i < line.length) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      
+      if (char === '"' && inQuotes && nextChar === '"') {
+        // Handle escaped quotes inside quoted field
+        current += '"';
+        i += 2;
+      } else if (char === '"') {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+        i++;
+      } else if (char === ',' && !inQuotes) {
+        // End of field
+        result.push(current);
+        current = '';
+        i++;
+      } else {
+        current += char;
+        i++;
+      }
+    }
+    
+    // Add the last field
+    result.push(current);
+    
+    return result.map(field => field.trim());
+  };
+
+  // Helper function to validate email format
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
   return (
@@ -713,11 +842,11 @@ export default function Contacts() {
 
       {/* Import CSV Modal */}
       <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Import Contacts</DialogTitle>
+            <DialogTitle>Import Contacts from CSV</DialogTitle>
             <DialogDescription>
-              Upload a CSV file to import your contacts. The file should have columns: First Name, Last Name, Email, Title, Department, Phone, LinkedIn URL.
+              Upload a CSV file to import your contacts. Email field is required for all contacts.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -730,18 +859,59 @@ export default function Contacts() {
                 onChange={handleFileUpload}
               />
               {csvFile && (
-                <p className="text-sm text-green-600">
-                  Selected: {csvFile.name}
-                </p>
+                <div className="text-sm space-y-1">
+                  <p className="text-green-600 font-medium">
+                    ✅ Selected: {csvFile.name}
+                  </p>
+                  <p className="text-gray-600">
+                    📄 Size: {(csvFile.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
               )}
+            </div>
+            
+            {/* CSV Format Guide */}
+            <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+              <h4 className="font-medium text-sm text-gray-900 mb-2">📋 Expected CSV Format:</h4>
+              <div className="text-xs text-gray-600 space-y-1">
+                <div className="font-mono bg-white p-2 rounded border text-xs">
+                  First Name,Last Name,Email,Title,Department,Phone,LinkedIn URL
+                </div>
+                <ul className="space-y-0.5 mt-2">
+                  <li>• <strong>First Name</strong> - Contact's first name</li>
+                  <li>• <strong>Last Name</strong> - Contact's last name</li>
+                  <li>• <strong>Email</strong> - <span className="text-red-600">Required</span> - Valid email address</li>
+                  <li>• <strong>Title</strong> - Job title or position</li>
+                  <li>• <strong>Department</strong> - Department or team</li>
+                  <li>• <strong>Phone</strong> - Phone number (optional)</li>
+                  <li>• <strong>LinkedIn URL</strong> - LinkedIn profile URL</li>
+                </ul>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Fields with commas or quotes should be wrapped in double quotes
+                </p>
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setImportModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={processImport} disabled={!csvFile || importing}>
-              {importing ? 'Importing...' : 'Import Contacts'}
+            <Button 
+              onClick={processImport} 
+              disabled={!csvFile || importing}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {importing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import Contacts
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
