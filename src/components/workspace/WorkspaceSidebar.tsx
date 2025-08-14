@@ -33,7 +33,7 @@ const mainNavItems = [
   { title: "Search", url: "/search", icon: Search },
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Inbox", url: "/inbox", icon: Mail },
-  { title: "Follow-ups", url: "/follow-ups", icon: Calendar },
+  { title: "Follow-ups", url: "/follow-ups-public", icon: Calendar },
   { title: "Templates", url: "/templates", icon: FileText },
 ];
 
