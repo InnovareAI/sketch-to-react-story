@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGate from "@/components/AuthGate";
 import { globalAutoSync } from "@/services/GlobalAutoSync";
+import { migrateLinkedInAccountsToUserStorage } from "@/utils/migrateLinkedInAccounts";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -55,14 +56,18 @@ import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
-  // Initialize global auto-sync when app starts
+  // Initialize global auto-sync and migrate data when app starts
   useEffect(() => {
-    const initializeAutoSync = async () => {
+    const initialize = async () => {
+      // First migrate LinkedIn accounts to user-specific storage
+      await migrateLinkedInAccountsToUserStorage();
+      
+      // Then initialize auto-sync
       await globalAutoSync.initialize();
     };
     
-    // Start auto-sync after a short delay to ensure auth is ready
-    const timer = setTimeout(initializeAutoSync, 2000);
+    // Start after a short delay to ensure auth is ready
+    const timer = setTimeout(initialize, 2000);
     
     return () => clearTimeout(timer);
   }, []);

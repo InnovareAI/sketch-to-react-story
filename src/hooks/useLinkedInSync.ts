@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { BackgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { toast } from 'sonner';
+import { getUserLinkedInAccounts, getUserWorkspaceId } from '@/utils/userDataStorage';
 
 interface SyncState {
   isInitialSyncComplete: boolean;
@@ -77,8 +78,8 @@ export function useLinkedInSync() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get workspace ID from localStorage or user metadata
-    const workspaceId = localStorage.getItem('workspace_id') || user.user_metadata?.workspace_id;
+    // Get workspace ID for current user
+    const workspaceId = await getUserWorkspaceId();
     if (!workspaceId) {
       console.error('No workspace ID found for background sync setup');
       return;
@@ -88,8 +89,8 @@ export function useLinkedInSync() {
     const autoSyncEnabled = true; // Always true, no user preference
 
     if (autoSyncEnabled && unipileRealTimeSync.isConfigured()) {
-      // Get LinkedIn account ID
-      const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+      // Get LinkedIn account ID for current user
+      const accounts = await getUserLinkedInAccounts();
       if (accounts.length > 0) {
         const account = accounts[0];
         const accountId = account.unipileAccountId || account.id || account.account_id;

@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
 import { BackgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { toast } from 'sonner';
+import { getUserLinkedInAccounts, getUserWorkspaceId } from '@/utils/userDataStorage';
 
 class GlobalAutoSync {
   private static instance: GlobalAutoSync;
@@ -41,17 +42,17 @@ class GlobalAutoSync {
       return;
     }
     
-    // Get workspace ID
-    const workspaceId = localStorage.getItem('workspace_id') || user.user_metadata?.workspace_id;
+    // Get workspace ID for current user
+    const workspaceId = await getUserWorkspaceId();
     if (!workspaceId) {
       console.error('❌ No workspace ID found for auto-sync');
       return;
     }
     
-    // Get LinkedIn accounts
-    const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+    // Get LinkedIn accounts for current user
+    const accounts = await getUserLinkedInAccounts();
     if (accounts.length === 0) {
-      console.log('⚠️ No LinkedIn accounts found, skipping auto-sync');
+      console.log('⚠️ No LinkedIn accounts found for current user, skipping auto-sync');
       return;
     }
     
