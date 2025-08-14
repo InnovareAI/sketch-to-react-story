@@ -202,6 +202,94 @@ export default function CampaignSetup() {
     }, 2000);
   };
 
+  // Function to extract prospects from LinkedIn search URL
+  const handleExtractProspects = async () => {
+    if (!searchUrl) {
+      toast.error('Please enter a LinkedIn search URL');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Validate URL
+      if (!searchUrl.includes('linkedin.com')) {
+        toast.error('Please enter a valid LinkedIn URL');
+        return;
+      }
+
+      toast.info('Extracting prospects from LinkedIn...');
+      
+      // Simulate extraction process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Mock extracted prospects
+      const mockProspects = [
+        { id: 1, name: 'John Doe', title: 'CEO', company: 'Tech Corp' },
+        { id: 2, name: 'Jane Smith', title: 'CTO', company: 'Innovation Inc' },
+        { id: 3, name: 'Mike Johnson', title: 'VP Sales', company: 'Growth Co' }
+      ];
+      
+      setSelectedPeople(mockProspects);
+      toast.success(`Successfully extracted ${mockProspects.length} prospects from LinkedIn`);
+    } catch (error) {
+      console.error('Error extracting prospects:', error);
+      toast.error('Failed to extract prospects. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to process uploaded CSV file
+  const processCSVFile = async () => {
+    if (!csvFile) {
+      toast.error('Please upload a CSV file first');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        // Process CSV rows
+        const prospects = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim()) {
+            const values = lines[i].split(',');
+            const prospect = {
+              id: i,
+              profile_link: values[0]?.trim(),
+              first_name: values[1]?.trim(),
+              last_name: values[2]?.trim(),
+              job_title: values[3]?.trim(),
+              company_name: values[4]?.trim(),
+              email: values[5]?.trim()
+            };
+            prospects.push(prospect);
+          }
+        }
+        
+        setSelectedPeople(prospects);
+        toast.success(`Successfully imported ${prospects.length} prospects from CSV`);
+      };
+      
+      reader.onerror = () => {
+        toast.error('Failed to read CSV file');
+      };
+      
+      reader.readAsText(csvFile);
+    } catch (error) {
+      console.error('Error processing CSV:', error);
+      toast.error('Failed to process CSV file');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const addFollowUpMessage = () => {
     const newMessage: Message = {
       id: messages.length + 1,
@@ -602,26 +690,125 @@ Example: https://www.linkedin.com/sales/search/people?..."
                         </div>
                       </div>
 
-                      {/* New Search Method */}
+                      {/* Prospect Method Selection */}
                       <div className="space-y-4">
-                        <div className="text-center py-8">
-                          <div className="max-w-md mx-auto">
-                            <Target className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Add Prospects to Campaign</h3>
-                            <p className="text-gray-600 text-sm mb-6">
-                              Choose from multiple search methods to find and add prospects to your campaign. Select the method that best fits your targeting strategy.
-                            </p>
-                            <Button size="lg" onClick={() => navigate('/prospect-search')} className="bg-blue-600 hover:bg-blue-700">
-                              <Search className="h-5 w-5 mr-2" />
-                              Choose Search Type
-                            </Button>
+                        <Label className="text-base font-medium">Choose how to add prospects:</Label>
+                        <RadioGroup value={prospectMethod} onValueChange={(value: any) => setProspectMethod(value)}>
+                          <div className="grid grid-cols-3 gap-4">
+                            <Card className={`cursor-pointer ${prospectMethod === 'search' ? 'ring-2 ring-primary' : ''}`}>
+                              <CardContent className="p-4" onClick={() => setProspectMethod('search')}>
+                                <RadioGroupItem value="search" id="search" className="sr-only" />
+                                <div className="text-center">
+                                  <Search className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                                  <Label htmlFor="search" className="font-medium cursor-pointer">Search LinkedIn</Label>
+                                  <p className="text-xs text-gray-600 mt-1">Use LinkedIn search URL</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            
+                            <Card className={`cursor-pointer ${prospectMethod === 'csv' ? 'ring-2 ring-primary' : ''}`}>
+                              <CardContent className="p-4" onClick={() => setProspectMethod('csv')}>
+                                <RadioGroupItem value="csv" id="csv" className="sr-only" />
+                                <div className="text-center">
+                                  <Upload className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                                  <Label htmlFor="csv" className="font-medium cursor-pointer">Upload CSV</Label>
+                                  <p className="text-xs text-gray-600 mt-1">Import from file</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            
+                            <Card className={`cursor-pointer ${prospectMethod === 'existing' ? 'ring-2 ring-primary' : ''}`}>
+                              <CardContent className="p-4" onClick={() => setProspectMethod('existing')}>
+                                <RadioGroupItem value="existing" id="existing" className="sr-only" />
+                                <div className="text-center">
+                                  <Users className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                                  <Label htmlFor="existing" className="font-medium cursor-pointer">Existing Contacts</Label>
+                                  <p className="text-xs text-gray-600 mt-1">From your database</p>
+                                </div>
+                              </CardContent>
+                            </Card>
                           </div>
-                        </div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* Method-specific content */}
+                      <div className="space-y-4">
+                        {prospectMethod === 'search' && (
+                          <div className="text-center py-8">
+                            <div className="max-w-md mx-auto">
+                              <Target className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">LinkedIn Search</h3>
+                              <p className="text-gray-600 text-sm mb-6">
+                                Paste your search URL above and we'll extract prospects automatically
+                              </p>
+                              <Button size="lg" onClick={() => {
+                                if (!searchUrl) {
+                                  toast.error('Please enter a LinkedIn search URL first');
+                                  return;
+                                }
+                                handleExtractProspects();
+                              }} disabled={loading}>
+                                <Search className="h-5 w-5 mr-2" />
+                                {loading ? 'Extracting...' : 'Extract Prospects'}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {prospectMethod === 'csv' && (
+                          <div className="text-center py-8">
+                            <div className="max-w-md mx-auto">
+                              <Upload className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload CSV File</h3>
+                              <p className="text-gray-600 text-sm mb-6">
+                                Upload a CSV file with your prospects. Required columns: First Name, Last Name, LinkedIn URL
+                              </p>
+                              <div className="space-y-4">
+                                <input
+                                  type="file"
+                                  accept=".csv"
+                                  id="csv-upload"
+                                  className="hidden"
+                                  onChange={handleFileUpload}
+                                />
+                                <label htmlFor="csv-upload">
+                                  <Button size="lg" className="bg-green-600 hover:bg-green-700" asChild>
+                                    <span>
+                                      <Upload className="h-5 w-5 mr-2" />
+                                      {csvFile ? csvFile.name : 'Choose CSV File'}
+                                    </span>
+                                  </Button>
+                                </label>
+                                {csvFile && (
+                                  <Button size="lg" onClick={processCSVFile} disabled={loading}>
+                                    {loading ? 'Processing...' : 'Process CSV'}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {prospectMethod === 'existing' && (
+                          <div className="text-center py-8">
+                            <div className="max-w-md mx-auto">
+                              <Users className="h-16 w-16 text-purple-600 mx-auto mb-4" />
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">Select from Contacts</h3>
+                              <p className="text-gray-600 text-sm mb-6">
+                                Choose prospects from your existing contact database
+                              </p>
+                              <Button size="lg" onClick={() => navigate('/contacts?select=true&campaign=' + campaignId)} className="bg-purple-600 hover:bg-purple-700">
+                                <Users className="h-5 w-5 mr-2" />
+                                Browse Contacts
+                              </Button>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="border-t pt-6">
                           <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>Prospects added: 0</span>
-                            <span>Campaign ready to launch once prospects are added</span>
+                            <span>Prospects added: {selectedPeople.length}</span>
+                            <span>{selectedPeople.length > 0 ? 'Campaign ready to launch' : 'Add prospects to continue'}</span>
                           </div>
                         </div>
                       </div>
