@@ -26,6 +26,7 @@ import {
   Edit
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProspectValidator } from './ProspectValidator';
 
 interface Prospect {
   id?: string;
@@ -696,6 +697,15 @@ Example: https://www.linkedin.com/sales/search/people?..."
           </div>
         </CardContent>
       </Card>
+
+      {/* Prospect Validation */}
+      {selectedPeople.length > 0 && (
+        <ProspectValidator 
+          prospects={selectedPeople}
+          onProspectsChange={onPeopleChange}
+          campaignType={campaignType}
+        />
+      )}
     </div>
   );
 }
