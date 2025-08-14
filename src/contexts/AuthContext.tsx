@@ -324,6 +324,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Store bypass data in localStorage
         localStorage.setItem('bypass_user', JSON.stringify(mockUser));
         localStorage.setItem('bypass_auth', 'true');
+        // Also store in the key that other components expect
+        localStorage.setItem('user_auth_profile', JSON.stringify(mockUser));
         
         setAuthUser(mockAuthUser);
         setUser(mockUser);
@@ -403,6 +405,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (bypassUser) {
           console.log('🚀 Found bypass user on initialization:', bypassUser.email);
           setUser(bypassUser);
+          // Ensure user_auth_profile is also set
+          localStorage.setItem('user_auth_profile', JSON.stringify(bypassUser));
           // Create mock auth user for bypass
           const mockAuthUser = {
             id: bypassUser.id,
