@@ -736,7 +736,9 @@ export default function ContactsView() {
                         <div className="font-medium text-gray-900">
                           {contact.first_name} {contact.last_name}
                         </div>
-                        <div className="text-sm text-gray-600">{contact.email}</div>
+                        <div className="text-sm text-gray-600">
+                          {contact.company || contact.metadata?.company || contact.department || 'No company'}
+                        </div>
                       </div>
                     </div>
                   </td>
