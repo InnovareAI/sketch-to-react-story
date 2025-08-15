@@ -189,7 +189,17 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
           }
         };
 
+        // Initialize with minimum delay to show loading state
+        const startTime = Date.now();
         await agentFactory.initialize(config);
+        const elapsedTime = Date.now() - startTime;
+        
+        // Ensure minimum 2 second loading time for better UX
+        const minLoadTime = 2000;
+        if (elapsedTime < minLoadTime) {
+          await new Promise(resolve => setTimeout(resolve, minLoadTime - elapsedTime));
+        }
+        
         setIsAgentInitialized(true);
         
         // Set initial operation mode
@@ -781,8 +791,8 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
                   <p className="text-xs text-gray-400 flex items-center gap-2">
                     <Brain className="h-3 w-3" />
                     {isAgentInitialized 
-                      ? "Powered by 6 specialist agents for lead generation, campaign optimization & content creation"
-                      : "Multi-agent system initializing... Basic assistance available"
+                      ? "SAM AI is ready - 6 specialist agents online for lead generation, campaign optimization & content creation"
+                      : "SAM AI is starting - Initializing multi-agent system..."
                     }
                   </p>
                 </div>
