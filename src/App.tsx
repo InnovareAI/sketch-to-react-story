@@ -63,37 +63,8 @@ import Inbox from "./components/inbox/Inbox";
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
-  // Initialize demo authentication immediately, then other initialization
+  // Initialize app without demo auth bypass 
   useEffect(() => {
-    // Set up demo authentication IMMEDIATELY (no delay)
-    const setupDemoAuth = () => {
-      if (!localStorage.getItem('is_authenticated')) {
-        console.log('🔧 Setting up demo authentication...');
-        localStorage.setItem('is_authenticated', 'true');
-        localStorage.setItem('demo_workspace_id', 'df5d730f-1915-4269-bd5a-9534478b17af');
-        localStorage.setItem('demo_user_id', 'cc000000-0000-0000-0000-000000000001');
-        
-        // Test name collection flow with email-only user
-        const demoProfile = {
-          id: 'cc000000-0000-0000-0000-000000000001',
-          email: 'demo@sameaisalesassistant.com',
-          full_name: '', // Empty name to trigger name collection
-          role: 'admin',
-          workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-          workspace_name: 'SAM AI Demo',
-          workspace_plan: 'premium',
-          status: 'active'
-        };
-        
-        localStorage.setItem('user_auth_profile', JSON.stringify(demoProfile));
-        console.log('✅ Demo authentication setup complete');
-      }
-    };
-    
-    // Run auth setup immediately
-    setupDemoAuth();
-    
-    // Then run other initialization with delay
     const initialize = async () => {
       console.log('🚀 Starting app initialization...');
       
@@ -107,7 +78,7 @@ const App: React.FC = () => {
       await globalAutoSync.initialize();
     };
     
-    // Start other initialization after a short delay
+    // Start initialization after a short delay
     const timer = setTimeout(initialize, 2000);
     
     return () => clearTimeout(timer);
