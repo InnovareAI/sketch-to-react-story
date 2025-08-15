@@ -38,34 +38,46 @@ interface EnhancedConversationalInterfaceProps {
   operationMode?: 'inbound' | 'outbound';
 }
 
-// Conversation starters - focused on agent functionality
+// 6 Core conversation starters - main SAM workflow functions
 const conversationStarters = {
-  "Train Your Agents": [
+  "Get Started": [
     {
-      title: "🎓 Agent Training Overview",
-      prompt: "Show me what my AI agents have learned and how to train them better",
-      icon: Brain,
+      title: "📤 Upload Knowledge",
+      prompt: "I want to upload company documents and training materials",
+      icon: Upload,
       color: "from-purple-500 to-pink-600"
     },
     {
-      title: "📊 Agent Performance",
-      prompt: "How are my AI agents performing and what can they do?",
-      icon: Activity,
-      color: "from-blue-500 to-purple-600"
-    }
-  ],
-  "Get Started": [
-    {
-      title: "🚀 Generate New Leads",
-      prompt: "I want to generate new leads and create outreach campaigns",
-      icon: Target,
-      color: "from-green-500 to-teal-600"
+      title: "🔍 Research Prospects",
+      prompt: "I need to research and find potential leads",
+      icon: Search,
+      color: "from-blue-500 to-cyan-600"
     },
     {
-      title: "📥 Manage My Inbox",  
-      prompt: "I want to manage my inbox and automate responses",
-      icon: MessageSquare,
+      title: "🎯 Find Leads",
+      prompt: "I want to generate new leads and build prospect lists",
+      icon: Target,
+      color: "from-green-500 to-teal-600"
+    }
+  ],
+  "Create & Optimize": [
+    {
+      title: "✍️ Write Messaging",
+      prompt: "I need help writing outreach messages and email campaigns",
+      icon: FileText,
       color: "from-orange-500 to-red-600"
+    },
+    {
+      title: "🧪 A/B Testing",
+      prompt: "I want to test different message variations and optimize performance",
+      icon: TestTube,
+      color: "from-pink-500 to-purple-600"
+    },
+    {
+      title: "📊 Analyze Performance",
+      prompt: "Show me campaign analytics and performance insights",
+      icon: BarChart3,
+      color: "from-indigo-500 to-blue-600"
     }
   ]
 };
@@ -691,15 +703,15 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     if (contentLower.includes('explain') || contentLower.includes('features') || contentLower.includes('overview')) {
       return `**SAM AI Quick Overview** (2 minutes)
 
-**🔄 Modes:** Switch between Outbound (lead gen), Inbound (customer service), Unified (both)
-**🎯 Agents:** 6 specialists - Lead Research, Campaign Manager, Content Creator, etc.
-**💬 Features:** Voice input, chat history, training center
+**🎯 Core Functions:** Upload knowledge, research prospects, find leads, write messaging, A/B testing, analyze performance
+**🤖 6 AI Agents:** Lead Research, Campaign Manager, Content Creator, Performance Analyst, etc.
+**💬 Features:** Voice input, chat history, training center, conversation saving
 **⚠️ Setup:** Connect LinkedIn/email for full access (preview mode without)
 
 **Ready to start?** Try:
-• "Find leads in [industry]"
+• "Upload company info"
+• "Find leads in [industry]" 
 • "Write cold email"
-• "Create LinkedIn campaign"
 
 💡 *Ask questions anytime if you get stuck!*`;
     }
@@ -709,10 +721,12 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       return `**Let's get to work!** 🚀
 
 **Quick actions:**
-• "Find leads in [industry]" 
-• "Write outreach message"
 • "Upload company info"
-• "Create campaign"
+• "Research prospects" 
+• "Find leads in [industry]"
+• "Write outreach message"
+• "Test message variations"
+• "Analyze performance"
 
 **What's your goal today?**
 
