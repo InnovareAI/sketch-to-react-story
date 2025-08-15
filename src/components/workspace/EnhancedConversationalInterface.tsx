@@ -36,42 +36,32 @@ interface EnhancedConversationalInterfaceProps {
   operationMode?: 'inbound' | 'outbound';
 }
 
-// Conversation starters - 6 essential options
+// Conversation starters - focused on mode selection
 const conversationStarters = {
-  "Quick Actions": [
+  "Choose Your Mode": [
     {
-      title: "Upload company info",
-      prompt: "I want to upload information about my company and what we sell",
-      icon: Upload,
-      color: "from-blue-500 to-purple-600"
-    },
-    {
-      title: "Find qualified leads",
-      prompt: "Find me qualified leads that match my ideal customer profile",
+      title: "🚀 Generate New Leads",
+      prompt: "I want to generate new leads and create outreach campaigns",
       icon: Target,
       color: "from-green-500 to-teal-600"
     },
     {
-      title: "Create campaign",
-      prompt: "Help me create an outreach campaign with email and LinkedIn sequences",
-      icon: Rocket,
-      color: "from-orange-500 to-red-600"
-    },
-    {
-      title: "Write messages",
-      prompt: "Write personalized outreach messages for my prospects",
+      title: "📥 Manage My Inbox",
+      prompt: "I want to manage my inbox and automate responses",
       icon: MessageSquare,
+      color: "from-blue-500 to-purple-600"
+    }
+  ],
+  "Quick Setup": [
+    {
+      title: "Upload company info",
+      prompt: "Let me upload information about my company first",
+      icon: Upload,
       color: "from-purple-500 to-pink-600"
     },
     {
-      title: "Analyze performance",
-      prompt: "Show me the performance of my campaigns and what to improve",
-      icon: BarChart3,
-      color: "from-indigo-500 to-purple-600"
-    },
-    {
       title: "Connect LinkedIn",
-      prompt: "Help me connect and set up my LinkedIn account for automated outreach",
+      prompt: "Help me connect my LinkedIn account to get started",
       icon: Linkedin,
       color: "from-blue-600 to-blue-700"
     }
@@ -108,7 +98,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm SAM, your AI sales assistant powered by a team of specialist agents. I can help you with lead generation, campaign optimization, content creation, and performance analysis. What would you like to work on today?",
+      content: "👋 **Hey there!** I'm SAM, your AI sales assistant.\n\n**Quick question:** Are you looking to **generate new leads** or **manage incoming messages** today?\n\nI've got specialist agents ready for both! 🚀",
       sender: "sam",
       timestamp: new Date(),
     },
@@ -250,8 +240,8 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       const greetingMessage: Message = {
         id: "mode-change-" + Date.now(),
         content: operationMode === 'inbound' 
-          ? "I've switched to **Inbound Mode** 📥. I'm now focused on managing your inbox, filtering spam, and automating responses to routine inquiries. My specialist team includes Inbox Triage, Spam Filter, and Auto-Response agents. How can I help organize your email communications?"
-          : "I've switched to **Outbound Mode** 🚀. I'm ready to help with lead generation, campaign creation, and sales outreach. My specialist team includes Lead Research, Campaign Management, and Content Creation agents. What would you like to work on?",
+          ? "🔄 **Switched to Inbound Mode** 📥\n\nPerfect! I'm now your **inbox manager**. I can help you:\n• Filter spam and organize messages\n• Draft smart auto-replies\n• Prioritize important conversations\n\nWhat's your biggest inbox challenge?"
+          : "🔄 **Switched to Outbound Mode** 🚀\n\nAwesome! I'm now your **lead generation engine**. I can help you:\n• Find qualified prospects\n• Create killer campaigns\n• Write personalized outreach\n\nReady to get some leads?",
         sender: "sam",
         timestamp: new Date(),
       };
@@ -585,7 +575,7 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
     setMessages([
       {
         id: "1",
-        content: "Hello! I'm SAM, your AI sales assistant powered by a team of specialist agents. I can help you with lead generation, campaign optimization, content creation, and performance analysis. What would you like to work on today?",
+        content: "👋 **Hey there!** I'm SAM, your AI sales assistant.\n\n**Quick question:** Are you looking to **generate new leads** or **manage incoming messages** today?\n\nI've got specialist agents ready for both! 🚀",
         sender: "sam",
         timestamp: new Date(),
       }
