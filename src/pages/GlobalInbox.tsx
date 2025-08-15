@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useLinkedInSync } from '@/hooks/useLinkedInSync';
+import { useBusinessMetrics } from '@/hooks/useBusinessMetrics';
 import { toast } from 'sonner';
 import { previewSync } from '@/services/unipile/PreviewSync';
 import FollowUpModal from '@/components/FollowUpModal';
@@ -103,8 +104,9 @@ export default function GlobalInbox() {
     { value: 'later', label: 'Later', color: 'bg-gray-100 text-gray-800' },
   ];
   
-  // Use the LinkedIn sync hook
+  // Use the LinkedIn sync hook and business metrics
   const { syncState, performManualSync, toggleAutoSync } = useLinkedInSync();
+  const businessMetrics = useBusinessMetrics();
   
   // Modal states
   const [replyModalOpen, setReplyModalOpen] = useState(false);
@@ -283,6 +285,11 @@ export default function GlobalInbox() {
       });
       
       setMessages(inboxMessages);
+      
+      // Also refresh business metrics when messages are loaded
+      if (!businessMetrics.loading) {
+        businessMetrics.refetch();
+      }
     } catch (error) {
       setMessages([]);
     } finally {
@@ -840,9 +847,10 @@ export default function GlobalInbox() {
                 
                 toast.success('Sync completed! Refreshing inbox...');
                 
-                // Refresh the inbox data after a short delay
+                // Refresh the inbox data and business metrics after a short delay
                 setTimeout(() => {
-                  window.location.reload();
+                  loadMessages();
+                  businessMetrics.refetch();
                 }, 1500);
                 
               } catch (error: any) {
@@ -902,6 +910,23 @@ export default function GlobalInbox() {
           >
             <CheckCircle className="h-4 w-4 mr-2" />
             Mark All Read
+          </Button>
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              businessMetrics.refetch();
+              toast.info('Refreshing business metrics...');
+            }}
+            disabled={businessMetrics.loading}
+            title="Refresh business metrics from database"
+          >
+            {businessMetrics.loading ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Refresh Stats
           </Button>
           <DropdownMenu open={showFilterDropdown} onOpenChange={setShowFilterDropdown}>
             <DropdownMenuTrigger asChild>
@@ -1111,27 +1136,32 @@ export default function GlobalInbox() {
         </div>
       </div>
 
-      {/* Business Metrics Stats */}
+      {/* Business Metrics Stats - Real Data from Supabase */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">{messages.length}</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {businessMetrics.loading ? '...' : businessMetrics.totalMessages.toLocaleString()}
+                </div>
                 <div className="text-sm text-gray-600">Total Messages</div>
                 {messages.filter(m => !m.read).length > 0 && (
                   <Badge className="mt-1 bg-blue-100 text-blue-800">
                     {messages.filter(m => !m.read).length} unread
                   </Badge>
                 )}
+                {businessMetrics.error && (
+                  <Badge className="mt-1 bg-red-100 text-red-800">
+                    Error loading
+                  </Badge>
+                )}
               </div>
               <Inbox className="h-8 w-8 text-premium-purple" />
             </div>
-            {messages.length > 0 && (
-              <p className="text-xs text-gray-500 mt-2">
-                Team + User Level
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-2">
+              Team + User Level
+            </p>
           </CardContent>
         </Card>
 
@@ -1139,10 +1169,12 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">42</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {businessMetrics.loading ? '...' : businessMetrics.connectionsAccepted.toLocaleString()}
+                </div>
                 <div className="text-sm text-gray-600">Connection Requests Accepted</div>
                 <Badge className="mt-1 bg-green-100 text-green-800">
-                  +12 this week
+                  +{businessMetrics.loading ? '...' : businessMetrics.connectionsThisWeek} this week
                 </Badge>
               </div>
               <Users className="h-8 w-8 text-green-600" />
@@ -1157,10 +1189,12 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">18</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {businessMetrics.loading ? '...' : businessMetrics.interestedContacts.toLocaleString()}
+                </div>
                 <div className="text-sm text-gray-600">Interested</div>
                 <Badge className="mt-1 bg-orange-100 text-orange-800">
-                  Hot prospects
+                  +{businessMetrics.loading ? '...' : businessMetrics.interestedThisWeek} this week
                 </Badge>
               </div>
               <Target className="h-8 w-8 text-orange-600" />
@@ -1175,10 +1209,12 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">7</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {businessMetrics.loading ? '...' : businessMetrics.meetingsBooked.toLocaleString()}
+                </div>
                 <div className="text-sm text-gray-600">Meetings Booked</div>
                 <Badge className="mt-1 bg-purple-100 text-purple-800">
-                  High value
+                  +{businessMetrics.loading ? '...' : businessMetrics.meetingsThisWeek} this week
                 </Badge>
               </div>
               <Calendar className="h-8 w-8 text-purple-600" />
