@@ -78,12 +78,12 @@ export function ModeSwitcher({ currentMode, onModeChange, className }: ModeSwitc
     <div className={cn("relative", className)}>
       {/* Mode Selector - Three modes */}
       <div className="flex items-center gap-3 lg:gap-6">
-        <div className="flex items-center gap-2 p-1.5 lg:p-2 rounded-xl border bg-gray-800 border-gray-600">
+        <div className="flex items-center gap-2 p-1.5 lg:p-2 rounded-xl border bg-black border-gray-600">
           <button
             onClick={() => onModeChange('outbound')}
             className={cn(
               "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
-              currentMode === 'outbound' ? "bg-purple-600/20 text-white" : "text-gray-400 hover:text-gray-300"
+              currentMode === 'outbound' ? "bg-purple-600/20 text-white" : "text-gray-300 hover:text-white hover:bg-gray-900"
             )}
           >
             <Send className="h-3 w-3 lg:h-4 lg:w-4" />
@@ -96,7 +96,7 @@ export function ModeSwitcher({ currentMode, onModeChange, className }: ModeSwitc
             onClick={() => onModeChange('unified')}
             className={cn(
               "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
-              currentMode === 'unified' ? "bg-purple-600/20 text-white" : "text-gray-400 hover:text-gray-300"
+              currentMode === 'unified' ? "bg-purple-600/20 text-white" : "text-gray-300 hover:text-white hover:bg-gray-900"
             )}
           >
             <Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />
@@ -109,7 +109,7 @@ export function ModeSwitcher({ currentMode, onModeChange, className }: ModeSwitc
             onClick={() => onModeChange('inbound')}
             className={cn(
               "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
-              currentMode === 'inbound' ? "bg-purple-600/20 text-white" : "text-gray-400 hover:text-gray-300"
+              currentMode === 'inbound' ? "bg-purple-600/20 text-white" : "text-gray-300 hover:text-white hover:bg-gray-900"
             )}
           >
             <Inbox className="h-3 w-3 lg:h-4 lg:w-4" />
