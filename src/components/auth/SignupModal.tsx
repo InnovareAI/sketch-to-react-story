@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Lock, User, Building2, CheckCircle } from 'lucide-react';
+import { Loader2, Mail, User, Ticket, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,42 +18,56 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    confirmPassword: '',
     fullName: '',
-    companyName: ''
+    voucherCode: ''
   });
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.email || !formData.password || !formData.fullName) {
+    if (!formData.email || !formData.fullName || !formData.voucherCode) {
       toast.error('Please fill in all required fields');
-      return;
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
       return;
     }
     
     setLoading(true);
     
     try {
-      // Use proper Supabase authentication
+      // First, validate the voucher code
+      const { data: voucherData, error: voucherError } = await supabase
+        .from('voucher_codes')
+        .select('*')
+        .eq('code', formData.voucherCode.trim().toUpperCase())
+        .eq('email', formData.email.toLowerCase())
+        .eq('is_active', true)
+        .single();
+
+      if (voucherError || !voucherData) {
+        throw new Error('Invalid voucher code or email not authorized for this code');
+      }
+
+      // Check if voucher has exceeded usage limit
+      if (voucherData.used_count >= voucherData.max_uses) {
+        throw new Error('This voucher code has already been used');
+      }
+
+      // Check if voucher has expired
+      if (voucherData.expires_at && new Date(voucherData.expires_at) < new Date()) {
+        throw new Error('This voucher code has expired');
+      }
+
+      // Generate a temporary password for the user
+      const tempPassword = crypto.randomUUID();
+
+      // Create the user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
+        password: tempPassword,
         options: {
           data: {
             full_name: formData.fullName,
-            company_name: formData.companyName
+            voucher_code: formData.voucherCode.trim().toUpperCase()
           }
         }
       });
@@ -66,8 +80,8 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
         throw new Error('No user data returned from signup');
       }
 
-      // Create workspace first
-      const workspaceName = formData.companyName || `${formData.fullName}'s Workspace`;
+      // Create workspace
+      const workspaceName = `${formData.fullName}'s Workspace`;
       const { data: workspace, error: workspaceError } = await supabase
         .from('workspaces')
         .insert({
@@ -105,7 +119,8 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
           email: formData.email,
           full_name: formData.fullName,
           workspace_id: workspace.id,
-          role: 'owner'
+          role: 'owner',
+          voucher_code_used: formData.voucherCode.trim().toUpperCase()
         })
         .select()
         .single();
@@ -115,7 +130,27 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
         throw new Error('Failed to create user profile');
       }
 
-      // Set up authentication state for immediate login
+      // Update voucher usage count
+      await supabase
+        .from('voucher_codes')
+        .update({ 
+          used_count: voucherData.used_count + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', voucherData.id);
+
+      // Sign the user in immediately (password-less flow)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: tempPassword
+      });
+
+      if (signInError) {
+        console.error('Auto sign-in error:', signInError);
+        // Continue anyway - user can login manually
+      }
+
+      // Set up authentication state for immediate access
       const userProfile = {
         id: profile.id,
         email: profile.email,
@@ -152,10 +187,8 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
   const resetForm = () => {
     setFormData({
       email: '',
-      password: '',
-      confirmPassword: '',
       fullName: '',
-      companyName: ''
+      voucherCode: ''
     });
     setStep('form');
   };
@@ -216,53 +249,23 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name (Optional)</Label>
+              <Label htmlFor="voucherCode">Voucher Code *</Label>
               <div className="relative">
-                <Building2 className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Ticket className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  id="companyName"
+                  id="voucherCode"
                   type="text"
-                  placeholder="Acme Inc."
-                  className="pl-10"
-                  value={formData.companyName}
-                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Min. 6 characters"
-                  className="pl-10"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="BETA-TL-2025"
+                  className="pl-10 uppercase"
+                  value={formData.voucherCode}
+                  onChange={(e) => setFormData({ ...formData, voucherCode: e.target.value.toUpperCase() })}
                   disabled={loading}
                   required
                 />
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Re-enter password"
-                  className="pl-10"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  disabled={loading}
-                  required
-                />
-              </div>
+              <p className="text-xs text-gray-500">
+                Enter the voucher code provided to you via email
+              </p>
             </div>
             
             <div className="flex gap-2 pt-2">
@@ -289,7 +292,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
                     Creating...
                   </>
                 ) : (
-                  'Sign up'
+                  'Get Started'
                 )}
               </Button>
             </div>
