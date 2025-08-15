@@ -261,7 +261,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       let greeting;
       
       if (needsNameCollection) {
-        greeting = `Hello! Welcome and how are you today? I am Sam your in and outbound marketing orchestration agent. What should I call you? Just your first name is perfect!`;
+        greeting = `Hello First, welcome and how are you today. I am Sam your in and outbound marketing orchestration agent. What should I call you? Just your first name is perfect!`;
       } else {
         greeting = `Hello ${firstName}, welcome and how are you today. I am Sam your in and outbound marketing orchestration agent. What brings you here today?`;
       }
@@ -311,11 +311,21 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         
         // Try to initialize agent factory
         try {
+          const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
+          const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+          const openrouterKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+          
+          console.log('🔑 API Keys Status:', {
+            openai: openaiKey ? `✅ Set (${openaiKey.substring(0, 10)}...)` : '❌ Missing',
+            anthropic: anthropicKey ? `✅ Set (${anthropicKey.substring(0, 10)}...)` : '❌ Missing',
+            openrouter: openrouterKey ? `✅ Set (${openrouterKey.substring(0, 10)}...)` : '❌ Missing'
+          });
+          
           const config: AgentConfig = {
             apiKeys: {
-              openai: import.meta.env.VITE_OPENAI_API_KEY || undefined,
-              claude: import.meta.env.VITE_ANTHROPIC_API_KEY || undefined,
-              openrouter: import.meta.env.VITE_OPENROUTER_API_KEY || undefined,
+              openai: openaiKey || undefined,
+              claude: anthropicKey || undefined,
+              openrouter: openrouterKey || undefined,
             },
             supabase: {
               url: import.meta.env.VITE_SUPABASE_URL || 'https://ktchrfgkbpaixbiwbieg.supabase.co',
