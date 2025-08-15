@@ -17,7 +17,12 @@ import {
   MoreVertical,
   CheckCircle,
   XCircle,
-  FileUp
+  FileUp,
+  Tag,
+  Trash2,
+  Edit3,
+  Plus,
+  X
 } from "lucide-react";
 
 interface Contact {
@@ -36,6 +41,12 @@ interface Contact {
   profile_picture_url?: string;
   company?: string;
   full_name?: string;
+  last_message?: Array<{
+    sent_at?: string;
+    replied_at?: string;
+    opened_at?: string;
+    clicked_at?: string;
+  }>;
 }
 
 // Profile image component with fallback
@@ -86,32 +97,46 @@ export default function ContactsView() {
   const [filterTag, setFilterTag] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [syncing, setSyncing] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [editingTags, setEditingTags] = useState<string | null>(null);
+  const [newTag, setNewTag] = useState('');
 
   useEffect(() => {
     loadContacts();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown) {
+        setOpenDropdown(null);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdown]);
+
   const loadContacts = async () => {
     try {
       setLoading(true);
       
-      // Get workspace
-      const { data: workspace } = await supabase
-        .from('workspaces')
-        .select('id')
-        .limit(1)
-        .single();
-      
-      if (!workspace) {
-        toast.error('No workspace found');
-        return;
-      }
+      // Get workspace ID from localStorage (demo mode)
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af'; // Default demo workspace
 
-      // Load contacts
+      // Load contacts with last interaction data
       const { data, error } = await supabase
         .from('contacts')
-        .select('*')
-        .eq('workspace_id', workspace.id)
+        .select(`
+          *,
+          last_message:messages(sent_at, replied_at, opened_at, clicked_at)
+        `)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -139,39 +164,31 @@ export default function ContactsView() {
       console.log(`   • User Agent: ${navigator.userAgent}`);
       console.log(`   • Current URL: ${window.location.href}`);
       
-      // Check user authentication first
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('❌ User authentication failed:', userError);
-        toast.error('Please sign in to sync LinkedIn contacts');
+      // Check localStorage authentication (demo mode)
+      const isAuthenticated = localStorage.getItem('is_authenticated');
+      const userEmail = localStorage.getItem('user_email');
+      
+      if (!isAuthenticated) {
+        console.error('❌ User not authenticated in demo mode');
+        toast.error('Please ensure you are logged in to sync contacts');
         return;
       }
-      console.log('✅ User authenticated:', user.email);
+      console.log('✅ User authenticated (demo mode):', userEmail || 'demo user');
       
-      // Get or find workspace ID
-      let { data: workspace, error: wsError } = await supabase
-        .from('workspaces')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-        
-      if (wsError || !workspace) {
-        console.log('⚠️ No workspace found for user, generating dynamic workspace');
-        // Generate dynamic workspace ID
-        const userEmail = localStorage.getItem('user_email') || 'default';
-        const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const workspaceId = `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
-        workspace = { id: workspaceId };
-      }
+      // Get workspace ID from localStorage
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af'; // Default demo workspace
       
-      console.log('✅ Workspace ID:', workspace.id);
+      console.log('✅ Using workspace ID:', workspaceId);
       
       // Test basic database connectivity
       console.log('🔄 Testing database connectivity...');
       const { count: existingContactCount } = await supabase
         .from('contacts')
         .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspace.id);
+        .eq('workspace_id', workspaceId);
       
       console.log(`✅ Database accessible - existing contacts: ${existingContactCount || 0}`);
       
@@ -182,7 +199,7 @@ export default function ContactsView() {
       try {
         // Use the enhanced import service
         const { enhancedLinkedInImport } = await import('@/services/EnhancedLinkedInImport');
-        enhancedLinkedInImport.initialize(workspace.id);
+        enhancedLinkedInImport.initialize(workspaceId);
         
         // Test connections before starting
         console.log('🔄 Testing LinkedIn integration connections...');
@@ -273,33 +290,25 @@ export default function ContactsView() {
     console.log('═'.repeat(60));
     
     try {
-      // Get user and workspace info
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('❌ User authentication failed:', userError);
-        toast.error('Please sign in to start server import');
+      // Check localStorage authentication (demo mode)
+      const isAuthenticated = localStorage.getItem('is_authenticated');
+      const userEmail = localStorage.getItem('user_email');
+      
+      if (!isAuthenticated) {
+        console.error('❌ User not authenticated in demo mode');
+        toast.error('Please ensure you are logged in to start server import');
         return;
       }
       
-      console.log('✅ User authenticated:', user.email);
+      console.log('✅ User authenticated (demo mode):', userEmail || 'demo user');
       
-      // Get workspace ID
-      let { data: workspace, error: wsError } = await supabase
-        .from('workspaces')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-        
-      if (wsError || !workspace) {
-        console.log('⚠️ No workspace found, generating dynamic workspace');
-        // Generate dynamic workspace ID
-        const userEmail = localStorage.getItem('user_email') || 'default';
-        const emailHash = userEmail.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const workspaceId = `workspace-${emailHash}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
-        workspace = { id: workspaceId };
-      }
+      // Get workspace ID from localStorage
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af'; // Default demo workspace
       
-      console.log('✅ Using workspace:', workspace.id);
+      console.log('✅ Using workspace:', workspaceId);
       
       // Check server availability
       toast.info('🔍 Checking server availability...');
@@ -314,7 +323,7 @@ export default function ContactsView() {
       console.log('✅ Server import available');
       
       // Initialize server import
-      serverLinkedInImport.initialize(workspace.id);
+      serverLinkedInImport.initialize(workspaceId);
       
       // Show server import advantages
       const importInfo = serverLinkedInImport.getImportInfo();
@@ -391,14 +400,34 @@ export default function ContactsView() {
 
   const handleExport = () => {
     const csv = [
-      ['First Name', 'Last Name', 'Connection Status', 'Job Title', 'Tags', 'Connected Since', 'LinkedIn URL'].join(','),
+      ['First Name', 'Last Name', 'Connection Status', 'Job Title', 'Tags', 'Last Interaction', 'LinkedIn URL'].join(','),
       ...filteredContacts.map(c => [
         c.first_name,
         c.last_name,
         (c.metadata?.connection_degree || c.scraped_data?.connection_degree || '1st') + ' degree',
         c.title || '',
         (c.tags || []).join('; '),
-        new Date(c.created_at).toLocaleDateString(),
+        (() => {
+          // Get the most recent interaction from messages
+          if (c.last_message && c.last_message.length > 0) {
+            const lastMsg = c.last_message[0];
+            const interactionDate = lastMsg.replied_at || 
+                                  lastMsg.clicked_at || 
+                                  lastMsg.opened_at || 
+                                  lastMsg.sent_at;
+            
+            if (interactionDate) {
+              return new Date(interactionDate).toLocaleDateString();
+            }
+          }
+          
+          // Fallback: Check synced_at from metadata  
+          if (c.metadata?.synced_at) {
+            return new Date(c.metadata.synced_at).toLocaleDateString();
+          }
+          
+          return 'No interaction';
+        })(),
         c.linkedin_url
       ].join(','))
     ].join('\n');
@@ -411,6 +440,84 @@ export default function ContactsView() {
     a.click();
     
     toast.success(`Exported ${filteredContacts.length} contacts`);
+  };
+
+  const handleAddTag = async (contactId: string, tag: string) => {
+    if (!tag.trim()) return;
+    
+    try {
+      const contact = contacts.find(c => c.id === contactId);
+      if (!contact) return;
+      
+      const updatedTags = [...(contact.tags || []), tag.trim()];
+      
+      const { error } = await supabase
+        .from('contacts')
+        .update({ tags: updatedTags })
+        .eq('id', contactId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setContacts(contacts.map(c => 
+        c.id === contactId ? { ...c, tags: updatedTags } : c
+      ));
+      
+      toast.success(`Added tag "${tag}" to ${contact.first_name} ${contact.last_name}`);
+      setNewTag('');
+      setEditingTags(null);
+    } catch (error) {
+      console.error('Error adding tag:', error);
+      toast.error('Failed to add tag');
+    }
+  };
+
+  const handleRemoveTag = async (contactId: string, tagToRemove: string) => {
+    try {
+      const contact = contacts.find(c => c.id === contactId);
+      if (!contact) return;
+      
+      const updatedTags = (contact.tags || []).filter(tag => tag !== tagToRemove);
+      
+      const { error } = await supabase
+        .from('contacts')
+        .update({ tags: updatedTags })
+        .eq('id', contactId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setContacts(contacts.map(c => 
+        c.id === contactId ? { ...c, tags: updatedTags } : c
+      ));
+      
+      toast.success(`Removed tag "${tagToRemove}" from ${contact.first_name} ${contact.last_name}`);
+    } catch (error) {
+      console.error('Error removing tag:', error);
+      toast.error('Failed to remove tag');
+    }
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm('Are you sure you want to delete this contact?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', contactId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setContacts(contacts.filter(c => c.id !== contactId));
+      
+      toast.success('Contact deleted successfully');
+      setOpenDropdown(null);
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      toast.error('Failed to delete contact');
+    }
   };
 
   const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -436,24 +543,11 @@ export default function ContactsView() {
       
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
       
-      // Get workspace
-      const { data: { user } } = await supabase.auth.getUser();
-      let workspace: any;
-      
-      if (user) {
-        const { data: ws } = await supabase
-          .from('workspaces')
-          .select('id')
-          .eq('owner_id', user.id)
-          .single();
-        workspace = ws;
-      }
-      
-      if (!workspace) {
-        // Create default workspace
-        const workspaceId = `ws-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        workspace = { id: workspaceId };
-      }
+      // Get workspace ID from localStorage (demo mode)
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af'; // Default demo workspace
 
       const contactsToImport = [];
       let skippedCount = 0;
@@ -462,7 +556,7 @@ export default function ContactsView() {
         const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
         
         const contact: any = {
-          workspace_id: workspace.id,
+          workspace_id: workspaceId,
           first_name: '',
           last_name: '',
           email: '',
@@ -706,7 +800,7 @@ export default function ContactsView() {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Job Title</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Tags</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Connected Since</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Last Interaction</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -753,11 +847,35 @@ export default function ContactsView() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="text-sm text-gray-600">
-                      {new Date(contact.created_at).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric', 
-                        year: 'numeric' 
-                      })}
+                      {(() => {
+                        // Get the most recent interaction from messages
+                        if (contact.last_message && contact.last_message.length > 0) {
+                          const lastMsg = contact.last_message[0];
+                          const interactionDate = lastMsg.replied_at || 
+                                                lastMsg.clicked_at || 
+                                                lastMsg.opened_at || 
+                                                lastMsg.sent_at;
+                          
+                          if (interactionDate) {
+                            return new Date(interactionDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            });
+                          }
+                        }
+                        
+                        // Fallback: Check synced_at from metadata  
+                        if (contact.metadata?.synced_at) {
+                          return new Date(contact.metadata.synced_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          });
+                        }
+                        
+                        return 'No interaction';
+                      })()}
                     </div>
                   </td>
                   <td className="px-4 py-4">
@@ -778,15 +896,134 @@ export default function ContactsView() {
                       >
                         <Mail className="h-4 w-4" />
                       </button>
-                      <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
+                      <div className="relative">
+                        <button 
+                          className="p-1 text-gray-600 hover:bg-gray-100 rounded"
+                          onClick={() => setOpenDropdown(openDropdown === contact.id ? null : contact.id)}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        
+                        {openDropdown === contact.id && (
+                          <div className="absolute right-0 top-8 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                            <div className="py-1">
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                onClick={() => {
+                                  setEditingTags(contact.id);
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                <Tag className="h-4 w-4" />
+                                Manage Tags
+                              </button>
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(contact.linkedin_url);
+                                  toast.success('LinkedIn URL copied to clipboard');
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                <Edit3 className="h-4 w-4" />
+                                Copy LinkedIn URL
+                              </button>
+                              <hr className="my-1" />
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                onClick={() => handleDeleteContact(contact.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete Contact
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Tag Management Modal */}
+      {editingTags && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Manage Tags - {contacts.find(c => c.id === editingTags)?.first_name} {contacts.find(c => c.id === editingTags)?.last_name}
+              </h3>
+              <button
+                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setEditingTags(null)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Current Tags */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Current Tags</label>
+              <div className="flex flex-wrap gap-2">
+                {(contacts.find(c => c.id === editingTags)?.tags || []).map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded"
+                  >
+                    {tag}
+                    <button
+                      className="text-gray-500 hover:text-red-600"
+                      onClick={() => handleRemoveTag(editingTags, tag)}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {(contacts.find(c => c.id === editingTags)?.tags || []).length === 0 && (
+                  <span className="text-gray-500 text-sm">No tags yet</span>
+                )}
+              </div>
+            </div>
+
+            {/* Add New Tag */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Add New Tag</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="Enter tag name..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddTag(editingTags, newTag);
+                    }
+                  }}
+                />
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-1"
+                  onClick={() => handleAddTag(editingTags, newTag)}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                onClick={() => setEditingTags(null)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
