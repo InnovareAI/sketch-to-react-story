@@ -354,14 +354,14 @@ export function WorkspaceDashboard() {
                 className="w-full justify-start bg-gradient-to-r from-premium-blue/10 to-premium-purple/10 hover:from-premium-blue/20 hover:to-premium-purple/20 border border-premium-blue/20 text-foreground"
               >
                 <Upload className="h-4 w-4 mr-3" />
-                Provide Insights
+                Provide Insights Documents
               </Button>
               <Button 
                 onClick={() => navigate('/research')}
                 className="w-full justify-start bg-gradient-to-r from-premium-green/10 to-premium-cyan/10 hover:from-premium-green/20 hover:to-premium-cyan/20 border border-premium-green/20 text-foreground"
               >
                 <Search className="h-4 w-4 mr-3" />
-                Research
+                Conduct Market and ICP Research
               </Button>
               <Button 
                 onClick={() => navigate('/research')}
