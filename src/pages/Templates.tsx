@@ -25,7 +25,10 @@ import {
   Target,
   Eye,
   Download,
-  Upload
+  Upload,
+  X,
+  Clock,
+  UserPlus
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,9 +38,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// LinkedIn Campaign Types
+const linkedinCampaignTypes = [
+  { value: "connection_request", label: "Connection Request", description: "Send personalized connection invitations" },
+  { value: "message_campaign", label: "Message Campaign", description: "Direct messages to existing connections" },
+  { value: "inmail_campaign", label: "InMail Campaign", description: "Premium InMail messages to any LinkedIn user" },
+  { value: "follow_up_sequence", label: "Follow-up Sequence", description: "Multi-step follow-up messaging" },
+  { value: "endorsement_campaign", label: "Endorsement Campaign", description: "Skills endorsements with follow-up" },
+  { value: "content_engagement", label: "Content Engagement", description: "Engage with posts then message" }
+];
+
+// Message Step Types
+const messageStepTypes = [
+  { value: "connection", label: "Connection Request", delay: 0 },
+  { value: "initial_message", label: "Initial Message", delay: 1 },
+  { value: "follow_up_1", label: "Follow-up 1", delay: 3 },
+  { value: "follow_up_2", label: "Follow-up 2", delay: 7 },
+  { value: "follow_up_3", label: "Follow-up 3", delay: 14 },
+  { value: "break_up", label: "Break-up Message", delay: 21 }
+];
+
 export default function Templates() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateWithPerformance | null>(null);
-  const [newTemplate, setNewTemplate] = useState({ name: "", type: "email", subject: "", content: "" });
+  const [newTemplate, setNewTemplate] = useState({ 
+    name: "", 
+    type: "email", 
+    subject: "", 
+    content: "",
+    campaignType: "",
+    steps: [{ type: "connection", content: "", delay: 0, delayUnit: "days" }]
+  });
   const { templates, stats, loading, error, refreshData, createTemplate, updateTemplate, deleteTemplate } = useRealTemplates();
 
   const getChannelIcon = (channel: string) => {
@@ -47,6 +77,51 @@ export default function Templates() {
       case "WhatsApp": return <MessageSquare className="h-4 w-4 text-green-600" />;
       default: return <FileText className="h-4 w-4" />;
     }
+  };
+
+  // Add new message step
+  const addMessageStep = () => {
+    const newStepType = messageStepTypes[newTemplate.steps.length] || messageStepTypes[messageStepTypes.length - 1];
+    setNewTemplate({
+      ...newTemplate,
+      steps: [
+        ...newTemplate.steps,
+        {
+          type: newStepType.value,
+          content: "",
+          delay: newStepType.delay,
+          delayUnit: "days"
+        }
+      ]
+    });
+  };
+
+  // Remove message step
+  const removeMessageStep = (index: number) => {
+    if (newTemplate.steps.length > 1) {
+      const updatedSteps = newTemplate.steps.filter((_, i) => i !== index);
+      setNewTemplate({ ...newTemplate, steps: updatedSteps });
+    }
+  };
+
+  // Update message step
+  const updateMessageStep = (index: number, field: string, value: any) => {
+    const updatedSteps = newTemplate.steps.map((step, i) => 
+      i === index ? { ...step, [field]: value } : step
+    );
+    setNewTemplate({ ...newTemplate, steps: updatedSteps });
+  };
+
+  // Reset template form
+  const resetTemplateForm = () => {
+    setNewTemplate({ 
+      name: "", 
+      type: "email", 
+      subject: "", 
+      content: "",
+      campaignType: "",
+      steps: [{ type: "connection", content: "", delay: 0, delayUnit: "days" }]
+    });
   };
 
   const getPerformanceColor = (rate: number) => {
@@ -100,7 +175,19 @@ export default function Templates() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Channel</label>
-                    <Select value={newTemplate.type} onValueChange={(value) => setNewTemplate({...newTemplate, type: value})}>
+                    <Select 
+                      value={newTemplate.type} 
+                      onValueChange={(value) => {
+                        setNewTemplate({
+                          ...newTemplate, 
+                          type: value,
+                          campaignType: value === 'linkedin' ? 'connection_request' : '',
+                          steps: value === 'linkedin' 
+                            ? [{ type: "connection", content: "", delay: 0, delayUnit: "days" }]
+                            : newTemplate.steps
+                        });
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -112,6 +199,31 @@ export default function Templates() {
                     </Select>
                   </div>
                 </div>
+                
+                {/* LinkedIn Campaign Type Selection */}
+                {newTemplate.type === "linkedin" && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">LinkedIn Campaign Type</label>
+                    <Select 
+                      value={newTemplate.campaignType} 
+                      onValueChange={(value) => setNewTemplate({...newTemplate, campaignType: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select campaign type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {linkedinCampaignTypes.map(type => (
+                          <SelectItem key={type.value} value={type.value}>
+                            <div>
+                              <div className="font-medium">{type.label}</div>
+                              <div className="text-xs text-gray-500">{type.description}</div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {newTemplate.type === "email" && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Subject Line</label>
@@ -122,31 +234,155 @@ export default function Templates() {
                     />
                   </div>
                 )}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Message Content</label>
-                  <Textarea
-                    placeholder="Enter your template content with variables like {{firstName}}, {{companyName}}, etc."
-                    rows={8}
-                    value={newTemplate.content}
-                    onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
-                  />
-                </div>
+                
+                {/* LinkedIn Multi-Step Message Builder */}
+                {newTemplate.type === "linkedin" ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Message Sequence</label>
+                      <Button 
+                        type="button"
+                        onClick={addMessageStep}
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add Step
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                      {newTemplate.steps.map((step, index) => (
+                        <Card key={index} className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="bg-blue-100 text-blue-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-semibold">
+                                {index + 1}
+                              </div>
+                              <Select 
+                                value={step.type} 
+                                onValueChange={(value) => {
+                                  const stepType = messageStepTypes.find(t => t.value === value);
+                                  updateMessageStep(index, 'type', value);
+                                  updateMessageStep(index, 'delay', stepType?.delay || 0);
+                                }}
+                              >
+                                <SelectTrigger className="w-48">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {messageStepTypes.map(type => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            {index > 0 && (
+                              <Button 
+                                type="button"
+                                onClick={() => removeMessageStep(index)}
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          
+                          {/* Delay Configuration */}
+                          {index > 0 && (
+                            <div className="flex items-center gap-2 mb-3 text-sm text-gray-600">
+                              <Clock className="h-3 w-3" />
+                              <span>Send after</span>
+                              <Input 
+                                type="number"
+                                className="w-16 h-8"
+                                value={step.delay}
+                                onChange={(e) => updateMessageStep(index, 'delay', parseInt(e.target.value) || 0)}
+                              />
+                              <Select 
+                                value={step.delayUnit} 
+                                onValueChange={(value) => updateMessageStep(index, 'delayUnit', value)}
+                              >
+                                <SelectTrigger className="w-20 h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="hours">hours</SelectItem>
+                                  <SelectItem value="days">days</SelectItem>
+                                  <SelectItem value="weeks">weeks</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          
+                          <Textarea
+                            placeholder={`Enter ${messageStepTypes.find(t => t.value === step.type)?.label.toLowerCase() || 'message'} content with variables like {{firstName}}, {{companyName}}, etc.`}
+                            rows={4}
+                            value={step.content}
+                            onChange={(e) => updateMessageStep(index, 'content', e.target.value)}
+                          />
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* Single Message Content for Email/WhatsApp */
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Message Content</label>
+                    <Textarea
+                      placeholder="Enter your template content with variables like {{firstName}}, {{companyName}}, etc."
+                      rows={8}
+                      value={newTemplate.content}
+                      onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
+                    />
+                  </div>
+                )}
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline">Cancel</Button>
+                  <Button variant="outline" onClick={resetTemplateForm}>Cancel</Button>
                   <Button 
                     onClick={async () => {
                       try {
-                        if (!newTemplate.name || !newTemplate.content) {
-                          alert('Please fill in template name and content');
+                        // Validation
+                        if (!newTemplate.name) {
+                          alert('Please enter a template name');
                           return;
                         }
+                        
+                        if (newTemplate.type === 'linkedin') {
+                          if (!newTemplate.campaignType) {
+                            alert('Please select a LinkedIn campaign type');
+                            return;
+                          }
+                          const hasEmptySteps = newTemplate.steps.some(step => !step.content.trim());
+                          if (hasEmptySteps) {
+                            alert('Please fill in all message step content');
+                            return;
+                          }
+                        } else {
+                          if (!newTemplate.content) {
+                            alert('Please fill in the message content');
+                            return;
+                          }
+                        }
+                        
+                        // Create template with steps for LinkedIn
                         await createTemplate({
                           name: newTemplate.name,
                           type: newTemplate.type,
                           subject: newTemplate.subject,
-                          content: newTemplate.content,
+                          content: newTemplate.type === 'linkedin' ? 
+                            JSON.stringify(newTemplate.steps) : newTemplate.content,
+                          campaignType: newTemplate.campaignType,
+                          steps: newTemplate.type === 'linkedin' ? newTemplate.steps : undefined
                         });
-                        setNewTemplate({ name: "", type: "email", subject: "", content: "" });
+                        
+                        resetTemplateForm();
                         alert('Template created successfully!');
                       } catch (error) {
                         console.error('Failed to create template:', error);
