@@ -124,6 +124,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [userProfile, setUserProfile] = useState<any>(null);
   const [needsNameCollection, setNeedsNameCollection] = useState<boolean>(false);
   const [needsConfirmation, setNeedsConfirmation] = useState<boolean>(false);
+  const [hasInitialMessage, setHasInitialMessage] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Helper functions to check account connection status
@@ -171,9 +172,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     loadUserProfile();
   }, []);
 
-  // Set personalized initial message
+  // Set personalized initial message - only once
   useEffect(() => {
-    if (userProfile && messages.length === 0) {
+    if (userProfile && messages.length === 0 && !hasInitialMessage) {
       const firstName = userProfile.full_name?.split(' ')[0];
       let greeting;
       
@@ -189,8 +190,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         sender: "sam",
         timestamp: new Date(),
       }]);
+      setHasInitialMessage(true);
     }
-  }, [userProfile, needsNameCollection, messages.length]);
+  }, [userProfile, needsNameCollection, hasInitialMessage]);
 
   // Check if user is new and needs onboarding
   useEffect(() => {
@@ -923,6 +925,11 @@ What should we tackle first?`;
   };
 
   const handleLoadSession = (sessionMessages: Message[]) => {
+    // Don't overwrite messages if we're in the middle of name collection or confirmation
+    if (needsNameCollection || needsConfirmation) {
+      console.log('Skipping session load - user is in onboarding flow');
+      return;
+    }
     setMessages(sessionMessages);
   };
 
