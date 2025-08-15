@@ -85,23 +85,49 @@ export function WorkspaceSidebar({
   const isAgentMode = currentPath.startsWith('/agent');
 
   // Simple navigation item component with no complex interactions
-  const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
-    <NavLink
-      to={item.url}
-      className={() => cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
-        isActive
-          ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1"
-          : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
-      )}
-      onClick={(e) => {
-        e.stopPropagation();
-      }}
-    >
-      <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-blue-500" : "")} />
-      <span className="truncate">{item.title}</span>
-    </NavLink>
-  );
+  const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => {
+    // Special handling for follow-ups to force navigation
+    if (item.title === "Follow-ups") {
+      return (
+        <a
+          href={item.url}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
+            isActive
+              ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1"
+              : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
+          )}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Force navigation to follow-ups page
+            window.location.href = '/follow-ups-public';
+          }}
+        >
+          <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-blue-500" : "")} />
+          <span className="truncate">{item.title}</span>
+        </a>
+      );
+    }
+    
+    return (
+      <NavLink
+        to={item.url}
+        className={() => cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
+          isActive
+            ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1"
+            : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-blue-500" : "")} />
+        <span className="truncate">{item.title}</span>
+      </NavLink>
+    );
+  };
 
   return (
     <aside className={cn(
