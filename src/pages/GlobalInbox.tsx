@@ -949,7 +949,14 @@ export default function GlobalInbox() {
 
       {/* Inbox Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            setFilterType('all');
+            setFilterTag('all');
+            setActiveTab('all');
+          }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -971,7 +978,14 @@ export default function GlobalInbox() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            setFilterType('unread');
+            setFilterTag('all');
+            setActiveTab('unread');
+          }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
