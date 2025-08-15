@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 export interface Template {
   id: string;
@@ -37,6 +39,8 @@ export interface TemplateStats {
 }
 
 export function useRealTemplates() {
+  const { user } = useAuth();
+  const { workspaceId } = useWorkspace();
   const [templates, setTemplates] = useState<TemplateWithPerformance[]>([]);
   const [stats, setStats] = useState<TemplateStats>({
     totalTemplates: 0,
@@ -46,25 +50,14 @@ export function useRealTemplates() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getCurrentWorkspaceId = (): string => {
-    // Get workspace from authenticated user profile
-    const workspaceId = localStorage.getItem('app_workspace_id') || localStorage.getItem('workspace_id');
-    
-    if (workspaceId && workspaceId !== 'a0000000-0000-0000-0000-000000000000') {
-      return workspaceId;
-    }
-    
-    // Generate new workspace if needed
-    const { getWorkspaceId } = require('@/lib/workspace');
-    return getWorkspaceId();
-  };
-
   const fetchTemplates = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const workspaceId = getCurrentWorkspaceId();
+      if (!workspaceId) {
+        throw new Error('No workspace found');
+      }
 
       // Get message templates (reusable messages)
       // First, try to get templates from a dedicated templates table if it exists
@@ -210,12 +203,19 @@ export function useRealTemplates() {
     tags?: string[];
   }) => {
     try {
-      const workspaceId = getCurrentWorkspaceId();
+      if (!workspaceId) {
+        throw new Error('No workspace found');
+      }
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
 
       const { data, error } = await supabase
         .from('messages')
         .insert({
           workspace_id: workspaceId,
+          created_by: user.id,
           subject: templateData.subject,
           content: templateData.content,
           status: 'template',
@@ -280,8 +280,10 @@ export function useRealTemplates() {
   };
 
   useEffect(() => {
-    fetchTemplates();
-  }, []);
+    if (workspaceId && user?.id) {
+      fetchTemplates();
+    }
+  }, [workspaceId, user?.id]);
 
   return {
     templates,
