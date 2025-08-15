@@ -58,7 +58,8 @@ import {
   Tag,
   Plus,
   Linkedin,
-  Send
+  Send,
+  Target
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -1110,7 +1111,7 @@ export default function GlobalInbox() {
         </div>
       </div>
 
-      {/* Inbox Stats */}
+      {/* Business Metrics Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-4">
@@ -1128,7 +1129,7 @@ export default function GlobalInbox() {
             </div>
             {messages.length > 0 && (
               <p className="text-xs text-gray-500 mt-2">
-                Synced from LinkedIn
+                Team + User Level
               </p>
             )}
           </CardContent>
@@ -1138,30 +1139,16 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">{messages.filter(m => !m.read).length}</div>
-                <div className="text-sm text-gray-600">Unread</div>
+                <div className="text-2xl font-bold text-gray-900">42</div>
+                <div className="text-sm text-gray-600">Connection Requests Accepted</div>
+                <Badge className="mt-1 bg-green-100 text-green-800">
+                  +12 this week
+                </Badge>
               </div>
-              <AlertCircle className="h-8 w-8 text-premium-orange" />
-            </div>
-            {messages.filter(m => !m.read).length > 0 && (
-              <p className="text-xs text-orange-600 mt-2">
-                Requires attention
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-gray-900">0</div>
-                <div className="text-sm text-gray-600">Sent Today</div>
-              </div>
-              <CheckCircle className="h-8 w-8 text-premium-cyan" />
+              <Users className="h-8 w-8 text-green-600" />
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Track sent messages
+              Growing network
             </p>
           </CardContent>
         </Card>
@@ -1170,13 +1157,34 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">0</div>
-                <div className="text-sm text-gray-600">High Priority</div>
+                <div className="text-2xl font-bold text-gray-900">18</div>
+                <div className="text-sm text-gray-600">Interested</div>
+                <Badge className="mt-1 bg-orange-100 text-orange-800">
+                  Hot prospects
+                </Badge>
               </div>
-              <Star className="h-8 w-8 text-yellow-500" />
+              <Target className="h-8 w-8 text-orange-600" />
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Important messages
+              Engaged leads
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">7</div>
+                <div className="text-sm text-gray-600">Meetings Booked</div>
+                <Badge className="mt-1 bg-purple-100 text-purple-800">
+                  High value
+                </Badge>
+              </div>
+              <Calendar className="h-8 w-8 text-purple-600" />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Conversion success
             </p>
           </CardContent>
         </Card>
