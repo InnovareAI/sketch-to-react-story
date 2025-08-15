@@ -26,32 +26,40 @@ export function ContextMemory({ className = "" }: ContextMemoryProps) {
   const [progressStage, setProgressStage] = useState("Getting to know you...");
 
   useEffect(() => {
-    loadMemoryData();
+    loadMemoryData().catch(console.error);
   }, [memoryService]);
 
-  const loadMemoryData = () => {
-    const memories = memoryService.getRelevantMemories();
-    const stats = memoryService.getStats();
-    
-    // Convert memory items to context items
-    const items: ContextItem[] = memories.map(memory => ({
-      id: memory.id,
-      type: mapMemoryTypeToContextType(memory.type),
-      title: memory.title,
-      content: memory.content,
-      lastUpdated: memory.updatedAt,
-      relevance: memory.confidence
-    }));
+  const loadMemoryData = async () => {
+    try {
+      // Get all documents from the new MemoryService
+      const documents = await memoryService.getAllDocuments();
+      
+      // Convert documents to context items
+      const items: ContextItem[] = documents.map(doc => ({
+        id: doc.id,
+        type: mapDocumentTypeToContextType(doc.metadata?.type || 'document'),
+        title: doc.title || doc.metadata?.filename || 'Document',
+        content: doc.content?.substring(0, 200) || 'No content preview',
+        lastUpdated: new Date(doc.created_at || Date.now()),
+        relevance: 0.8 // Default relevance for now
+      }));
 
-    setContextItems(items);
+      setContextItems(items);
 
-    // Calculate knowledge progress based on memory count and confidence
-    const progress = calculateKnowledgeProgress(stats.total, stats.averageConfidence);
-    setKnowledgeProgress(progress);
-    setProgressStage(getProgressStage(progress));
+      // Calculate knowledge progress based on document count
+      const progress = calculateKnowledgeProgress(documents.length, 0.8);
+      setKnowledgeProgress(progress);
+      setProgressStage(getProgressStage(progress));
+    } catch (error) {
+      console.error('Failed to load memory data:', error);
+      // Fallback to empty state
+      setContextItems([]);
+      setKnowledgeProgress(0);
+      setProgressStage("Getting to know you...");
+    }
   };
 
-  const mapMemoryTypeToContextType = (type: string): ContextItem['type'] => {
+  const mapDocumentTypeToContextType = (type: string): ContextItem['type'] => {
     switch (type) {
       case 'product': return 'offer';
       case 'audience': return 'audience';
@@ -59,6 +67,9 @@ export function ContextMemory({ className = "" }: ContextMemoryProps) {
       case 'campaign': return 'document';
       case 'conversation': return 'conversation';
       case 'preference': return 'document';
+      case 'website': return 'document';
+      case 'pdf': return 'document';
+      case 'youtube': return 'document';
       default: return 'document';
     }
   };
