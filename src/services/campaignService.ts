@@ -136,8 +136,21 @@ class CampaignService {
         
         if (bypassAuth === 'true' && bypassUserEmail && bypassUserData) {
           const userData = JSON.parse(bypassUserData);
-          const workspaceId = userData.workspace_id || 'default-workspace-' + crypto.randomUUID();
-          const userId = userData.id || crypto.randomUUID();
+          
+          // Get workspace_id from profiles table using the user's email
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('workspace_id, id')
+            .eq('email', bypassUserEmail)
+            .single();
+            
+          if (profileError || !profileData) {
+            console.error('Failed to get user profile:', profileError);
+            throw new Error('Failed to get user workspace information');
+          }
+          
+          const workspaceId = profileData.workspace_id;
+          const userId = profileData.id;
           
           const campaignData = {
             ...campaign,
@@ -184,12 +197,23 @@ class CampaignService {
         throw new Error('Authentication required to create campaigns');
       }
       
-      // Use authenticated user data
+      // Use authenticated user data - get workspace_id from profiles table
+      const { data: userProfileData, error: userProfileError } = await supabase
+        .from('profiles')
+        .select('workspace_id')
+        .eq('id', user.id)
+        .single();
+        
+      if (userProfileError) {
+        console.error('Failed to get authenticated user profile:', userProfileError);
+        throw new Error('Failed to get user workspace information');
+      }
+      
       const campaignData = {
         ...campaign,
-        workspace_id: campaign.workspace_id || user.user_metadata?.workspace_id,
+        workspace_id: campaign.workspace_id || userProfileData.workspace_id,
         user_id: campaign.user_id || user.id,
-        tenant_id: campaign.tenant_id || user.user_metadata?.workspace_id,
+        tenant_id: campaign.tenant_id || userProfileData.workspace_id,
         status: campaign.status || 'draft',
         type: campaign.type || 'connection_request',
         target_audience: campaign.target_audience || 'general',

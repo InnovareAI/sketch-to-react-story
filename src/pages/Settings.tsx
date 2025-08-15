@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { LinkedInAccountConnection } from '@/components/settings/LinkedInAccountConnection';
 import {
   User,
   Building2,
@@ -1367,73 +1368,16 @@ export default function Settings() {
             
             {/* Integrations Tab */}
             <TabsContent value="integrations" className="space-y-6">
+              {/* LinkedIn Account Connection - Full Component with CPR Workers */}
+              <LinkedInAccountConnection />
+              
+              {/* Other Integrations */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Integrations</CardTitle>
-                  <CardDescription>Connect your favorite tools and services</CardDescription>
+                  <CardTitle>Other Integrations</CardTitle>
+                  <CardDescription>Connect additional tools and services</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* LinkedIn */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium">LinkedIn Integration</h3>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => navigate('/linkedin-integration')}
-                      >
-                        <Linkedin className="h-4 w-4 mr-2" />
-                        Add LinkedIn Account
-                      </Button>
-                    </div>
-                    <div className="space-y-3">
-                      {linkedInAccounts.length > 0 ? (
-                        linkedInAccounts.map((account: any, index: number) => (
-                          <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Linkedin className="h-8 w-8 text-blue-600" />
-                              <div>
-                                <div className="font-medium">{account.name || 'LinkedIn Account'}</div>
-                                <p className="text-sm text-gray-500">Connected</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-green-100 text-green-800">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Active
-                              </Badge>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => navigate('/linkedin-integration')}
-                              >
-                                <ChevronRight className="h-4 w-4" />
-                                Manage
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Linkedin className="h-8 w-8 text-gray-400" />
-                            <div>
-                              <div className="font-medium">LinkedIn</div>
-                              <p className="text-sm text-gray-500">Not connected</p>
-                            </div>
-                          </div>
-                          <Button onClick={() => {
-                            navigate('/linkedin-integration');
-                          }}>
-                            Connect Account
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
                   {/* Email */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Email Integration</h3>
