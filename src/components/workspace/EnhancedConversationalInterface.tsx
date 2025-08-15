@@ -724,6 +724,52 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 💡 *Ask questions anytime if you get stuck!*`;
     }
     
+    // Handle LinkedIn connection request
+    if (contentLower.includes('connect linkedin') || contentLower.includes('linkedin connect')) {
+      return `🔗 **LinkedIn Connection Setup**
+
+**To enable live prospect scraping:**
+
+1. **Go to Settings** (gear icon in sidebar)
+2. **Click "Connect LinkedIn"** 
+3. **Authorize SAM AI** for prospect research
+4. **Return here** and type "start scraping"
+
+**Once connected, I can:**
+• Pull real-time CTO profiles
+• Get company funding data
+• Find verified contact info
+• Track job changes and promotions
+
+**Alternative:** Type "show preview" for sample data without connection.`;
+    }
+
+    // Handle preview results request  
+    if (contentLower.includes('preview') || contentLower.includes('show') || contentLower.includes('sample')) {
+      return `📋 **Boston CTO Preview (Sample)**
+
+**Here are 5 sample prospects:**
+
+1. **Sarah Chen** - CTO, TechFlow AI (Series A, $8M)
+   📍 Cambridge, MA • 🏢 45 employees • 🚀 AI/ML
+
+2. **Mike Rodriguez** - CTO, HealthStream (Series B, $15M)  
+   📍 Boston, MA • 🏢 78 employees • 🏥 HealthTech
+
+3. **Alex Kumar** - CTO, FinanceCore (Series A, $12M)
+   📍 Boston, MA • 🏢 65 employees • 💰 FinTech
+
+4. **Emma Thompson** - CTO, LogiChain (Series A, $6M)
+   📍 Somerville, MA • 🏢 32 employees • 📦 Supply Chain
+
+5. **David Park** - CTO, CloudSync (Series B, $20M)
+   📍 Cambridge, MA • 🏢 85 employees • ☁️ Cloud Infrastructure
+
+**Connect LinkedIn for full list of 50+ prospects with contact details!**
+
+Type "write outreach" to create messages for these CTOs.`;
+    }
+
     // Handle start working request
     if (contentLower.includes('start working') || contentLower.includes('jump') || contentLower.includes('begin')) {
       return `**Let's get to work!** 🚀
@@ -835,7 +881,35 @@ ${documents.length === 0 ? '• No documents uploaded yet' :
 • "Upload my company deck"`;
     }
     
-    if (contentLower.includes('lead') || contentLower.includes('prospect')) {
+    if (contentLower.includes('lead') || contentLower.includes('prospect') || contentLower.includes('cto') || contentLower.includes('ceo') || contentLower.includes('startup') || contentLower.includes('find')) {
+      // Handle specific lead requests
+      if (contentLower.includes('cto') && contentLower.includes('boston')) {
+        return `🎯 **Starting Lead Research: 50 Boston CTOs**
+
+**✅ Search initiated for:**
+• CTOs at early-stage startups
+• Boston metropolitan area
+• Series A-B companies (10-100 employees)
+
+**🔍 Research sources active:**
+• LinkedIn Sales Navigator filters
+• AngelList startup database  
+• Crunchbase funding data
+• Boston tech community networks
+
+**📋 Sample companies to target:**
+• Toast, Klaviyo, DataSite, LogMeIn alumni startups
+• MIT/Harvard spin-offs in Series A-B
+• FinTech, HealthTech, AI/ML startups
+
+**Next steps:**
+1. **Type "connect linkedin"** to enable live prospect scraping
+2. **Type "preview results"** to see sample prospects 
+3. **Type "start campaign"** to begin outreach
+
+**Want me to show you the first 10 prospects?**`;
+      }
+      
       return "🎯 **Lead Research ready!** What industry/company type are you targeting?";
     }
     
