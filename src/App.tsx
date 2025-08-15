@@ -34,6 +34,7 @@ import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
 import UserLogin from "./pages/auth/UserLogin";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import Settings from "./pages/Settings";
+import SeoReview from "./pages/SeoReview";
 // Analytics merged with Dashboard - no longer needed as separate page
 import ProspectSearch from "./pages/ProspectSearch";
 import SearchResults from "./pages/SearchResults";
@@ -90,6 +91,7 @@ const App: React.FC = () => {
                 <Route path="test-sync" element={<ContactSyncTest />} />
                 <Route path="inbox" element={<GlobalInbox />} />
                 <Route path="templates" element={<Templates />} />
+                <Route path="seo-review" element={<SeoReview />} />
                 <Route path="analytics" element={<Dashboard />} /> {/* Analytics redirects to Dashboard */}
                 
                 {/* Team Routes */}

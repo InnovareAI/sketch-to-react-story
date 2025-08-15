@@ -1,8 +1,8 @@
-# Sam AI - Intelligent Assistant Platform with LinkedIn Integration
+# 3Cubed Pharmaceutical SEO Platform
 
 ## Project info
 
-**URL**: https://sketch-to-react-story.netlify.app
+**URL**: https://app.3c-seo.com
 
 ## How can I edit this code?
 
@@ -52,42 +52,39 @@ npm run dev
 
 ## What technologies are used for this project?
 
-This project is built with:
+This pharmaceutical SEO automation platform is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Frontend**: React 18, TypeScript, Vite
+- **UI**: shadcn-ui, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Edge Functions)
+- **Forms**: Direct HTML5 form integration
+- **AI Processing**: Supabase Edge Functions
 
-## LinkedIn + Bright Data Integration
+## 🧬 **Pharmaceutical SEO Features**
 
-This platform includes a professional LinkedIn data collection system:
+This platform automates SEO content creation for pharmaceutical products:
 
-### 🏠 **Residential Network Scraping**
-- **Bright Data Integration**: Premium residential proxies for maximum authenticity
-- **Smart Location Matching**: NYC profiles → NYC residential IPs automatically
-- **Certificate-Based Security**: Secure access to residential IP network
-
-### 🎯 **Features**
-- **Single Profile Scraping**: Extract individual LinkedIn profiles
-- **Bulk Operations**: Process multiple profiles with distributed proxies  
-- **Profile Search**: Discover profiles by keywords and location
-- **Real-time Monitoring**: Track scraping jobs and proxy health
-- **Data Export**: Complete profile data in JSON format
+### 🎯 **Core Features**
+- **Drug Submission Form**: Direct pharmaceutical product submissions
+- **Target Audience Selection**: HCP vs Patient content differentiation
+- **AI Content Generation**: Automated SEO content tailored to audience
+- **Medical Validation**: Compliance scoring and accuracy verification
+- **Workflow Management**: Submission → Processing → Review → Approval
 
 ### 🚀 **Quick Start**
 ```bash
-# Access LinkedIn integration
-http://localhost:3000/linkedin
+# Development server
+npm run dev
+
+# Access submission form
+http://localhost:3000/dist/WORKING_FORM.html
 ```
 
-### 📋 **Setup Requirements**
-1. **Bright Data Certificate**: Install from dashboard for residential network access
-2. **Environment Variables**: Add `VITE_BRIGHT_DATA_PASSWORD` from your Bright Data account
-3. **Configuration**: Use Settings tab to verify residential network connectivity
-
-See `LINKEDIN_BRIGHT_DATA_INTEGRATION.md` for complete setup instructions.
+### 📋 **Database Status**
+- **86+ pharmaceutical submissions** processed
+- **Target audiences**: HCP and Patient content supported
+- **Therapeutic areas**: Oncology, Immunology, Endocrinology, Dermatology, Pain Management
+- **Auto-processing**: Supabase triggers handle AI content generation
 
 ## How can I deploy this project?
 
