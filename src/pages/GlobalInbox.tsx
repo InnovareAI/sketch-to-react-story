@@ -774,7 +774,7 @@ export default function GlobalInbox() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inbox</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Team Inbox</h1>
           <p className="text-gray-600 mt-1">
             Manage all your conversations across channels
             {syncState.lastSyncTime && (
