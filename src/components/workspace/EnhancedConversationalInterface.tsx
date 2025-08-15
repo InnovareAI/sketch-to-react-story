@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus, Sparkles, Brain, Cpu, Activity, Upload, Rocket, Linkedin, Search, Database, Mail, BarChart3, TestTube, FileText, Link } from "lucide-react";
+import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus, Sparkles, Brain, Cpu, Activity, Upload, Rocket, Linkedin, Search, Database, Mail, BarChart3, TestTube, FileText, Link, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -165,9 +165,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       let greeting;
       
       if (needsNameCollection) {
-        greeting = `👋 **Welcome to SAM AI!** I'm your intelligent sales assistant with 6 specialist agents ready to help.\n\n**Before we start, I'd love to know - what should I call you?** Just your first name is perfect!\n\n**🔄 SAM AI Operation Modes:**\n• **📤 Outbound Mode:** Lead generation, prospecting, cold outreach campaigns\n• **📥 Inbound Mode:** Response handling, customer service, inbox triage\n• **⚡ Unified Mode:** Full automation across all channels simultaneously\n\n**⚠️ Important Setup Notes:**\n• You'll get **preview data** during onboarding, but **full data scraping** requires connected accounts\n• **SAM is most productive** when you have **active running campaigns**\n• To get started effectively, you'll need to **connect LinkedIn** and/or **email accounts**\n\n**💬 Chat Features:**\n• **Chat History:** Access all saved conversations (top right)\n• **🎤 Voice Input:** Click microphone to speak instead of typing`;
+        greeting = `👋 **Welcome to SAM AI!** I'm your sales assistant.\n\n**What should I call you?** Just your first name works!`;
       } else {
-        greeting = `👋 **Welcome back, ${firstName}!** I'm SAM, your intelligent sales assistant with 6 specialist agents ready to help.\n\n**🔄 SAM AI Operation Modes:**\n• **📤 Outbound Mode:** Lead generation, prospecting, automated cold outreach campaigns\n• **📥 Inbound Mode:** Response handling, customer service, inbox management\n• **⚡ Unified Mode:** Full automation across all channels with intelligent routing\n\n**🚀 Account Status Check:**\n• **LinkedIn Connected:** ${checkLinkedInConnection() ? '✅ Ready for prospecting' : '❌ Connect for full lead generation'}\n• **Email Connected:** ${checkEmailConnection() ? '✅ Ready for campaigns' : '❌ Connect for email automation'}\n• **Active Campaigns:** ${checkActiveCampaigns() ? '✅ SAM is fully productive' : '⚠️ No active campaigns - limited productivity'}\n\n**💡 Pro Tip:** SAM is most effective when you have active campaigns running. Without connected accounts, you'll only see preview data during prospecting.\n\n**💬 Chat Features:**\n• **Chat History:** Access all saved conversations (top right)\n• **🎤 Voice Input:** Click microphone to speak instead of typing\n• **Conversation Starters:** Quick actions to get started below\n\n**What would you like to work on first, ${firstName}?** Try the conversation starters below or ask me anything!`;
+        greeting = `👋 **Hi ${firstName}!** I'm SAM, your sales assistant.\n\n**Would you like me to:**\n• **Explain features first** (2-minute overview)\n• **Jump right into work** (start immediately)\n\nJust type "explain" or "start working" - your choice!`;
       }
       
       setMessages([{
@@ -438,19 +438,11 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         id: (Date.now() + 1).toString(),
         content: `Perfect! Nice to meet you, **${firstName}**! 🎉
 
-I'm SAM, your intelligent sales assistant with 6 specialist agents ready to help you grow your business.
+**Would you like me to:**
+• **Explain features first** (2-minute overview)
+• **Jump right into work** (start immediately)
 
-**🔄 Mode Switcher (Top Right):**
-• **📤 Outbound:** Lead generation, campaigns, prospecting
-• **📥 Inbound:** Response handling, customer service, inbox triage
-• **⚡ Unified:** Full automation across all channels
-
-**💬 Chat Features:**
-• **Chat History:** Access all saved conversations (top right)
-• **🎤 Voice Input:** Click microphone to speak instead of typing
-• **Conversation Starters:** Quick actions to get started below
-
-**What would you like to work on first, ${firstName}?** Try the conversation starters below or ask me anything!`,
+Just type "explain" or "start working" - your choice!`,
         sender: "sam",
         timestamp: new Date(),
       };
@@ -637,6 +629,34 @@ I'm SAM, your intelligent sales assistant with 6 specialist agents ready to help
   const generateFallbackResponse = async (content: string): Promise<string> => {
     const contentLower = content.toLowerCase();
     
+    // Handle feature explanation request
+    if (contentLower.includes('explain') || contentLower.includes('features') || contentLower.includes('overview')) {
+      return `**SAM AI Quick Overview** (2 minutes)
+
+**🔄 Modes:** Switch between Outbound (lead gen), Inbound (customer service), Unified (both)
+**🎯 Agents:** 6 specialists - Lead Research, Campaign Manager, Content Creator, etc.
+**💬 Features:** Voice input, chat history, training center
+**⚠️ Setup:** Connect LinkedIn/email for full access (preview mode without)
+
+**Ready to start?** Try:
+• "Find leads in [industry]"
+• "Write cold email"
+• "Create LinkedIn campaign"`;
+    }
+    
+    // Handle start working request
+    if (contentLower.includes('start working') || contentLower.includes('jump') || contentLower.includes('begin')) {
+      return `**Let's get to work!** 🚀
+
+**Quick actions:**
+• "Find leads in [industry]" 
+• "Write outreach message"
+• "Upload company info"
+• "Create campaign"
+
+**What's your goal today?**`;
+    }
+    
     // Agent Training Overview with real document data
     if (contentLower.includes('agent') && (contentLower.includes('training') || contentLower.includes('learned') || contentLower.includes('overview'))) {
       try {
@@ -732,18 +752,18 @@ ${documents.length === 0 ? '• No documents uploaded yet' :
     }
     
     if (contentLower.includes('lead') || contentLower.includes('prospect')) {
-      return "🎯 **Lead Research Agent activated!** I can help you find qualified prospects. To get better results, tell me about your ideal customer profile (ICP) - what industry, company size, and job titles are you targeting?";
+      return "🎯 **Lead Research ready!** What industry/company type are you targeting?";
     }
     
     if (contentLower.includes('campaign') || contentLower.includes('outreach')) {
-      return "📊 **Campaign Manager Agent ready!** I can help you create multi-touch outreach sequences. What's your goal - LinkedIn outreach, email campaigns, or a multi-channel approach?";
+      return "📊 **Campaign Manager ready!** LinkedIn, email, or multi-channel outreach?";
     }
     
     if (contentLower.includes('content') || contentLower.includes('template') || contentLower.includes('write')) {
-      return "✍️ **Content Creator Agent at your service!** I can write personalized messages, email sequences, or LinkedIn outreach. What type of content do you need and who's your target audience?";
+      return "✍️ **Content Creator ready!** What type of message and for which audience?";
     }
     
-    return "I have 6 specialist agents ready to help! Try asking about **agent training**, **finding leads**, **writing campaigns**, or **analyzing performance**. What would you like to work on?";
+    return "**6 agents ready!** Try: \"find leads\", \"write email\", \"create campaign\", or \"upload info\". What's your goal?";
   };
 
   const handleQuickAction = (action: QuickAction) => {
@@ -823,12 +843,39 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
     setMessages(prev => [...prev, completionMessage]);
   };
 
+  const saveCurrentConversation = () => {
+    if (messages.length === 0) return;
+    
+    // Create or use existing session
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      sessionId = createNewSession();
+    }
+    
+    // Save all current messages to the session
+    messages.forEach(message => {
+      addMessageToSession(sessionId!, message as any);
+    });
+    
+    // Show confirmation
+    const confirmationMessage: Message = {
+      id: Date.now().toString(),
+      content: "✅ **Conversation saved!** Find it in Chat History (top right).",
+      sender: "sam",
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, confirmationMessage]);
+    
+    console.log(`💾 Conversation saved to session: ${sessionId}`);
+  };
+
   const startNewChat = () => {
     const sessionId = createNewSession();
     setMessages([
       {
         id: "1",
-        content: "👋 **Welcome to SAM AI!** I'm your intelligent sales assistant with 6 specialist agents ready to help.\n\n**🔄 Mode Switcher (Top Right):**\n• **📤 Outbound:** Lead generation, campaigns, prospecting\n• **📥 Inbound:** Response handling, customer service, inbox triage\n• **⚡ Unified:** Full automation across all channels\n\n**💬 Chat Features:**\n• **Chat History:** Access all saved conversations (top right)\n• **🎤 Voice Input:** Click microphone to speak instead of typing\n• **Conversation Starters:** Quick actions to get started below\n\n**What would you like to work on first?** Try the conversation starters below or ask me anything!",
+        content: "👋 **Hi there!** I'm SAM, your sales assistant.\n\n**Would you like me to:**\n• **Explain features first** (2-minute overview)\n• **Jump right into work** (start immediately)\n\nJust type \"explain\" or \"start working\" - your choice!",
         sender: "sam",
         timestamp: new Date(),
       }
@@ -1039,27 +1086,37 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
               
               {/* Input Area */}
               <div className="border-t border-gray-700 p-6 bg-gray-800">
-                <div className="flex gap-4 items-end">
+                <div className="flex gap-3 items-end">
                   <div className="flex-1 relative">
                     <Input
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder={isAgentInitialized 
-                        ? "Ask SAM's specialist agents anything about sales..." 
-                        : "Ask SAM anything (simplified mode)..."
+                        ? "Ask SAM anything..." 
+                        : "Ask SAM anything..."
                       }
                       className="py-4 text-base bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                       disabled={isLoading}
                     />
                   </div>
                   
+                  <Button
+                    onClick={saveCurrentConversation}
+                    disabled={messages.length === 0}
+                    variant="outline"
+                    className="h-12 px-4 border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700 transition-all duration-200"
+                    title="Save conversation to Chat History"
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                  
                   <VoiceInterface onVoiceMessage={handleVoiceMessage} disabled={isLoading} />
                   
                   <Button
                     onClick={() => handleSendMessage()}
                     disabled={!input.trim() || isLoading}
-                    className="h-12 px-8 !bg-black hover:!bg-gray-900 !border !border-gray-600 !text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    className="h-12 px-6 !bg-black hover:!bg-gray-900 !border !border-gray-600 !text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     <Send className="h-5 w-5 mr-2" />
                     Send
@@ -1070,8 +1127,8 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
                   <p className="text-xs text-gray-400 flex items-center gap-2">
                     <Brain className="h-3 w-3" />
                     {isAgentInitialized 
-                      ? "SAM AI is ready - 6 specialist agents online for lead generation, campaign optimization & content creation"
-                      : "SAM AI is starting - Initializing multi-agent system..."
+                      ? "SAM AI ready - 6 agents online"
+                      : "SAM AI starting..."
                     }
                   </p>
                 </div>
