@@ -43,33 +43,25 @@ export default function AuthGate({ children }: AuthGateProps) {
   
   const checkAuth = async () => {
     try {
-      // Check for existing Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
+      const isAuth = localStorage.getItem('is_authenticated') === 'true';
+      const userProfile = localStorage.getItem('user_auth_profile');
       
-      if (session?.user) {
-        // User is authenticated with Supabase, check if profile exists
-        const isAuth = localStorage.getItem('is_authenticated') === 'true';
-        const userProfile = localStorage.getItem('user_auth_profile');
-        
-        if (isAuth && userProfile) {
-          try {
-            const profile = JSON.parse(userProfile);
-            if (profile.id && profile.workspace_id) {
-              setIsAuthenticated(true);
-              // Initialize workspace asynchronously
-              initializeWorkspace().catch(console.error);
-              setLoading(false);
-              return;
-            }
-          } catch (e) {
-            // Clear bad data
-            localStorage.removeItem('is_authenticated');
-            localStorage.removeItem('user_auth_profile');
+      if (isAuth && userProfile) {
+        try {
+          const profile = JSON.parse(userProfile);
+          if (profile.id && profile.workspace_id) {
+            setIsAuthenticated(true);
+            initializeWorkspace().catch(console.error);
+            setLoading(false);
+            return;
           }
+        } catch (e) {
+          // Clear bad data
+          localStorage.removeItem('is_authenticated');
+          localStorage.removeItem('user_auth_profile');
         }
       }
       
-      // No valid session or profile, user needs to authenticate
       setIsAuthenticated(false);
       setLoading(false);
     } catch (error) {
