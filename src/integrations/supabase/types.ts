@@ -19,7 +19,6 @@ export type Database = {
           id: string
           name: string
           slug: string
-          owner_id: string | null
           settings: Json
           subscription_tier: string
           subscription_status: string
@@ -31,7 +30,6 @@ export type Database = {
           id?: string
           name: string
           slug: string
-          owner_id?: string | null
           settings?: Json
           subscription_tier?: string
           subscription_status?: string
@@ -43,7 +41,6 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
-          owner_id?: string | null
           settings?: Json
           subscription_tier?: string
           subscription_status?: string
@@ -51,15 +48,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "workspaces_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "auth.users"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -69,7 +58,6 @@ export type Database = {
           full_name: string | null
           role: string
           avatar_url: string | null
-          voucher_code_used: string | null
           settings: Json
           created_at: string
           updated_at: string
@@ -81,7 +69,6 @@ export type Database = {
           full_name?: string | null
           role?: string
           avatar_url?: string | null
-          voucher_code_used?: string | null
           settings?: Json
           created_at?: string
           updated_at?: string
@@ -93,7 +80,6 @@ export type Database = {
           full_name?: string | null
           role?: string
           avatar_url?: string | null
-          voucher_code_used?: string | null
           settings?: Json
           created_at?: string
           updated_at?: string
@@ -107,45 +93,6 @@ export type Database = {
             referencedColumns: ["id"]
           }
         ]
-      }
-      voucher_codes: {
-        Row: {
-          id: string
-          code: string
-          email: string
-          description: string | null
-          max_uses: number
-          used_count: number
-          is_active: boolean
-          expires_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          code: string
-          email: string
-          description?: string | null
-          max_uses?: number
-          used_count?: number
-          is_active?: boolean
-          expires_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          code?: string
-          email?: string
-          description?: string | null
-          max_uses?: number
-          used_count?: number
-          is_active?: boolean
-          expires_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
       accounts: {
         Row: {

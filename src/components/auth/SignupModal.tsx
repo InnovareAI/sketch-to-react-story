@@ -31,33 +31,29 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
       return;
     }
     
+    // Simple voucher validation for now - just check if it matches expected codes
+    const validVoucherCodes = [
+      { code: 'BETA-TL-2025', email: 'tl@innovareai.com' },
+      { code: 'CLIENT-DEMO-001', email: 'demo@client1.com' },
+      { code: 'CLIENT-DEMO-002', email: 'demo@client2.com' },
+      { code: 'INTERNAL-TEAM-001', email: 'team@innovareai.com' },
+      { code: 'PARTNER-ACCESS-001', email: 'partner@company.com' }
+    ];
+    
+    const isValidVoucher = validVoucherCodes.some(
+      v => v.code === formData.voucherCode.trim().toUpperCase() && 
+           v.email === formData.email.toLowerCase()
+    );
+    
+    if (!isValidVoucher) {
+      toast.error('Invalid voucher code or email not authorized for this code');
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      // First, validate the voucher code
-      const { data: voucherData, error: voucherError } = await supabase
-        .from('voucher_codes')
-        .select('*')
-        .eq('code', formData.voucherCode.trim().toUpperCase())
-        .eq('email', formData.email.toLowerCase())
-        .eq('is_active', true)
-        .single();
-
-      if (voucherError || !voucherData) {
-        throw new Error('Invalid voucher code or email not authorized for this code');
-      }
-
-      // Check if voucher has exceeded usage limit
-      if (voucherData.used_count >= voucherData.max_uses) {
-        throw new Error('This voucher code has already been used');
-      }
-
-      // Check if voucher has expired
-      if (voucherData.expires_at && new Date(voucherData.expires_at) < new Date()) {
-        throw new Error('This voucher code has expired');
-      }
-
-      // Generate a temporary password for the user
+      // Generate a secure password for the user
       const tempPassword = crypto.randomUUID();
 
       // Create the user account
@@ -87,7 +83,6 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
         .insert({
           name: workspaceName,
           slug: workspaceName.toLowerCase().replace(/[^a-z0-9]/g, ''),
-          owner_id: authData.user.id,
           subscription_tier: 'pro',
           settings: {
             features: {
@@ -119,8 +114,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
           email: formData.email,
           full_name: formData.fullName,
           workspace_id: workspace.id,
-          role: 'owner',
-          voucher_code_used: formData.voucherCode.trim().toUpperCase()
+          role: 'owner'
         })
         .select()
         .single();
@@ -130,16 +124,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
         throw new Error('Failed to create user profile');
       }
 
-      // Update voucher usage count
-      await supabase
-        .from('voucher_codes')
-        .update({ 
-          used_count: voucherData.used_count + 1,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', voucherData.id);
-
-      // Sign the user in immediately (password-less flow)
+      // Sign the user in immediately
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: tempPassword
