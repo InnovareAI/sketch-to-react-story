@@ -3,7 +3,7 @@
 // All credentials are handled server-side only
 
 import { supabase } from '@/integrations/supabase/client';
-import { n8nService } from '@/services/n8n/N8nIntegrationService';
+import { N8nIntegrationService } from '@/services/n8n/N8nIntegrationService';
 
 // Enhanced data structures for different LinkedIn page types
 interface LinkedInScrapedProfile {
@@ -337,23 +337,23 @@ class EnhancedBrightDataService {
         search_url: searchUrl
       });
       
-      // Trigger n8n workflow for LinkedIn basic search
-      const workflowExecution = await n8nService.triggerWorkflow('leadDiscovery', {
-        workflow_stage: 'linkedin_basic_search',
-        data: {
-          search_url: searchUrl,
-          workspace_id: options.workspaceId,
-          search_config_id: options.searchConfigId,
-          max_results: options.maxResults || 50,
-          filters: options.filters,
-          bright_data_config: {
-            proxy_type: 'residential',
-            country: options.country || 'US',
-            state: options.state,
-            session_stickiness: true
-          }
-        }
-      });
+      // TODO: Trigger n8n workflow for LinkedIn basic search (once triggerWorkflow method is implemented)
+      // const workflowExecution = await N8nIntegrationService.getInstance().triggerWorkflow('leadDiscovery', {
+      //   workflow_stage: 'linkedin_basic_search',
+      //   data: {
+      //     search_url: searchUrl,
+      //     workspace_id: options.workspaceId,
+      //     search_config_id: options.searchConfigId,
+      //     max_results: options.maxResults || 50,
+      //     filters: options.filters,
+      //     bright_data_config: {
+      //       proxy_type: 'residential',
+      //       country: options.country || 'US',
+      //       state: options.state,
+      //       session_stickiness: true
+      //     }
+      //   }
+      // });
       
       // Make direct request to secure endpoint
       const response = await fetch(`${this.apiEndpoint}/linkedin-basic-search`, {
@@ -432,22 +432,22 @@ class EnhancedBrightDataService {
         search_url: searchUrl
       });
       
-      // Trigger n8n workflow for Sales Navigator search
-      const workflowExecution = await n8nService.triggerWorkflow('linkedInOutreach', {
-        workflow_stage: 'sales_navigator_search',
-        data: {
-          search_url: searchUrl,
-          workspace_id: options.workspaceId,
-          search_config_id: options.searchConfigId,
-          max_results: options.maxResults || 25, // Lower limit for premium searches
-          premium_filters: options.premiumFilters,
-          bright_data_config: {
-            proxy_type: 'residential',
-            country: options.country || 'US',
-            premium_account_required: true
-          }
-        }
-      });
+      // TODO: Trigger n8n workflow for Sales Navigator search (once triggerWorkflow method is implemented)
+      // const workflowExecution = await N8nIntegrationService.getInstance().triggerWorkflow('linkedInOutreach', {
+      //   workflow_stage: 'sales_navigator_search',
+      //   data: {
+      //     search_url: searchUrl,
+      //     workspace_id: options.workspaceId,
+      //     search_config_id: options.searchConfigId,
+      //     max_results: options.maxResults || 25, // Lower limit for premium searches
+      //     premium_filters: options.premiumFilters,
+      //     bright_data_config: {
+      //       proxy_type: 'residential',
+      //       country: options.country || 'US',
+      //       premium_account_required: true
+      //     }
+      //   }
+      // });
       
       const response = await fetch(`${this.apiEndpoint}/linkedin-sales-navigator`, {
         method: 'POST',

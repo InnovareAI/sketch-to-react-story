@@ -2,8 +2,7 @@
  * Onboarding Agent - Real working dialogue and training data collection
  */
 
-import { BaseAgent } from '../core/BaseAgent';
-import { AgentConfig, TaskRequest, TaskResponse, ConversationContext } from '../types/AgentTypes';
+import { BaseAgent, AgentConfig, TaskRequest, TaskResponse, ConversationContext } from '../types/AgentTypes';
 import { LLMService } from '../../llm/LLMService';
 import { MemoryService } from '../../memory/MemoryService';
 
@@ -89,7 +88,7 @@ export class OnboardingAgent extends BaseAgent {
   ];
 
   constructor(config: AgentConfig) {
-    super('onboarding', config);
+    super('orchestrator', config); // Use valid AgentType
     this.llmService = LLMService.getInstance();
     this.memoryService = MemoryService.getInstance();
     this.initializeCapabilities();
@@ -125,22 +124,22 @@ export class OnboardingAgent extends BaseAgent {
           return await this.processOnboardingResponse(task, context);
           
         default:
-          return {
-            success: false,
-            error: `Unsupported task type: ${task.type}`,
-            agentId: this.agentId,
-            taskId: task.id,
-            processingTime: Date.now() - startTime
-          };
+          return this.createTaskResponse(
+            task.id,
+            { type: 'error', data: {} },
+            false,
+            `Unsupported task type: ${task.type}`,
+            { processingTime: Date.now() - startTime }
+          );
       }
     } catch (error) {
-      return {
-        success: false,
-        error: `Onboarding processing failed: ${error.message}`,
-        agentId: this.agentId,
-        taskId: task.id,
-        processingTime: Date.now() - startTime
-      };
+      return this.createTaskResponse(
+        task.id,
+        { type: 'error', data: {} },
+        false,
+        `Onboarding processing failed: ${error.message}`,
+        { processingTime: Date.now() - startTime }
+      );
     }
   }
 
@@ -184,19 +183,22 @@ Keep it conversational and energetic.`
 
     const firstStep = onboardingState.steps[0];
     
-    return {
-      success: true,
-      result: {
-        message: `${welcomeMessage.content}\n\n**${firstStep.title}**\n${firstStep.question}`,
-        onboarding_state: onboardingState,
-        current_step: firstStep,
-        progress_percentage: 0,
-        is_onboarding: true
+    return this.createTaskResponse(
+      task.id,
+      {
+        type: 'onboarding_start',
+        data: {
+          message: `${welcomeMessage.content}\n\n**${firstStep.title}**\n${firstStep.question}`,
+          onboarding_state: onboardingState,
+          current_step: firstStep,
+          progress_percentage: 0,
+          is_onboarding: true
+        }
       },
-      agentId: this.agentId,
-      taskId: task.id,
-      processingTime: 200
-    };
+      true,
+      undefined,
+      { processingTime: 200 }
+    );
   }
 
   /**
@@ -240,22 +242,25 @@ Keep it conversational and energetic.`
       nextAction = 'next_step';
     }
 
-    return {
-      success: true,
-      result: {
-        message: response,
-        onboarding_state: onboardingState,
-        current_step: onboardingState.currentStep < onboardingState.totalSteps ? 
-          onboardingState.steps[onboardingState.currentStep] : null,
-        progress_percentage: onboardingState.completionPercentage,
-        action: nextAction,
-        extracted_data: extractedData,
-        is_onboarding: nextAction !== 'complete'
+    return this.createTaskResponse(
+      task.id,
+      {
+        type: 'onboarding_response',
+        data: {
+          message: response,
+          onboarding_state: onboardingState,
+          current_step: onboardingState.currentStep < onboardingState.totalSteps ? 
+            onboardingState.steps[onboardingState.currentStep] : null,
+          progress_percentage: onboardingState.completionPercentage,
+          action: nextAction,
+          extracted_data: extractedData,
+          is_onboarding: nextAction !== 'complete'
+        }
       },
-      agentId: this.agentId,
-      taskId: task.id,
-      processingTime: 400
-    };
+      true,
+      undefined,
+      { processingTime: 400 }
+    );
   }
 
   /**
