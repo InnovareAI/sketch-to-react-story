@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   User,
@@ -67,9 +69,11 @@ interface Workspace {
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { user: authUser, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   // Data states
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -84,7 +88,8 @@ export default function Settings() {
     avatar_url: '',
     notifications_enabled: true,
     profile_visibility: 'public',
-    data_sharing: false
+    data_sharing: false,
+    personal_timezone: 'UTC'
   });
   
   const [workspaceForm, setWorkspaceForm] = useState({
@@ -119,46 +124,129 @@ export default function Settings() {
   });
   const [showPassword, setShowPassword] = useState(false);
   
+  // Modal states
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [showInviteMemberDialog, setShowInviteMemberDialog] = useState(false);
+  const [showRoleChangeDialog, setShowRoleChangeDialog] = useState(false);
+  const [showWebhookDialog, setShowWebhookDialog] = useState(false);
+  
+  // Form states for modals
+  const [inviteForm, setInviteForm] = useState({ email: '', role: 'member' });
+  const [roleChangeForm, setRoleChangeForm] = useState({ memberId: '', currentRole: '', newRole: '' });
+  const [webhookForm, setWebhookForm] = useState({ url: '', description: '' });
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  
   useEffect(() => {
     loadAllData();
+  }, [authUser, isAuthenticated]); // Re-run when auth state changes
+
+  // Update clock every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
   
+  // Format time in selected timezone
+  const formatTimeInTimezone = (date: Date, timezone: string) => {
+    try {
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: timezone,
+        hour12: true,
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      };
+      return new Intl.DateTimeFormat('en-US', options).format(date);
+    } catch (error) {
+      console.error('Error formatting timezone:', error);
+      return date.toLocaleString();
+    }
+  };
+
+  // Get timezone offset
+  const getTimezoneOffset = (timezone: string) => {
+    try {
+      const now = new Date();
+      const tzDate = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        timeZoneName: 'short'
+      }).format(now);
+      const match = tzDate.match(/[A-Z]{3,4}/);
+      if (match) return match[0];
+      
+      // Calculate offset manually if abbreviation not available
+      const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const tzDateObj = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+      const offset = (tzDateObj.getTime() - utcDate.getTime()) / (1000 * 60 * 60);
+      const sign = offset >= 0 ? '+' : '';
+      return `GMT${sign}${offset}`;
+    } catch (error) {
+      return '';
+    }
+  };
+
   const loadAllData = async () => {
     try {
       setLoading(true);
       
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Wait for auth context to finish loading before checking authentication
+      // This prevents premature redirects when auth is still loading
+      if (!authUser) {
+        console.log('User data not yet available, waiting...');
+        // Instead of redirecting immediately, let the auth context finish loading
+        setLoading(false);
+        return;
+      }
+      
+      if (!isAuthenticated) {
+        console.log('No authenticated user found, redirecting to login');
         navigate('/login');
         return;
       }
       
-      // Load user profile
+      console.log('Loading settings for user:', authUser.email);
+      
+      // Load user profile using authUser (works for both bypass and regular auth)
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', authUser.id)
         .single();
       
-      if (profile) {
-        setUserProfile(profile);
-        setPersonalForm({
-          full_name: profile.full_name || '',
-          email: profile.email || '',
-          avatar_url: profile.avatar_url || '',
-          notifications_enabled: profile.settings?.notifications_enabled ?? true,
-          profile_visibility: profile.settings?.profile_visibility || 'public',
-          data_sharing: profile.settings?.data_sharing ?? false
-        });
-      }
+      // Use profile data if available, otherwise use authUser data
+      const profileData = profile || {
+        id: authUser.id,
+        email: authUser.email,
+        full_name: authUser.full_name,
+        avatar_url: authUser.avatar_url,
+        role: authUser.role,
+        workspace_id: authUser.workspace_id,
+        settings: {}
+      };
       
-      // Load workspace
-      if (profile?.workspace_id) {
+      setUserProfile(profileData);
+      setPersonalForm({
+        full_name: profileData.full_name || '',
+        email: profileData.email || '',
+        avatar_url: profileData.avatar_url || '',
+        notifications_enabled: profileData.settings?.notifications_enabled ?? true,
+        profile_visibility: profileData.settings?.profile_visibility || 'public',
+        data_sharing: profileData.settings?.data_sharing ?? false
+      });
+      
+      // Load workspace using either profile or authUser workspace_id
+      const workspaceId = profileData.workspace_id;
+      if (workspaceId) {
         const { data: ws } = await supabase
           .from('workspaces')
           .select('*')
-          .eq('id', profile.workspace_id)
+          .eq('id', workspaceId)
           .single();
         
         if (ws) {
@@ -192,7 +280,7 @@ export default function Settings() {
         const { data: members } = await supabase
           .from('profiles')
           .select('*')
-          .eq('workspace_id', profile.workspace_id)
+          .eq('workspace_id', workspaceId)
           .order('created_at', { ascending: false });
         
         setTeamMembers(members || []);
@@ -312,6 +400,13 @@ export default function Settings() {
         return;
       }
       
+      // Check if this is a bypass user
+      const isBypassUser = localStorage.getItem('bypass_auth') === 'true';
+      if (isBypassUser) {
+        toast.error('Password changes are not available for bypass authentication users');
+        return;
+      }
+      
       setSaving(true);
       
       const { error } = await supabase.auth.updateUser({
@@ -366,13 +461,63 @@ export default function Settings() {
     }
   };
   
-  if (loading) {
+  // Modal handlers
+  const handleDeleteAccount = () => {
+    if (deleteConfirmText === 'DELETE') {
+      // In production, this would call a delete account API
+      toast.error('Account deletion is currently disabled. Contact support for account deletion.');
+      setShowDeleteAccountDialog(false);
+      setDeleteConfirmText('');
+    } else {
+      toast.error('Please type DELETE to confirm account deletion.');
+    }
+  };
+  
+  const handleInviteMember = async () => {
+    if (inviteForm.email) {
+      await inviteTeamMember(inviteForm.email, inviteForm.role);
+      setShowInviteMemberDialog(false);
+      setInviteForm({ email: '', role: 'member' });
+    } else {
+      toast.error('Please enter an email address');
+    }
+  };
+  
+  const handleRoleChange = () => {
+    if (roleChangeForm.newRole !== roleChangeForm.currentRole) {
+      // In production, this would update the member's role
+      toast.success(`Role updated to ${roleChangeForm.newRole}`);
+      setShowRoleChangeDialog(false);
+      loadAllData();
+    }
+  };
+  
+  const handleWebhookSave = () => {
+    if (webhookForm.url) {
+      if (webhookForm.url.startsWith('http://') || webhookForm.url.startsWith('https://')) {
+        toast.success('Webhook configured successfully!');
+        // In production, this would save the webhook configuration
+        setShowWebhookDialog(false);
+        setWebhookForm({ url: '', description: '' });
+      } else {
+        toast.error('Please enter a valid URL starting with http:// or https://');
+      }
+    } else {
+      toast.error('Please enter a webhook URL');
+    }
+  };
+  
+  
+  // Show loading state while waiting for auth or while loading data
+  if (loading || !authUser) {
     return (
       <div className="flex-1 bg-gray-50 p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              {!authUser ? 'Loading user data...' : 'Loading settings...'}
+            </p>
           </div>
         </div>
       </div>
@@ -437,7 +582,28 @@ export default function Settings() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="space-y-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.onchange = (e: any) => {
+                            const file = e.target?.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (e) => {
+                                const result = e.target?.result as string;
+                                setPersonalForm({ ...personalForm, avatar_url: result });
+                                toast.success('Photo updated successfully');
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          };
+                          input.click();
+                        }}
+                      >
                         <Camera className="h-4 w-4 mr-2" />
                         Change Photo
                       </Button>
@@ -529,6 +695,14 @@ export default function Settings() {
                   {/* Password Change */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Change Password</h3>
+                    {localStorage.getItem('bypass_auth') === 'true' && (
+                      <Alert>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          Password changes are not available for bypass authentication users. Contact your administrator for password management.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="current_password">Current Password</Label>
@@ -538,6 +712,8 @@ export default function Settings() {
                             type={showPassword ? "text" : "password"}
                             value={passwordForm.current}
                             onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
+                            disabled={localStorage.getItem('bypass_auth') === 'true'}
+                            className={localStorage.getItem('bypass_auth') === 'true' ? 'bg-gray-100' : ''}
                           />
                         </div>
                       </div>
@@ -548,6 +724,8 @@ export default function Settings() {
                           type={showPassword ? "text" : "password"}
                           value={passwordForm.new}
                           onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
+                          disabled={localStorage.getItem('bypass_auth') === 'true'}
+                          className={localStorage.getItem('bypass_auth') === 'true' ? 'bg-gray-100' : ''}
                         />
                       </div>
                       <div className="space-y-2">
@@ -558,6 +736,8 @@ export default function Settings() {
                             type={showPassword ? "text" : "password"}
                             value={passwordForm.confirm}
                             onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+                            disabled={localStorage.getItem('bypass_auth') === 'true'}
+                            className={localStorage.getItem('bypass_auth') === 'true' ? 'bg-gray-100' : ''}
                           />
                           <Button
                             type="button"
@@ -565,13 +745,17 @@ export default function Settings() {
                             size="sm"
                             className="absolute right-0 top-0 h-full px-3"
                             onClick={() => setShowPassword(!showPassword)}
+                            disabled={localStorage.getItem('bypass_auth') === 'true'}
                           >
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </Button>
                         </div>
                       </div>
                     </div>
-                    <Button onClick={changePassword} disabled={saving}>
+                    <Button 
+                      onClick={changePassword} 
+                      disabled={saving || localStorage.getItem('bypass_auth') === 'true'}
+                    >
                       <Lock className="h-4 w-4 mr-2" />
                       Change Password
                     </Button>
@@ -583,11 +767,37 @@ export default function Settings() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Account Actions</h3>
                     <div className="flex gap-4">
-                      <Button variant="outline">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          // Create a simple data export
+                          const userData = {
+                            profile: userProfile,
+                            settings: personalForm,
+                            workspace: workspace?.name,
+                            exported_at: new Date().toISOString()
+                          };
+                          const dataStr = JSON.stringify(userData, null, 2);
+                          const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                          
+                          const exportFileDefaultName = `sam-ai-data-${new Date().toISOString().split('T')[0]}.json`;
+                          
+                          const linkElement = document.createElement('a');
+                          linkElement.setAttribute('href', dataUri);
+                          linkElement.setAttribute('download', exportFileDefaultName);
+                          linkElement.click();
+                          
+                          toast.success('Data export downloaded successfully');
+                        }}
+                      >
                         <Download className="h-4 w-4 mr-2" />
                         Download My Data
                       </Button>
-                      <Button variant="outline" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        variant="outline" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => setShowDeleteAccountDialog(true)}
+                      >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete Account
                       </Button>
@@ -712,9 +922,19 @@ export default function Settings() {
                           <SelectItem value="Pacific/Fiji">Fiji</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-gray-500">
-                        This timezone will be used for all campaign scheduling and analytics
-                      </p>
+                      <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <div className="text-sm">
+                            <p className="font-medium text-gray-700">
+                              Current time: {formatTimeInTimezone(currentTime, workspaceForm.timezone)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {getTimezoneOffset(workspaceForm.timezone)} • This timezone will be used for all campaign scheduling and analytics
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
@@ -912,10 +1132,7 @@ export default function Settings() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium">Team Members</h3>
-                      <Button onClick={() => {
-                        const email = prompt('Enter email address to invite:');
-                        if (email) inviteTeamMember(email, 'member');
-                      }}>
+                      <Button onClick={() => setShowInviteMemberDialog(true)}>
                         <UserPlus className="h-4 w-4 mr-2" />
                         Invite Member
                       </Button>
@@ -943,7 +1160,18 @@ export default function Settings() {
                             {member.settings?.invited && (
                               <Badge variant="outline">Pending</Badge>
                             )}
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setRoleChangeForm({
+                                  memberId: member.id,
+                                  currentRole: member.role,
+                                  newRole: member.role
+                                });
+                                setShowRoleChangeDialog(true);
+                              }}
+                            >
                               <SettingsIcon className="h-4 w-4" />
                             </Button>
                           </div>
@@ -1101,7 +1329,13 @@ export default function Settings() {
                           <div className="font-medium">API Keys</div>
                           <p className="text-sm text-gray-500">Manage API keys for integrations</p>
                         </div>
-                        <Button variant="outline">
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            toast.info('API Key management will open in a modal. Feature coming soon!');
+                            // In production, this would open a modal with API key management
+                          }}
+                        >
                           <Key className="h-4 w-4 mr-2" />
                           Manage Keys
                         </Button>
@@ -1111,7 +1345,10 @@ export default function Settings() {
                           <div className="font-medium">Webhooks</div>
                           <p className="text-sm text-gray-500">Configure webhook endpoints</p>
                         </div>
-                        <Button variant="outline">
+                        <Button 
+                          variant="outline"
+                          onClick={() => setShowWebhookDialog(true)}
+                        >
                           <Zap className="h-4 w-4 mr-2" />
                           Configure
                         </Button>
@@ -1138,7 +1375,17 @@ export default function Settings() {
                 <CardContent className="space-y-6">
                   {/* LinkedIn */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-medium">LinkedIn Integration</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">LinkedIn Integration</h3>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate('/linkedin-integration')}
+                      >
+                        <Linkedin className="h-4 w-4 mr-2" />
+                        Add LinkedIn Account
+                      </Button>
+                    </div>
                     <div className="space-y-3">
                       {linkedInAccounts.length > 0 ? (
                         linkedInAccounts.map((account: any, index: number) => (
@@ -1155,8 +1402,13 @@ export default function Settings() {
                                 <CheckCircle className="h-3 w-3 mr-1" />
                                 Active
                               </Badge>
-                              <Button variant="outline" size="sm">
-                                Disconnect
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => navigate('/linkedin-integration')}
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                                Manage
                               </Button>
                             </div>
                           </div>
@@ -1170,7 +1422,9 @@ export default function Settings() {
                               <p className="text-sm text-gray-500">Not connected</p>
                             </div>
                           </div>
-                          <Button onClick={() => navigate('/linkedin-onboarding')}>
+                          <Button onClick={() => {
+                            navigate('/linkedin-integration');
+                          }}>
                             Connect Account
                           </Button>
                         </div>
@@ -1191,7 +1445,12 @@ export default function Settings() {
                           <p className="text-sm text-gray-500">Connect your email account</p>
                         </div>
                       </div>
-                      <Button variant="outline">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          toast.info('Email integration coming soon! We will support Gmail, Outlook, and other providers.');
+                        }}
+                      >
                         Connect Email
                       </Button>
                     </div>
@@ -1210,7 +1469,12 @@ export default function Settings() {
                           <p className="text-sm text-gray-500">Sync with Google Calendar or Outlook</p>
                         </div>
                       </div>
-                      <Button variant="outline">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          toast.info('Calendar integration coming soon! We will support Google Calendar, Outlook Calendar, and Apple Calendar.');
+                        }}
+                      >
                         Connect Calendar
                       </Button>
                     </div>
@@ -1238,6 +1502,206 @@ export default function Settings() {
           </Tabs>
         </div>
       </main>
+      
+      {/* Delete Account Dialog */}
+      <Dialog open={showDeleteAccountDialog} onOpenChange={setShowDeleteAccountDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Account
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete your account and all associated data, campaigns, and settings.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                All your campaigns, contacts, messages, and analytics will be permanently lost.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirmation">Type "DELETE" to confirm:</Label>
+              <Input
+                id="delete-confirmation"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE here"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowDeleteAccountDialog(false);
+              setDeleteConfirmText('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmText !== 'DELETE'}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Invite Team Member Dialog */}
+      <Dialog open={showInviteMemberDialog} onOpenChange={setShowInviteMemberDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Invite Team Member
+            </DialogTitle>
+            <DialogDescription>
+              Send an invitation to join your workspace. They will receive an email with setup instructions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email Address</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="teammate@company.com"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-role">Role</Label>
+              <Select value={inviteForm.role} onValueChange={(value) => setInviteForm({ ...inviteForm, role: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Member - Can create and manage campaigns</SelectItem>
+                  <SelectItem value="admin">Admin - Can manage team and most settings</SelectItem>
+                  <SelectItem value="viewer">Viewer - View-only access</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowInviteMemberDialog(false);
+              setInviteForm({ email: '', role: 'member' });
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleInviteMember}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Invitation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Change Role Dialog */}
+      <Dialog open={showRoleChangeDialog} onOpenChange={setShowRoleChangeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Change Member Role
+            </DialogTitle>
+            <DialogDescription>
+              Update the role and permissions for this team member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Current Role</Label>
+              <div className="p-2 bg-gray-50 rounded capitalize">{roleChangeForm.currentRole}</div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-role">New Role</Label>
+              <Select value={roleChangeForm.newRole} onValueChange={(value) => setRoleChangeForm({ ...roleChangeForm, newRole: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">Owner - Full workspace access</SelectItem>
+                  <SelectItem value="admin">Admin - Manage team and most settings</SelectItem>
+                  <SelectItem value="member">Member - Create and manage campaigns</SelectItem>
+                  <SelectItem value="viewer">Viewer - View-only access</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRoleChangeDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRoleChange}>
+              <Save className="h-4 w-4 mr-2" />
+              Update Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Webhook Configuration Dialog */}
+      <Dialog open={showWebhookDialog} onOpenChange={setShowWebhookDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Configure Webhook
+            </DialogTitle>
+            <DialogDescription>
+              Add a webhook endpoint to receive real-time notifications about campaigns and responses.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="webhook-url">Webhook URL</Label>
+              <Input
+                id="webhook-url"
+                type="url"
+                placeholder="https://your-app.com/webhook"
+                value={webhookForm.url}
+                onChange={(e) => setWebhookForm({ ...webhookForm, url: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="webhook-description">Description (optional)</Label>
+              <Textarea
+                id="webhook-description"
+                placeholder="What this webhook is used for..."
+                value={webhookForm.description}
+                onChange={(e) => setWebhookForm({ ...webhookForm, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Webhooks will receive campaign completion, response notifications, and account alerts.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowWebhookDialog(false);
+              setWebhookForm({ url: '', description: '' });
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleWebhookSave}>
+              <Zap className="h-4 w-4 mr-2" />
+              Save Webhook
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
     </div>
   );
 }

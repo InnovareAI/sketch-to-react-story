@@ -13,11 +13,16 @@ import {
   Phone, 
   Linkedin, 
   Building2,
-  TrendingUp,
   RefreshCw,
   MoreVertical,
   CheckCircle,
-  XCircle
+  XCircle,
+  FileUp,
+  Tag,
+  Trash2,
+  Edit3,
+  Plus,
+  X
 } from "lucide-react";
 
 interface Contact {
@@ -33,6 +38,55 @@ interface Contact {
   metadata: any;
   scraped_data: any;
   created_at: string;
+  profile_picture_url?: string;
+  company?: string;
+  full_name?: string;
+  last_message?: Array<{
+    sent_at?: string;
+    replied_at?: string;
+    opened_at?: string;
+    clicked_at?: string;
+  }>;
+}
+
+// Profile image component with fallback
+function ContactAvatar({ contact }: { contact: Contact }) {
+  const [imageError, setImageError] = useState(false);
+  
+  // Try to get image URL from various sources
+  const getImageUrl = () => {
+    if (contact.profile_picture_url) return contact.profile_picture_url;
+    if (contact.metadata?.profile_picture_url) return contact.metadata.profile_picture_url;
+    if (contact.metadata?.avatar_url) return contact.metadata.avatar_url;
+    if (contact.metadata?.profile_image_url) return contact.metadata.profile_image_url;
+    if (contact.scraped_data?.profile_picture_url) return contact.scraped_data.profile_picture_url;
+    if (contact.scraped_data?.profile_image_url) return contact.scraped_data.profile_image_url;
+    if (contact.scraped_data?.avatar_url) return contact.scraped_data.avatar_url;
+    
+    // Generate professional avatar from DiceBear API
+    const seed = `${contact.first_name}-${contact.last_name}`.toLowerCase();
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+  };
+  
+  const imageUrl = getImageUrl();
+  const initials = `${contact.first_name[0]}${contact.last_name[0]}`;
+  
+  if (imageError || !imageUrl) {
+    return (
+      <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+        {initials}
+      </div>
+    );
+  }
+  
+  return (
+    <img 
+      src={imageUrl} 
+      alt={`${contact.first_name} ${contact.last_name}`}
+      className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+      onError={() => setImageError(true)}
+    />
+  );
 }
 
 export default function ContactsView() {
@@ -43,38 +97,82 @@ export default function ContactsView() {
   const [filterTag, setFilterTag] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [syncing, setSyncing] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [editingTags, setEditingTags] = useState<string | null>(null);
+  const [newTag, setNewTag] = useState('');
 
   useEffect(() => {
     loadContacts();
+    
+    // Auto-sync contacts if we have very few (indicates incomplete initial sync)
+    const performAutoSync = async () => {
+      const contactCount = localStorage.getItem('contact_count');
+      const lastSyncTime = localStorage.getItem('last_full_sync');
+      const now = Date.now();
+      const hoursSinceLastSync = lastSyncTime ? (now - parseInt(lastSyncTime)) / (1000 * 60 * 60) : 999;
+      
+      // Trigger full sync if:
+      // 1. Contact count is low (< 1000 when expecting 15k)
+      // 2. No sync in last 24 hours
+      // 3. No sync time recorded at all
+      if ((!contactCount || parseInt(contactCount) < 1000) || hoursSinceLastSync > 24) {
+        console.log('🔄 Auto-triggering full contact sync...');
+        console.log(`📊 Current contacts: ${contactCount || 0}, Hours since sync: ${hoursSinceLastSync}`);
+        
+        toast.info('🔄 Auto-syncing LinkedIn contacts...', { duration: 3000 });
+        
+        // Run sync in background
+        setTimeout(() => {
+          performFullSync();
+        }, 2000); // Wait 2 seconds to let UI load
+      }
+    };
+    
+    performAutoSync();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown) {
+        setOpenDropdown(null);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdown]);
 
   const loadContacts = async () => {
     try {
       setLoading(true);
       
-      // Get workspace
-      const { data: workspace } = await supabase
-        .from('workspaces')
-        .select('id')
-        .limit(1)
-        .single();
-      
-      if (!workspace) {
-        toast.error('No workspace found');
-        return;
-      }
+      // Get workspace ID from localStorage (demo mode)
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af'; // Default demo workspace
 
-      // Load contacts
+      // Load contacts with last interaction data
       const { data, error } = await supabase
         .from('contacts')
-        .select('*')
-        .eq('workspace_id', workspace.id)
+        .select(`
+          *,
+          last_message:messages(sent_at, replied_at, opened_at, clicked_at)
+        `)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
       setContacts(data || []);
-      // No console logs for clean UX
+      
+      // Update localStorage contact count for auto-sync logic
+      if (data) {
+        localStorage.setItem('contact_count', data.length.toString());
+      }
       
     } catch (error) {
       console.error('Error loading contacts:', error);
@@ -96,35 +194,31 @@ export default function ContactsView() {
       console.log(`   • User Agent: ${navigator.userAgent}`);
       console.log(`   • Current URL: ${window.location.href}`);
       
-      // Check user authentication first
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('❌ User authentication failed:', userError);
-        toast.error('Please sign in to sync LinkedIn contacts');
+      // Check localStorage authentication (demo mode)
+      const isAuthenticated = localStorage.getItem('is_authenticated');
+      const userEmail = localStorage.getItem('user_email');
+      
+      if (!isAuthenticated) {
+        console.error('❌ User not authenticated in demo mode');
+        toast.error('Please ensure you are logged in to sync contacts');
         return;
       }
-      console.log('✅ User authenticated:', user.email);
+      console.log('✅ User authenticated (demo mode):', userEmail || 'demo user');
       
-      // Get or find workspace ID
-      let { data: workspace, error: wsError } = await supabase
-        .from('workspaces')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-        
-      if (wsError || !workspace) {
-        console.log('⚠️ No workspace found for user, using default');
-        workspace = { id: 'a0000000-0000-0000-0000-000000000000' }; // Default workspace
-      }
+      // Get workspace ID from localStorage
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af'; // Default demo workspace
       
-      console.log('✅ Workspace ID:', workspace.id);
+      console.log('✅ Using workspace ID:', workspaceId);
       
       // Test basic database connectivity
       console.log('🔄 Testing database connectivity...');
       const { count: existingContactCount } = await supabase
         .from('contacts')
         .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspace.id);
+        .eq('workspace_id', workspaceId);
       
       console.log(`✅ Database accessible - existing contacts: ${existingContactCount || 0}`);
       
@@ -135,7 +229,7 @@ export default function ContactsView() {
       try {
         // Use the enhanced import service
         const { enhancedLinkedInImport } = await import('@/services/EnhancedLinkedInImport');
-        enhancedLinkedInImport.initialize(workspace.id);
+        enhancedLinkedInImport.initialize(workspaceId);
         
         // Test connections before starting
         console.log('🔄 Testing LinkedIn integration connections...');
@@ -226,29 +320,25 @@ export default function ContactsView() {
     console.log('═'.repeat(60));
     
     try {
-      // Get user and workspace info
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('❌ User authentication failed:', userError);
-        toast.error('Please sign in to start server import');
+      // Check localStorage authentication (demo mode)
+      const isAuthenticated = localStorage.getItem('is_authenticated');
+      const userEmail = localStorage.getItem('user_email');
+      
+      if (!isAuthenticated) {
+        console.error('❌ User not authenticated in demo mode');
+        toast.error('Please ensure you are logged in to start server import');
         return;
       }
       
-      console.log('✅ User authenticated:', user.email);
+      console.log('✅ User authenticated (demo mode):', userEmail || 'demo user');
       
-      // Get workspace ID
-      let { data: workspace, error: wsError } = await supabase
-        .from('workspaces')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-        
-      if (wsError || !workspace) {
-        console.log('⚠️ No workspace found, using default');
-        workspace = { id: 'a0000000-0000-0000-0000-000000000000' };
-      }
+      // Get workspace ID from localStorage
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af'; // Default demo workspace
       
-      console.log('✅ Using workspace:', workspace.id);
+      console.log('✅ Using workspace:', workspaceId);
       
       // Check server availability
       toast.info('🔍 Checking server availability...');
@@ -263,7 +353,7 @@ export default function ContactsView() {
       console.log('✅ Server import available');
       
       // Initialize server import
-      serverLinkedInImport.initialize(workspace.id);
+      serverLinkedInImport.initialize(workspaceId);
       
       // Show server import advantages
       const importInfo = serverLinkedInImport.getImportInfo();
@@ -335,19 +425,55 @@ export default function ContactsView() {
       toast.error('No contacts selected');
       return;
     }
-    toast.success(`Preparing email for ${selectedContacts.length} contacts`);
+    
+    // Filter selected contacts to only include those with real email addresses
+    const contactsWithRealEmails = selectedContacts.filter(contactId => {
+      const contact = contacts.find(c => c.id === contactId);
+      return contact && isRealEmail(contact.email);
+    });
+    
+    if (contactsWithRealEmails.length === 0) {
+      toast.error('None of the selected contacts have real email addresses');
+      return;
+    }
+    
+    if (contactsWithRealEmails.length < selectedContacts.length) {
+      toast.warning(`${contactsWithRealEmails.length} of ${selectedContacts.length} selected contacts have real email addresses`);
+    }
+    
+    toast.success(`Preparing email for ${contactsWithRealEmails.length} contacts with real email addresses`);
   };
 
   const handleExport = () => {
     const csv = [
-      ['First Name', 'Last Name', 'Email', 'Title', 'Company', 'Engagement Score', 'LinkedIn URL'].join(','),
+      ['First Name', 'Last Name', 'Connection Status', 'Job Title', 'Tags', 'Last Interaction', 'LinkedIn URL'].join(','),
       ...filteredContacts.map(c => [
         c.first_name,
         c.last_name,
-        c.email,
-        c.title,
-        c.metadata?.company || '',
-        c.engagement_score,
+        (c.metadata?.connection_degree || c.scraped_data?.connection_degree || '1st') + ' degree',
+        c.title || '',
+        (c.tags || []).join('; '),
+        (() => {
+          // Get the most recent interaction from messages
+          if (c.last_message && c.last_message.length > 0) {
+            const lastMsg = c.last_message[0];
+            const interactionDate = lastMsg.replied_at || 
+                                  lastMsg.clicked_at || 
+                                  lastMsg.opened_at || 
+                                  lastMsg.sent_at;
+            
+            if (interactionDate) {
+              return new Date(interactionDate).toLocaleDateString();
+            }
+          }
+          
+          // Fallback: Check synced_at from metadata  
+          if (c.metadata?.synced_at) {
+            return new Date(c.metadata.synced_at).toLocaleDateString();
+          }
+          
+          return 'No interaction';
+        })(),
         c.linkedin_url
       ].join(','))
     ].join('\n');
@@ -360,6 +486,266 @@ export default function ContactsView() {
     a.click();
     
     toast.success(`Exported ${filteredContacts.length} contacts`);
+  };
+
+  const handleAddTag = async (contactId: string, tag: string) => {
+    if (!tag.trim()) return;
+    
+    try {
+      const contact = contacts.find(c => c.id === contactId);
+      if (!contact) return;
+      
+      const updatedTags = [...(contact.tags || []), tag.trim()];
+      
+      const { error } = await supabase
+        .from('contacts')
+        .update({ tags: updatedTags })
+        .eq('id', contactId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setContacts(contacts.map(c => 
+        c.id === contactId ? { ...c, tags: updatedTags } : c
+      ));
+      
+      toast.success(`Added tag "${tag}" to ${contact.first_name} ${contact.last_name}`);
+      setNewTag('');
+      setEditingTags(null);
+    } catch (error) {
+      console.error('Error adding tag:', error);
+      toast.error('Failed to add tag');
+    }
+  };
+
+  const handleRemoveTag = async (contactId: string, tagToRemove: string) => {
+    try {
+      const contact = contacts.find(c => c.id === contactId);
+      if (!contact) return;
+      
+      const updatedTags = (contact.tags || []).filter(tag => tag !== tagToRemove);
+      
+      const { error } = await supabase
+        .from('contacts')
+        .update({ tags: updatedTags })
+        .eq('id', contactId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setContacts(contacts.map(c => 
+        c.id === contactId ? { ...c, tags: updatedTags } : c
+      ));
+      
+      toast.success(`Removed tag "${tagToRemove}" from ${contact.first_name} ${contact.last_name}`);
+    } catch (error) {
+      console.error('Error removing tag:', error);
+      toast.error('Failed to remove tag');
+    }
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm('Are you sure you want to delete this contact?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', contactId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setContacts(contacts.filter(c => c.id !== contactId));
+      
+      toast.success('Contact deleted successfully');
+      setOpenDropdown(null);
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      toast.error('Failed to delete contact');
+    }
+  };
+
+  const performFullSync = async () => {
+    console.log('🚀 Starting comprehensive LinkedIn contact sync...');
+    
+    try {
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af';
+      
+      // Use the enhanced import with higher limits for initial sync
+      const { enhancedLinkedInImport } = await import('@/services/EnhancedLinkedInImport');
+      enhancedLinkedInImport.initialize(workspaceId);
+      
+      console.log('🔄 Starting full contact import (up to 15k contacts)...');
+      
+      const result = await enhancedLinkedInImport.importContacts({
+        limit: 15000, // Import up to 15k contacts
+        preferredMethod: 'both',
+        useUnipile: true,
+        useLinkedInAPI: true
+      });
+      
+      console.log('📊 Full sync results:', result);
+      
+      if (result.success && result.totalContacts > 0) {
+        // Update localStorage tracking
+        localStorage.setItem('contact_count', result.totalContacts.toString());
+        localStorage.setItem('last_full_sync', Date.now().toString());
+        
+        toast.success(`🎉 Synced ${result.totalContacts} LinkedIn contacts!`, { duration: 5000 });
+        
+        // Refresh the contacts view
+        await loadContacts();
+      } else {
+        console.log('⚠️ Full sync completed but no new contacts found');
+        toast.info('Sync completed - no new contacts found');
+      }
+      
+    } catch (error) {
+      console.error('❌ Full sync failed:', error);
+      toast.error('Contact sync failed. Please try again later.');
+    }
+  };
+
+  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast.error('Please upload a CSV file');
+      return;
+    }
+
+    setLoading(true);
+    toast.info('Processing CSV file...');
+    
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast.error('CSV file is empty or has no data rows');
+        return;
+      }
+      
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
+      
+      // Get workspace ID from localStorage (demo mode)
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af'; // Default demo workspace
+
+      const contactsToImport = [];
+      let skippedCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        
+        const contact: any = {
+          workspace_id: workspaceId,
+          first_name: '',
+          last_name: '',
+          email: '',
+          title: '',
+          department: '',
+          linkedin_url: '',
+          engagement_score: 50,
+          tags: [],
+          metadata: {}
+        };
+
+        // Map CSV columns to contact fields
+        headers.forEach((header, index) => {
+          const value = values[index] || '';
+          
+          if (header.includes('first') && header.includes('name')) {
+            contact.first_name = value;
+          } else if (header.includes('last') && header.includes('name')) {
+            contact.last_name = value;
+          } else if (header.includes('email')) {
+            contact.email = value;
+          } else if (header.includes('title') || header.includes('position')) {
+            contact.title = value;
+          } else if (header.includes('company')) {
+            contact.metadata.company = value;
+          } else if (header.includes('department')) {
+            contact.department = value;
+          } else if (header.includes('linkedin')) {
+            contact.linkedin_url = value;
+          } else if (header.includes('phone')) {
+            contact.metadata.phone = value;
+          }
+        });
+
+        // Skip if no identifying information
+        if (!contact.email && !contact.first_name && !contact.last_name) {
+          skippedCount++;
+          continue;
+        }
+
+        // Generate email if missing
+        if (!contact.email && (contact.first_name || contact.last_name)) {
+          const fname = contact.first_name.toLowerCase().replace(/\s+/g, '');
+          const lname = contact.last_name.toLowerCase().replace(/\s+/g, '');
+          contact.email = `${fname}${fname && lname ? '.' : ''}${lname}@imported.contact`;
+        }
+
+        contactsToImport.push(contact);
+      }
+
+      if (contactsToImport.length === 0) {
+        toast.error('No valid contacts found in CSV');
+        return;
+      }
+
+      // Import contacts in batches
+      const batchSize = 50;
+      let importedCount = 0;
+      let failedCount = 0;
+
+      for (let i = 0; i < contactsToImport.length; i += batchSize) {
+        const batch = contactsToImport.slice(i, i + batchSize);
+        
+        const { data, error } = await supabase
+          .from('contacts')
+          .upsert(batch, { 
+            onConflict: 'workspace_id,email'
+          });
+
+        if (error) {
+          console.error('Batch import error:', error);
+          failedCount += batch.length;
+        } else {
+          importedCount += batch.length;
+        }
+      }
+
+      // Show results
+      if (importedCount > 0) {
+        toast.success(`Successfully imported ${importedCount} contacts`);
+        await loadContacts(); // Refresh the list
+      }
+      
+      if (failedCount > 0) {
+        toast.warning(`Failed to import ${failedCount} contacts`);
+      }
+      
+      if (skippedCount > 0) {
+        toast.info(`Skipped ${skippedCount} invalid rows`);
+      }
+      
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Failed to import CSV file: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setLoading(false);
+      // Reset file input
+      event.target.value = '';
+    }
   };
 
   // Filter and sort contacts
@@ -376,8 +762,6 @@ export default function ContactsView() {
       switch (sortBy) {
         case 'name':
           return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
-        case 'engagement':
-          return b.engagement_score - a.engagement_score;
         case 'recent':
         default:
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -387,11 +771,45 @@ export default function ContactsView() {
   // Get unique tags
   const allTags = [...new Set(contacts.flatMap(c => c.tags || []))];
 
-  const getEngagementColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-50';
-    if (score >= 60) return 'text-yellow-600 bg-yellow-50';
-    return 'text-gray-600 bg-gray-50';
+  // Check if email is a real email address (not LinkedIn-generated)
+  const isRealEmail = (email: string) => {
+    if (!email) return false;
+    
+    // Check if it's a LinkedIn-generated email (longer alphanumeric strings)
+    if (email.includes('@linkedin.com')) {
+      // LinkedIn-generated emails have long random strings like: ACoAADePTH4BGwxPfw_Fi5KXg-z8figinkDu8lM@linkedin.com
+      const linkedinGeneratedPattern = /^[A-Za-z0-9_-]{20,}@linkedin\.com$/;
+      if (linkedinGeneratedPattern.test(email)) {
+        return false;
+      }
+    }
+    
+    // Check if it's a generic imported email pattern
+    if (email.includes('@imported.contact')) {
+      return false;
+    }
+    
+    // Check for other placeholder patterns
+    if (email.includes('noreply') || email.includes('no-reply') || email.includes('donotreply')) {
+      return false;
+    }
+    
+    // Basic email validation - must have proper domain structure
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return false;
+    }
+    
+    // Additional check: domain should have valid TLD (at least 2 characters)
+    const domainPart = email.split('@')[1];
+    const tld = domainPart.split('.').pop();
+    if (!tld || tld.length < 2) {
+      return false;
+    }
+    
+    return true;
   };
+
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -404,49 +822,16 @@ export default function ContactsView() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={handleServerSync}
-            disabled={syncing}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Server Sync LinkedIn
-          </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Browser Sync LinkedIn
-          </button>
-          <button
-            onClick={async () => {
-              console.log('🔄 Starting detailed sync test...');
-              setSyncing(true);
-              try {
-                // Test the sync with detailed logging
-                const testScript = document.createElement('script');
-                testScript.src = '/test-unipile-sync-now.js';
-                document.body.appendChild(testScript);
-                testScript.onload = async () => {
-                  if (window.testUnipileContactSync) {
-                    await window.testUnipileContactSync();
-                    await loadContacts(); // Reload contacts after sync
-                  }
-                };
-              } catch (error) {
-                console.error('Test failed:', error);
-              } finally {
-                setSyncing(false);
-              }
-            }}
-            disabled={syncing}
-            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Test Sync (Console)
-          </button>
+          <label className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2 cursor-pointer">
+            <Upload className="h-4 w-4" />
+            Import CSV
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImportCSV}
+              className="hidden"
+            />
+          </label>
           <button
             onClick={handleExport}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
@@ -491,7 +876,6 @@ export default function ContactsView() {
           >
             <option value="recent">Most Recent</option>
             <option value="name">Name (A-Z)</option>
-            <option value="engagement">Engagement Score</option>
           </select>
         </div>
         
@@ -525,24 +909,8 @@ export default function ContactsView() {
           <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
           <p className="text-gray-600 mb-4">
-            {searchTerm ? 'Try adjusting your search criteria' : 'Click "Server Sync LinkedIn" for reliable background import'}
+            {searchTerm ? 'Try adjusting your search criteria' : 'Your LinkedIn contacts will appear here automatically'}
           </p>
-          {!searchTerm && (
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={handleServerSync}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-              >
-                Server Sync LinkedIn
-              </button>
-              <button
-                onClick={handleSync}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                Browser Sync LinkedIn
-              </button>
-            </div>
-          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -557,10 +925,11 @@ export default function ContactsView() {
                     className="rounded"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Contact</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Title & Company</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Engagement</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Name</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Job Title</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Tags</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Last Interaction</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -577,31 +946,24 @@ export default function ContactsView() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {contact.first_name[0]}{contact.last_name[0]}
-                      </div>
+                      <ContactAvatar contact={contact} />
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 flex items-center gap-2">
                           {contact.first_name} {contact.last_name}
+                          {isRealEmail(contact.email) && (
+                            <Mail className="h-3 w-3 text-green-600" title="Real email available" />
+                          )}
                         </div>
-                        <div className="text-sm text-gray-600">{contact.email}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div>
-                      <div className="font-medium text-gray-900">{contact.title}</div>
-                      <div className="text-sm text-gray-600 flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
-                        {contact.metadata?.company || contact.department}
-                      </div>
+                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {contact.metadata?.connection_degree || contact.scraped_data?.connection_degree || '1st'} degree
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium ${getEngagementColor(contact.engagement_score)}`}>
-                      <TrendingUp className="h-3 w-3" />
-                      {contact.engagement_score}%
-                    </div>
+                    <div className="font-medium text-gray-900">{contact.title || 'No title'}</div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap gap-1">
@@ -618,6 +980,39 @@ export default function ContactsView() {
                     </div>
                   </td>
                   <td className="px-4 py-4">
+                    <div className="text-sm text-gray-600">
+                      {(() => {
+                        // Get the most recent interaction from messages
+                        if (contact.last_message && contact.last_message.length > 0) {
+                          const lastMsg = contact.last_message[0];
+                          const interactionDate = lastMsg.replied_at || 
+                                                lastMsg.clicked_at || 
+                                                lastMsg.opened_at || 
+                                                lastMsg.sent_at;
+                          
+                          if (interactionDate) {
+                            return new Date(interactionDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            });
+                          }
+                        }
+                        
+                        // Fallback: Check synced_at from metadata  
+                        if (contact.metadata?.synced_at) {
+                          return new Date(contact.metadata.synced_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          });
+                        }
+                        
+                        return 'No interaction';
+                      })()}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       <a
                         href={contact.linkedin_url}
@@ -628,22 +1023,143 @@ export default function ContactsView() {
                       >
                         <Linkedin className="h-4 w-4" />
                       </a>
-                      <button
-                        onClick={() => window.location.href = `mailto:${contact.email}`}
-                        className="p-1 text-gray-600 hover:bg-gray-100 rounded"
-                        title="Send Email"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </button>
-                      <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
+                      {isRealEmail(contact.email) && (
+                        <button
+                          onClick={() => window.location.href = `mailto:${contact.email}`}
+                          className="p-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer"
+                          title={`Send Email to ${contact.email}`}
+                        >
+                          <Mail className="h-4 w-4" />
+                        </button>
+                      )}
+                      <div className="relative">
+                        <button 
+                          className="p-1 text-gray-600 hover:bg-gray-100 rounded"
+                          onClick={() => setOpenDropdown(openDropdown === contact.id ? null : contact.id)}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        
+                        {openDropdown === contact.id && (
+                          <div className="absolute right-0 top-8 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                            <div className="py-1">
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                onClick={() => {
+                                  setEditingTags(contact.id);
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                <Tag className="h-4 w-4" />
+                                Manage Tags
+                              </button>
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(contact.linkedin_url);
+                                  toast.success('LinkedIn URL copied to clipboard');
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                <Edit3 className="h-4 w-4" />
+                                Copy LinkedIn URL
+                              </button>
+                              <hr className="my-1" />
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                onClick={() => handleDeleteContact(contact.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete Contact
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Tag Management Modal */}
+      {editingTags && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Manage Tags - {contacts.find(c => c.id === editingTags)?.first_name} {contacts.find(c => c.id === editingTags)?.last_name}
+              </h3>
+              <button
+                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setEditingTags(null)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Current Tags */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Current Tags</label>
+              <div className="flex flex-wrap gap-2">
+                {(contacts.find(c => c.id === editingTags)?.tags || []).map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded"
+                  >
+                    {tag}
+                    <button
+                      className="text-gray-500 hover:text-red-600"
+                      onClick={() => handleRemoveTag(editingTags, tag)}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {(contacts.find(c => c.id === editingTags)?.tags || []).length === 0 && (
+                  <span className="text-gray-500 text-sm">No tags yet</span>
+                )}
+              </div>
+            </div>
+
+            {/* Add New Tag */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Add New Tag</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="Enter tag name..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddTag(editingTags, newTag);
+                    }
+                  }}
+                />
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-1"
+                  onClick={() => handleAddTag(editingTags, newTag)}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                onClick={() => setEditingTags(null)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

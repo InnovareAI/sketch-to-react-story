@@ -100,7 +100,7 @@ export function LinkedInConnect({ onConnect }: LinkedInConnectProps) {
     }
   };
 
-  const handleConnectionSuccess = (accountId: string) => {
+  const handleConnectionSuccess = async (accountId: string) => {
     // Store account info in localStorage
     const accountData = {
       id: accountId,
@@ -111,9 +111,39 @@ export function LinkedInConnect({ onConnect }: LinkedInConnectProps) {
     
     localStorage.setItem('linkedin_accounts', JSON.stringify([accountData]));
     
+    // Enable cloud-based background sync with adaptive strategy for large datasets
+    try {
+      const workspaceId = localStorage.getItem('workspace_id');
+      if (workspaceId) {
+        // Check if this is a large dataset account
+        const { LargeDatasetSyncManager } = await import('@/services/LargeDatasetSyncManager');
+        const largeDatasetManager = LargeDatasetSyncManager.getInstance();
+        
+        // Setup adaptive sync that handles 20k+ connections intelligently
+        await largeDatasetManager.setupAdaptiveSync(workspaceId, accountId);
+        
+        console.log('☁️ Adaptive cloud sync enabled - optimized for your connection count');
+        toast.success('LinkedIn connected! Smart sync enabled for optimal performance', {
+          duration: 5000
+        });
+      }
+    } catch (error) {
+      console.error('Error enabling adaptive sync:', error);
+      // Fallback to standard sync
+      try {
+        const workspaceId = localStorage.getItem('workspace_id');
+        if (workspaceId) {
+          const { BackgroundSyncManager } = await import('@/services/BackgroundSyncManager');
+          const syncManager = BackgroundSyncManager.getInstance();
+          await syncManager.enableBackgroundSync(workspaceId, accountId, 30, 'both');
+        }
+      } catch (fallbackError) {
+        console.error('Fallback sync also failed:', fallbackError);
+      }
+    }
+    
     setAccountId(accountId);
     setStep('success');
-    toast.success('LinkedIn connected successfully!');
     
     if (onConnect) {
       onConnect(accountId);

@@ -29,18 +29,17 @@ export function useCampaigns() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getCurrentWorkspaceId = (): string | null => {
-    try {
-      const userAuthProfile = localStorage.getItem('user_auth_profile');
-      if (userAuthProfile) {
-        const profile = JSON.parse(userAuthProfile);
-        return profile.workspace_id;
-      }
-      return null;
-    } catch (err) {
-      console.error('Error getting workspace ID:', err);
-      return null;
+  const getCurrentWorkspaceId = (): string => {
+    // Get workspace from authenticated user profile
+    const workspaceId = localStorage.getItem('app_workspace_id') || localStorage.getItem('workspace_id');
+    
+    if (workspaceId && workspaceId !== 'a0000000-0000-0000-0000-000000000000') {
+      return workspaceId;
     }
+    
+    // Generate new workspace if needed
+    const { getWorkspaceId } = require('@/lib/workspace');
+    return getWorkspaceId();
   };
 
   const fetchCampaigns = async () => {
@@ -49,9 +48,7 @@ export function useCampaigns() {
       setError(null);
 
       const workspaceId = getCurrentWorkspaceId();
-      if (!workspaceId) {
-        throw new Error('No workspace found. Please ensure you are logged in.');
-      }
+      console.log('✅ CAMPAIGNS: Using workspaceId:', workspaceId);
 
       // Get current user's workspace campaigns
       const { data, error: campaignError } = await supabase
@@ -76,18 +73,27 @@ export function useCampaigns() {
   const createCampaign = async (name: string, status: string = 'draft') => {
     try {
       const workspaceId = getCurrentWorkspaceId();
-      if (!workspaceId) {
-        throw new Error('No workspace found. Please ensure you are logged in.');
-      }
 
       // Get current user ID from localStorage (development mode)
-      const userAuthUser = localStorage.getItem('user_auth_user');
+      let userId = null;
       
-      if (!userAuthUser) {
+      // Check regular auth user
+      const userAuthUser = localStorage.getItem('user_auth_user');
+      if (userAuthUser) {
+        const user = JSON.parse(userAuthUser);
+        userId = user.id;
+      } else {
+        // Check bypass user
+        const bypassUser = localStorage.getItem('bypass_user');
+        if (bypassUser) {
+          const userData = JSON.parse(bypassUser);
+          userId = userData.id;
+        }
+      }
+      
+      if (!userId) {
         throw new Error('User not authenticated');
       }
-
-      const user = JSON.parse(userAuthUser);
 
       const { data, error } = await supabase
         .from('campaigns')
@@ -96,7 +102,7 @@ export function useCampaigns() {
           status,
           type: 'email', // Default type
           workspace_id: workspaceId,
-          created_by: user.id,
+          created_by: userId,
           target_audience: {},
           linkedin_sequence_config: {},
           apify_actor_config: {},

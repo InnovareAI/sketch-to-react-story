@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { inboxService, type InboxConversation, type InboxMessage, type InboxStats } from '@/services/InboxService';
 import { 
   Inbox as InboxIcon,
   MessageSquare,
@@ -42,53 +43,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface LinkedInMessage {
-  id: string;
-  conversation_id: string;
-  sender: {
-    id: string;
-    name: string;
-    profile_url: string;
-    profile_image: string;
-    headline: string;
-    company: string;
-  };
-  recipient: {
-    id: string;
-    name: string;
-    profile_url: string;
-  };
-  content: string;
-  sent_at: string;
-  read_at?: string;
-  message_type: 'direct' | 'connection_request' | 'inmail';
-  is_outbound: boolean;
-  failed: boolean;
+// Using types from InboxService
+type Conversation = InboxConversation & {
+  last_message?: InboxMessage;
   campaign_source?: string;
-  attachments?: Array<{
-    name: string;
-    url: string;
-    type: string;
-  }>;
-}
-
-interface Conversation {
-  id: string;
-  participants: Array<{
-    id: string;
-    name: string;
-    profile_url: string;
-    profile_image: string;
-    headline: string;
-    company: string;
-  }>;
-  last_message: LinkedInMessage;
-  unread_count: number;
-  is_archived: boolean;
-  is_starred: boolean;
-  campaign_source?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 interface MessageTemplate {
@@ -101,14 +59,7 @@ interface MessageTemplate {
   created_at: string;
 }
 
-interface InboxStats {
-  total_messages: number;
-  unread_messages: number;
-  sent_today: number;
-  response_rate: number;
-  avg_response_time: string;
-  failed_messages: number;
-}
+// Using InboxStats from service
 
 interface InboxProps {
   className?: string;
@@ -116,15 +67,14 @@ interface InboxProps {
 
 export function Inbox({ className }: InboxProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<LinkedInMessage[]>([]);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [stats, setStats] = useState<InboxStats>({
-    total_messages: 0,
-    unread_messages: 0,
-    sent_today: 0,
-    response_rate: 0,
-    avg_response_time: '0h',
-    failed_messages: 0
+    total_conversations: 0,
+    unread_conversations: 0,
+    starred_conversations: 0,
+    messages_today: 0,
+    last_sync_at: null
   });
   
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -144,19 +94,16 @@ export function Inbox({ className }: InboxProps) {
     try {
       setLoading(true);
       
-      // Only real data - no mock data
-      setStats({
-        total_messages: 0,
-        unread_messages: 0,
-        sent_today: 0,
-        response_rate: 0,
-        avg_response_time: '0h',
-        failed_messages: 0
-      });
-
-      // Empty until real data is loaded
-      setConversations([]);
-      setTemplates([]);
+      // Load real conversations from database
+      const [conversationsData, statsData] = await Promise.all([
+        inboxService.loadConversations(),
+        inboxService.getInboxStats()
+      ]);
+      
+      setConversations(conversationsData);
+      setStats(statsData);
+      
+      console.log(`✅ Loaded ${conversationsData.length} conversations`);
 
     } catch (error) {
       console.error('Error loading inbox data:', error);
@@ -170,19 +117,17 @@ export function Inbox({ className }: InboxProps) {
     if (!newMessage.trim() || !selectedConversation) return;
 
     try {
-      const messageData = {
-        conversation_id: selectedConversation,
-        content: newMessage,
-        sent_at: new Date().toISOString(),
-        is_outbound: true
-      };
-
-      // This would call the API to send the message via Unipile
+      await inboxService.sendMessage(selectedConversation, newMessage);
+      
       toast.success('Message sent successfully');
       setNewMessage('');
       
-      // Refresh messages
+      // Refresh conversation list and messages
       await loadInboxData();
+      if (selectedConversation) {
+        const updatedMessages = await inboxService.loadMessages(selectedConversation);
+        setMessages(updatedMessages);
+      }
     } catch (error) {
       toast.error('Failed to send message');
     }
@@ -209,18 +154,22 @@ export function Inbox({ className }: InboxProps) {
 
   const handleMarkAsRead = async (conversationId: string) => {
     try {
+      await inboxService.markAsRead(conversationId);
+      
       setConversations(prev =>
         prev.map(conv =>
           conv.id === conversationId
-            ? { ...conv, unread_count: 0 }
+            ? { ...conv, unread_count: 0, status: 'active' }
             : conv
         )
       );
       
       setStats(prev => ({
         ...prev,
-        unread_messages: Math.max(0, prev.unread_messages - 1)
+        unread_conversations: Math.max(0, prev.unread_conversations - 1)
       }));
+      
+      toast.success('Marked as read');
     } catch (error) {
       toast.error('Failed to mark as read');
     }
@@ -228,13 +177,28 @@ export function Inbox({ className }: InboxProps) {
 
   const handleStarConversation = async (conversationId: string) => {
     try {
+      const conversation = conversations.find(c => c.id === conversationId);
+      if (!conversation) return;
+      
+      const newStarredState = !conversation.is_starred;
+      await inboxService.toggleStar(conversationId, newStarredState);
+      
       setConversations(prev =>
         prev.map(conv =>
           conv.id === conversationId
-            ? { ...conv, is_starred: !conv.is_starred }
+            ? { ...conv, is_starred: newStarredState }
             : conv
         )
       );
+      
+      setStats(prev => ({
+        ...prev,
+        starred_conversations: newStarredState 
+          ? prev.starred_conversations + 1
+          : Math.max(0, prev.starred_conversations - 1)
+      }));
+      
+      toast.success(newStarredState ? 'Conversation starred' : 'Star removed');
     } catch (error) {
       toast.error('Failed to update conversation');
     }
@@ -242,14 +206,21 @@ export function Inbox({ className }: InboxProps) {
 
   const handleArchiveConversation = async (conversationId: string) => {
     try {
+      const conversation = conversations.find(c => c.id === conversationId);
+      if (!conversation) return;
+      
+      const newArchivedState = !conversation.is_archived;
+      await inboxService.toggleArchive(conversationId, newArchivedState);
+      
       setConversations(prev =>
         prev.map(conv =>
           conv.id === conversationId
-            ? { ...conv, is_archived: !conv.is_archived }
+            ? { ...conv, is_archived: newArchivedState }
             : conv
         )
       );
-      toast.success('Conversation archived');
+      
+      toast.success(newArchivedState ? 'Conversation archived' : 'Conversation unarchived');
     } catch (error) {
       toast.error('Failed to archive conversation');
     }
@@ -291,10 +262,9 @@ export function Inbox({ className }: InboxProps) {
   };
 
   const filteredConversations = conversations.filter(conv => {
-    const matchesSearch = conv.participants.some(p =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.company.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || conv.last_message.content.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = conv.participant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         conv.participant_company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         searchTerm === '';
 
     const matchesFilter = filterBy === 'all' ||
                          (filterBy === 'unread' && conv.unread_count > 0) ||
@@ -335,17 +305,17 @@ export function Inbox({ className }: InboxProps) {
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.total_messages}</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.total_conversations}</div>
             <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
               <MessageSquare className="h-3 w-3" />
-              Total Messages
+              Total Conversations
             </div>
           </CardContent>
         </Card>
         
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">{stats.unread_messages}</div>
+            <div className="text-2xl font-bold text-orange-600">{stats.unread_conversations}</div>
             <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
               <Eye className="h-3 w-3" />
               Unread
@@ -355,7 +325,17 @@ export function Inbox({ className }: InboxProps) {
         
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.sent_today}</div>
+            <div className="text-2xl font-bold text-yellow-600">{stats.starred_conversations}</div>
+            <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+              <Star className="h-3 w-3" />
+              Starred
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{stats.messages_today}</div>
             <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
               <Send className="h-3 w-3" />
               Sent Today
@@ -365,25 +345,36 @@ export function Inbox({ className }: InboxProps) {
         
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600">{stats.response_rate}%</div>
-            <div className="text-sm text-gray-600">Response Rate</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-teal-600">{stats.avg_response_time}</div>
-            <div className="text-sm text-gray-600">Avg Response</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">{stats.failed_messages}</div>
-            <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-              <XCircle className="h-3 w-3" />
-              Failed
+            <div className="text-2xl font-bold text-teal-600">
+              {stats.last_sync_at ? formatTime(stats.last_sync_at) : 'Never'}
             </div>
+            <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+              <RefreshCw className="h-3 w-3" />
+              Last Sync
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={async () => {
+                try {
+                  toast.info('Syncing LinkedIn data...');
+                  await inboxService.triggerSync();
+                  await loadInboxData();
+                  toast.success('Sync completed');
+                } catch (error) {
+                  toast.error('Sync failed');
+                }
+              }}
+              className="w-full h-12"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Sync Now
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -434,19 +425,35 @@ export function Inbox({ className }: InboxProps) {
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => setSelectedConversation(conversation.id)}
+                  onClick={async () => {
+                    setSelectedConversation(conversation.id);
+                    try {
+                      const messagesData = await inboxService.loadMessages(conversation.id);
+                      setMessages(messagesData);
+                      
+                      // Mark as read when opening
+                      if (conversation.unread_count > 0) {
+                        await handleMarkAsRead(conversation.id);
+                      }
+                    } catch (error) {
+                      console.error('Failed to load messages:', error);
+                    }
+                  }}
                 >
                   <div className="flex items-start gap-3">
                     <img
-                      src={conversation.participants[0].profile_image}
-                      alt={conversation.participants[0].name}
+                      src={conversation.participant_avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(conversation.participant_name || 'U')}
+                      alt={conversation.participant_name}
                       className="w-10 h-10 rounded-full"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(conversation.participant_name || 'U');
+                      }}
                     />
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <h4 className="font-medium text-sm truncate">
-                          {conversation.participants[0].name}
+                          {conversation.participant_name}
                         </h4>
                         <div className="flex items-center gap-1">
                           {conversation.is_starred && (
@@ -457,25 +464,40 @@ export function Inbox({ className }: InboxProps) {
                               {conversation.unread_count}
                             </Badge>
                           )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStarConversation(conversation.id);
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <Star className={`h-3 w-3 ${conversation.is_starred ? 'text-yellow-500 fill-current' : 'text-gray-400'}`} />
+                          </button>
                         </div>
                       </div>
                       
                       <p className="text-xs text-gray-600 mb-1 truncate">
-                        {conversation.participants[0].headline}
+                        {conversation.participant_company}
                       </p>
                       
                       <p className="text-xs text-gray-500 truncate mb-1">
-                        {conversation.last_message.content}
+                        {conversation.metadata?.chat_subject || 'LinkedIn conversation'}
                       </p>
                       
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-400">
-                          {formatTime(conversation.last_message.sent_at)}
+                          {formatTime(conversation.last_message_at)}
                         </span>
                         
                         {conversation.campaign_source && (
                           <Badge variant="outline" className="text-xs">
                             Campaign
+                          </Badge>
+                        )}
+                        
+                        {conversation.metadata?.chat_type === 'inmail' && (
+                          <Badge variant="secondary" className="text-xs">
+                            InMail
                           </Badge>
                         )}
                       </div>
@@ -501,16 +523,20 @@ export function Inbox({ className }: InboxProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
-                    src={conversations.find(c => c.id === selectedConversation)?.participants[0].profile_image}
+                    src={conversations.find(c => c.id === selectedConversation)?.participant_avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(conversations.find(c => c.id === selectedConversation)?.participant_name || 'U')}
                     alt="Profile"
                     className="w-10 h-10 rounded-full"
+                    onError={(e) => {
+                      const conv = conversations.find(c => c.id === selectedConversation);
+                      e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(conv?.participant_name || 'U');
+                    }}
                   />
                   <div>
                     <h3 className="font-semibold">
-                      {conversations.find(c => c.id === selectedConversation)?.participants[0].name}
+                      {conversations.find(c => c.id === selectedConversation)?.participant_name}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {conversations.find(c => c.id === selectedConversation)?.participants[0].headline}
+                      {conversations.find(c => c.id === selectedConversation)?.participant_company}
                     </p>
                   </div>
                 </div>
@@ -530,7 +556,13 @@ export function Inbox({ className }: InboxProps) {
                   >
                     <Archive className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      toast.info('More options: Export, Block, Report, etc.');
+                    }}
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
@@ -547,10 +579,33 @@ export function Inbox({ className }: InboxProps) {
             <CardContent className="space-y-4">
               {/* Message Thread */}
               <div className="max-h-64 overflow-y-auto space-y-3 border rounded-lg p-4 bg-gray-50">
-                {/* Messages would be loaded here */}
-                <div className="text-center text-sm text-gray-500">
-                  Message history will be displayed here
-                </div>
+                {messages.length > 0 ? (
+                  messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          message.role === 'user'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-white border'
+                        }`}
+                      >
+                        <p className="text-sm">{message.content}</p>
+                        <p className={`text-xs mt-1 ${
+                          message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                        }`}>
+                          {formatTime(message.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-sm text-gray-500">
+                    No messages loaded yet. Click on a conversation to load messages.
+                  </div>
+                )}
               </div>
 
               {/* Message Composer */}
@@ -611,10 +666,22 @@ export function Inbox({ className }: InboxProps) {
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        toast.info('Attachment feature coming soon!');
+                      }}
+                    >
                       <Paperclip className="h-3 w-3" />
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        toast.info('Calendar scheduling coming soon!');
+                      }}
+                    >
                       <Calendar className="h-3 w-3" />
                     </Button>
                   </div>

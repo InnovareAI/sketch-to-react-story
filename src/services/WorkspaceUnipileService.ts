@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { getUserWorkspaceId } from '@/utils/userDataStorage';
 
 interface WorkspaceUnipileConfig {
   account_id: string;
@@ -32,8 +33,8 @@ class WorkspaceUnipileService {
    * Initialize with workspace ID and load Unipile config
    */
   async initialize(workspaceId?: string): Promise<WorkspaceUnipileConfig> {
-    // Use provided workspace ID or get from localStorage
-    this.workspaceId = workspaceId || this.getCurrentWorkspaceId();
+    // Use provided workspace ID or get from user-specific storage
+    this.workspaceId = workspaceId || await this.getCurrentWorkspaceId();
     
     if (!this.workspaceId) {
       throw new Error('No workspace ID available');
@@ -52,8 +53,11 @@ class WorkspaceUnipileService {
 
     this.config = data[0];
     
-    // Store in localStorage for quick access
-    localStorage.setItem('workspace_unipile_config', JSON.stringify(this.config));
+    // Store in user-specific localStorage for quick access
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      localStorage.setItem(`user_${user.id}_workspace_unipile_config`, JSON.stringify(this.config));
+    }
     
     return this.config;
   }
@@ -61,17 +65,35 @@ class WorkspaceUnipileService {
   /**
    * Get current workspace ID from various sources
    */
-  private getCurrentWorkspaceId(): string {
+   private async getCurrentWorkspaceId(): Promise<string> {
+    // First try to get from user-specific storage
+    const userWorkspaceId = await getUserWorkspaceId();
+    if (userWorkspaceId) return userWorkspaceId;
+    
     // Check auth profile
     const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
     if (authProfile.workspace_id) return authProfile.workspace_id;
     
-    // Check direct storage
-    const workspaceId = localStorage.getItem('workspace_id');
-    if (workspaceId) return workspaceId;
+    // Check bypass user data
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.workspace_id) return bypassUser.workspace_id;
     
-    // Dev mode fallback
-    return 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    // Get current user for user-specific workspace
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const workspaceId = localStorage.getItem(`user_${user.id}_workspace_id`);
+      if (workspaceId) return workspaceId;
+    }
+    
+    // Generate proper UUID fallback workspace ID
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    return generateUUID();
   }
 
   /**
@@ -80,11 +102,14 @@ class WorkspaceUnipileService {
   async getConfig(): Promise<WorkspaceUnipileConfig> {
     if (this.config) return this.config;
     
-    // Try to load from localStorage first
-    const cached = localStorage.getItem('workspace_unipile_config');
-    if (cached) {
-      this.config = JSON.parse(cached);
-      return this.config!;
+    // Try to load from user-specific localStorage first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const cached = localStorage.getItem(`user_${user.id}_workspace_unipile_config`);
+      if (cached) {
+        this.config = JSON.parse(cached);
+        return this.config!;
+      }
     }
     
     // Load from database
@@ -114,6 +139,12 @@ class WorkspaceUnipileService {
     
     // Use dedicated IP if available, otherwise use DSN
     const host = config.dedicated_ip || config.dsn || 'api6.unipile.com:13670';
+    
+    // Ensure host is defined and is a string
+    if (!host || typeof host !== 'string') {
+      console.warn('Invalid host configuration, using default');
+      return 'https://api6.unipile.com:13670/api/v1';
+    }
     
     // Ensure proper protocol and port
     if (!host.startsWith('http')) {
@@ -205,97 +236,159 @@ class WorkspaceUnipileService {
   }
 
   /**
-   * Sync LinkedIn contacts using shared credentials - Enhanced to get maximum contacts
+   * Sync LinkedIn contacts using shared credentials - Enhanced to get ALL LinkedIn connections
    */
-  async syncContacts(limit: number = 200): Promise<any> {
+  async syncContacts(limit: number = 20000): Promise<any> {
     const config = await this.getConfig();
     
     if (!config.linkedin_connected) {
       throw new Error('LinkedIn not connected. Please complete onboarding.');
     }
 
-    console.log('🔄 Starting enhanced LinkedIn contact sync...');
+    console.log('🔄 Starting FULL LinkedIn connections sync...');
+    console.log(`🎯 Target: Import up to ${limit} LinkedIn connections`);
     
     const allContacts = new Map(); // Use Map to deduplicate by provider_id
     
-    // Step 1: Get maximum possible chats
-    let chatsResponse;
-    const tryLimits = [1000, 500, 200, 100];
-    let allChats = [];
+    // Step 1: Try to get ALL LinkedIn connections using dedicated connections endpoint
+    console.log('📋 Fetching LinkedIn connections directly...');
     
-    for (const tryLimit of tryLimits) {
+    const connectionEndpoints = [
+      `/connections?account_id=${config.account_id}&limit=${limit}`,
+      `/contacts?account_id=${config.account_id}&limit=${limit}`,
+      `/accounts/${config.account_id}/connections?limit=${limit}`,
+      `/users/${config.account_id}/connections?limit=${limit}`
+    ];
+    
+    let connectionsFound = false;
+    
+    for (const endpoint of connectionEndpoints) {
       try {
-        chatsResponse = await this.request(`/chats?account_id=${config.account_id}&limit=${tryLimit}`);
-        if (chatsResponse.ok) {
-          const chatsData = await chatsResponse.json();
-          allChats = chatsData.items || [];
-          console.log(`✅ Successfully fetched ${allChats.length} chats`);
-          break;
-        }
-      } catch (err) {
-        continue; // Try next limit
-      }
-    }
-    
-    if (allChats.length === 0) {
-      throw new Error('Failed to fetch any LinkedIn chats');
-    }
-
-    console.log(`📋 Processing ${allChats.length} chats for attendees...`);
-    
-    // Step 2: Process ALL chats to get attendees
-    let processedChats = 0;
-    
-    for (let i = 0; i < allChats.length; i++) {
-      const chat = allChats[i];
-      
-      if (i % 20 === 0) {
-        console.log(`   Progress: ${i + 1}/${allChats.length} chats (${Math.round((i+1)/allChats.length*100)}%)`);
-      }
-      
-      try {
-        const attendeesResponse = await this.request(`/chats/${chat.id}/attendees`);
+        console.log(`🔍 Trying: ${endpoint}`);
+        const connectionsResponse = await this.request(endpoint);
         
-        if (attendeesResponse.ok) {
-          const attendeesData = await attendeesResponse.json();
-          const attendees = attendeesData.items || [];
+        if (connectionsResponse.ok) {
+          const connectionsData = await connectionsResponse.json();
+          const connections = connectionsData.items || connectionsData.connections || connectionsData.contacts || [];
           
-          for (const attendee of attendees) {
-            // Skip self and invalid contacts
-            if (attendee.is_self || !attendee.provider_id || !attendee.name) continue;
+          if (connections.length > 0) {
+            console.log(`✅ Found ${connections.length} LinkedIn connections from ${endpoint}`);
             
-            const existingContact = allContacts.get(attendee.provider_id);
+            // Process each connection
+            for (const connection of connections) {
+              if (!connection.id && !connection.provider_id) continue;
+              
+              const contactId = connection.provider_id || connection.id;
+              const fullName = connection.name || connection.full_name || `${connection.first_name || ''} ${connection.last_name || ''}`.trim();
+              
+              if (!contactId || !fullName) continue;
+              
+              allContacts.set(contactId, {
+                provider_id: contactId,
+                name: fullName,
+                profile_url: connection.profile_url || connection.public_profile_url || '',
+                occupation: connection.occupation || connection.title || connection.headline || '',
+                network_distance: connection.distance || 'DISTANCE_1', // Direct connections are 1st degree
+                picture_url: connection.picture_url || connection.profile_picture_url || '',
+                member_urn: connection.member_urn || connection.urn || '',
+                is_company: connection.is_company || false,
+                source: 'linkedin_connections',
+                connection_type: 'direct_connection',
+                industry: connection.industry || '',
+                location: connection.location || ''
+              });
+            }
             
-            // Store contact with comprehensive info
-            allContacts.set(attendee.provider_id, {
-              provider_id: attendee.provider_id,
-              name: attendee.name,
-              profile_url: attendee.profile_url || (existingContact?.profile_url || ''),
-              occupation: attendee.specifics?.occupation || (existingContact?.occupation || ''),
-              network_distance: attendee.specifics?.network_distance || (existingContact?.network_distance || ''),
-              picture_url: attendee.picture_url || (existingContact?.picture_url || ''),
-              member_urn: attendee.specifics?.member_urn || (existingContact?.member_urn || ''),
-              is_company: attendee.specifics?.is_company || false,
-              chat_ids: [...(existingContact?.chat_ids || []), chat.id],
-              chat_names: [...(existingContact?.chat_names || []), chat.name || 'Unnamed Chat'],
-              source: 'linkedin_chat'
-            });
+            connectionsFound = true;
+            break; // Found connections, stop trying other endpoints
           }
-          processedChats++;
         }
       } catch (err) {
-        console.error(`Error processing chat ${chat.id}:`, err.message);
+        console.log(`❌ Endpoint ${endpoint} failed: ${err.message}`);
+        continue;
       }
+    }
+    
+    // Step 2: If connections endpoint didn't work, fall back to chats method
+    if (!connectionsFound) {
+      console.log('⚠️ Direct connections fetch failed, falling back to chat analysis...');
       
-      // Small delay to be nice to the API
-      if (i % 10 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+      // Get maximum possible chats
+      let chatsResponse;
+      const tryLimits = [5000, 2000, 1000, 500];
+      let allChats = [];
+      
+      for (const tryLimit of tryLimits) {
+        try {
+          chatsResponse = await this.request(`/chats?account_id=${config.account_id}&limit=${tryLimit}`);
+          if (chatsResponse.ok) {
+            const chatsData = await chatsResponse.json();
+            allChats = chatsData.items || [];
+            console.log(`✅ Successfully fetched ${allChats.length} chats`);
+            break;
+          }
+        } catch (err) {
+          continue; // Try next limit
+        }
+      }
+
+      console.log(`📋 Processing ${allChats.length} chats for attendees...`);
+      
+      // Process ALL chats to get attendees
+      let processedChats = 0;
+      
+      for (let i = 0; i < allChats.length; i++) {
+        const chat = allChats[i];
+        
+        if (i % 20 === 0) {
+          console.log(`   Progress: ${i + 1}/${allChats.length} chats (${Math.round((i+1)/allChats.length*100)}%)`);
+        }
+        
+        try {
+          const attendeesResponse = await this.request(`/chats/${chat.id}/attendees`);
+          
+          if (attendeesResponse.ok) {
+            const attendeesData = await attendeesResponse.json();
+            const attendees = attendeesData.items || [];
+            
+            for (const attendee of attendees) {
+              // Skip self and invalid contacts
+              if (attendee.is_self || !attendee.provider_id || !attendee.name) continue;
+              
+              const existingContact = allContacts.get(attendee.provider_id);
+              
+              // Store contact with comprehensive info
+              allContacts.set(attendee.provider_id, {
+                provider_id: attendee.provider_id,
+                name: attendee.name,
+                profile_url: attendee.profile_url || (existingContact?.profile_url || ''),
+                occupation: attendee.specifics?.occupation || (existingContact?.occupation || ''),
+                network_distance: attendee.specifics?.network_distance || (existingContact?.network_distance || ''),
+                picture_url: attendee.picture_url || (existingContact?.picture_url || ''),
+                member_urn: attendee.specifics?.member_urn || (existingContact?.member_urn || ''),
+                is_company: attendee.specifics?.is_company || false,
+                chat_ids: [...(existingContact?.chat_ids || []), chat.id],
+                chat_names: [...(existingContact?.chat_names || []), chat.name || 'Unnamed Chat'],
+                source: 'linkedin_chat'
+              });
+            }
+            processedChats++;
+          }
+        } catch (err) {
+          console.error(`Error processing chat ${chat.id}:`, err.message);
+        }
+        
+        // Small delay to be nice to the API
+        if (i % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
       }
     }
 
-    // Step 3: Also get contacts from messages
+    // Step 3: Also get contacts from messages (additional source)
+    console.log('📨 Fetching additional contacts from messages...');
     try {
-      const messagesResponse = await this.request(`/messages?account_id=${config.account_id}&limit=1000`);
+      const messagesResponse = await this.request(`/messages?account_id=${config.account_id}&limit=5000`);
       
       if (messagesResponse.ok) {
         const messagesData = await messagesResponse.json();
@@ -335,7 +428,17 @@ class WorkspaceUnipileService {
     const contactsArray = Array.from(allContacts.values());
     let storedCount = 0;
     
-    console.log(`💾 Storing ${contactsArray.length} unique contacts in database...`);
+    console.log(`💾 Storing ${contactsArray.length} unique LinkedIn contacts in database...`);
+    console.log(`📊 Contact Sources:`);
+    const directConnections = contactsArray.filter(c => c.source === 'linkedin_connections').length;
+    const chatContacts = contactsArray.filter(c => c.source === 'linkedin_chat').length;
+    const messageContacts = contactsArray.filter(c => c.source === 'linkedin_message').length;
+    const hybridContacts = contactsArray.filter(c => c.source === 'linkedin_chat_and_message').length;
+    
+    console.log(`   🔗 Direct connections: ${directConnections}`);
+    console.log(`   💬 From chats: ${chatContacts}`);
+    console.log(`   📧 From messages: ${messageContacts}`);
+    console.log(`   🔄 Hybrid (chat+message): ${hybridContacts}`);
     
     for (const contact of contactsArray) {
       try {
@@ -383,16 +486,26 @@ class WorkspaceUnipileService {
       }
     }
     
-    console.log(`✅ Successfully stored ${storedCount} LinkedIn contacts`);
+    const finalMessage = directConnections > 0 
+      ? `✅ Successfully stored ${storedCount} LinkedIn contacts (${directConnections} direct connections found!)`
+      : `✅ Successfully stored ${storedCount} LinkedIn contacts (from chats/messages only)`;
+    
+    console.log(finalMessage);
+    
+    if (directConnections === 0) {
+      console.log('⚠️ No direct LinkedIn connections found - you may need to upgrade Unipile plan or check permissions');
+    }
     
     // Return comprehensive stats
     return { 
       contactsSynced: storedCount,
       totalFound: contactsArray.length,
-      chatsProcessed: processedChats,
-      fromChats: contactsArray.filter(c => c.source === 'linkedin_chat').length,
-      fromMessages: contactsArray.filter(c => c.source === 'linkedin_message').length,
-      fromBoth: contactsArray.filter(c => c.source === 'linkedin_chat_and_message').length,
+      chatsProcessed: connectionsFound ? 0 : (processedChats || 0),
+      directConnections: directConnections,
+      fromChats: chatContacts,
+      fromMessages: messageContacts,
+      fromBoth: hybridContacts,
+      connectionsEndpointWorked: connectionsFound,
       firstDegree: contactsArray.filter(c => c.network_distance === 'DISTANCE_1').length,
       secondDegree: contactsArray.filter(c => c.network_distance === 'DISTANCE_2').length,
       thirdDegree: contactsArray.filter(c => c.network_distance === 'DISTANCE_3').length,

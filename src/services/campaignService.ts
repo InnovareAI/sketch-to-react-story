@@ -122,19 +122,74 @@ class CampaignService {
    * Create a new campaign
    */
   async createCampaign(campaign: Omit<Campaign, 'id' | 'created_at' | 'updated_at'>): Promise<Campaign> {
-    // Get current user/workspace context
-    const defaultWorkspaceId = 'df5d730f-1915-4269-bd5a-9534478b17af';
-    const defaultTenantId = '367b6c5c-43d7-4546-96d4-4f5f22641de1';
-    const defaultUserId = '03ca8428-384a-482d-8371-66928fee1063';
-    
-    const { data, error } = await supabase
-      .from('campaigns')
-      .insert({
+    try {
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.warn('No authenticated user, using bypass auth logic');
+        
+        // Check for bypass auth user data in localStorage
+        const bypassAuth = localStorage.getItem('bypass_auth');
+        const bypassUserEmail = localStorage.getItem('user_email');
+        const bypassUserData = localStorage.getItem('bypass_user');
+        
+        if (bypassAuth === 'true' && bypassUserEmail && bypassUserData) {
+          const userData = JSON.parse(bypassUserData);
+          const workspaceId = userData.workspace_id || 'default-workspace-' + crypto.randomUUID();
+          const userId = userData.id || crypto.randomUUID();
+          
+          const campaignData = {
+            ...campaign,
+            workspace_id: campaign.workspace_id || workspaceId,
+            user_id: campaign.user_id || userId,
+            tenant_id: campaign.tenant_id || workspaceId, // Use workspace_id as tenant_id
+            status: campaign.status || 'draft',
+            type: campaign.type || 'connection_request',
+            target_audience: campaign.target_audience || 'general',
+            max_leads_per_day: campaign.max_leads_per_day || 50,
+            daily_connection_limit: campaign.daily_connection_limit || 100,
+            messaging_sequence: campaign.messaging_sequence || [],
+            follow_up_days: campaign.follow_up_days || [1, 3, 7],
+            current_leads_today: 0,
+            current_leads_total: 0,
+            total_sent: 0,
+            total_responses: 0,
+            total_connections: 0,
+            success_rate: 0.00,
+            settings: campaign.settings || {}
+          };
+          
+          console.log('Creating campaign with bypass auth data:', {
+            workspace_id: campaignData.workspace_id,
+            user_id: campaignData.user_id,
+            name: campaignData.name,
+            email: bypassUserEmail
+          });
+          
+          const { data, error } = await supabase
+            .from('campaigns')
+            .insert(campaignData)
+            .select()
+            .single();
+
+          if (error) {
+            console.error('Error creating campaign:', error);
+            throw new Error(`Failed to create campaign: ${error.message}`);
+          }
+
+          return data;
+        }
+        
+        throw new Error('Authentication required to create campaigns');
+      }
+      
+      // Use authenticated user data
+      const campaignData = {
         ...campaign,
-        // Ensure required fields have defaults
-        workspace_id: campaign.workspace_id || defaultWorkspaceId,
-        tenant_id: campaign.tenant_id || defaultTenantId,
-        user_id: campaign.user_id || defaultUserId,
+        workspace_id: campaign.workspace_id || user.user_metadata?.workspace_id,
+        user_id: campaign.user_id || user.id,
+        tenant_id: campaign.tenant_id || user.user_metadata?.workspace_id,
         status: campaign.status || 'draft',
         type: campaign.type || 'connection_request',
         target_audience: campaign.target_audience || 'general',
@@ -149,16 +204,31 @@ class CampaignService {
         total_connections: 0,
         success_rate: 0.00,
         settings: campaign.settings || {}
-      })
-      .select()
-      .single();
+      };
+      
+      console.log('Creating campaign with authenticated user data:', {
+        workspace_id: campaignData.workspace_id,
+        user_id: campaignData.user_id,
+        name: campaignData.name
+      });
+      
+      const { data, error } = await supabase
+        .from('campaigns')
+        .insert(campaignData)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error creating campaign:', error);
-      throw new Error(`Failed to create campaign: ${error.message}`);
+      if (error) {
+        console.error('Error creating campaign:', error);
+        throw new Error(`Failed to create campaign: ${error.message}`);
+      }
+
+      return data;
+      
+    } catch (error) {
+      console.error('Campaign creation failed:', error);
+      throw error;
     }
-
-    return data;
   }
 
   /**

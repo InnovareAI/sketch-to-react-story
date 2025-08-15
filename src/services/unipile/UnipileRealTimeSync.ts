@@ -5,6 +5,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getUserLinkedInAccounts, setUserLinkedInAccounts } from '@/utils/userDataStorage';
+import { getUnipileApiKey, getUnipileBaseUrl, getUnipileHeaders } from '@/config/unipile';
 
 interface SyncStatus {
   isRunning: boolean;
@@ -83,9 +85,22 @@ export class UnipileRealTimeSync {
   };
 
   constructor() {
-    // Use environment variables for configuration
-    this.baseUrl = 'https://api6.unipile.com:13670/api/v1';
-    this.apiKey = import.meta.env.VITE_UNIPILE_API_KEY || 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU=';
+    // Use centralized configuration
+    this.baseUrl = getUnipileBaseUrl();
+    this.apiKey = getUnipileApiKey();
+  }
+
+  /**
+   * Configure the sync service with API credentials
+   */
+  configure(config: { apiKey?: string; accountId?: string }) {
+    if (config.apiKey) {
+      this.apiKey = config.apiKey;
+    }
+    // Store accountId if needed for specific operations
+    if (config.accountId) {
+      localStorage.setItem('unipile_account_id', config.accountId);
+    }
   }
 
   /**
@@ -314,7 +329,7 @@ export class UnipileRealTimeSync {
             if (thorstenAccount) {
               // Only return Thorsten's account
               const filteredAccounts = [thorstenAccount];
-              localStorage.setItem('linkedin_accounts', JSON.stringify(filteredAccounts));
+              await setUserLinkedInAccounts(filteredAccounts);
               return filteredAccounts;
             }
           }
@@ -343,14 +358,11 @@ export class UnipileRealTimeSync {
       }
 
       // 2. Check specific LinkedIn accounts storage
-      const storedAccounts = localStorage.getItem('linkedin_accounts');
-      if (storedAccounts) {
+      const storedAccounts = await getUserLinkedInAccounts();
+      if (storedAccounts && storedAccounts.length > 0) {
         try {
-          const accounts = JSON.parse(storedAccounts);
-          console.log('✅ Found stored LinkedIn accounts:', accounts);
-          if (accounts.length > 0) {
-            return accounts;
-          }
+          console.log('✅ Found stored LinkedIn accounts:', storedAccounts);
+          return storedAccounts;
         } catch (e) {
           console.log('Could not parse stored accounts');
         }
@@ -375,7 +387,7 @@ export class UnipileRealTimeSync {
         if (dbAccounts && dbAccounts.length > 0) {
           console.log('✅ Found LinkedIn accounts in database:', dbAccounts);
           // Store in localStorage for faster access
-          localStorage.setItem('linkedin_accounts', JSON.stringify(dbAccounts));
+          await setUserLinkedInAccounts(dbAccounts);
           return dbAccounts;
         }
       }
@@ -419,7 +431,7 @@ export class UnipileRealTimeSync {
 
             if (linkedInAccounts.length > 0) {
               // Store for next time
-              localStorage.setItem('linkedin_accounts', JSON.stringify(linkedInAccounts));
+              await setUserLinkedInAccounts(linkedInAccounts);
               return linkedInAccounts;
             }
           } else {
@@ -450,7 +462,7 @@ export class UnipileRealTimeSync {
         };
         
         // Store it for next time
-        localStorage.setItem('linkedin_accounts', JSON.stringify([defaultAccount]));
+        await setUserLinkedInAccounts([defaultAccount]);
         
         return [defaultAccount];
       }
@@ -535,6 +547,9 @@ export class UnipileRealTimeSync {
           let participantCompany = '';
           let participantAvatar = '';
           
+          // Store LinkedIn URL from attendee data
+          let participantLinkedInUrl = '';
+          
           // Always try to get attendee info if we have the ID
           if (chat.attendee_provider_id) {
             console.log(`🔍 Fetching attendee: ${chat.attendee_provider_id}`);
@@ -558,9 +573,33 @@ export class UnipileRealTimeSync {
                 const firstName = attendee.first_name || '';
                 const lastName = attendee.last_name || '';
                 participantName = `${firstName} ${lastName}`.trim() || attendee.name || participantName;
-                participantCompany = attendee.headline || attendee.company || '';
+                
+                // Capture LinkedIn URL from attendee data
+                participantLinkedInUrl = attendee.public_profile_url || 
+                                       attendee.linkedin_url ||
+                                       (attendee.public_identifier ? `https://linkedin.com/in/${attendee.public_identifier}` : '') ||
+                                       (attendee.provider_id ? `https://linkedin.com/in/${attendee.provider_id}` : '');
+                
+                // Get company but validate it's not our own workspace name
+                let rawCompany = attendee.headline || attendee.company || '';
+                
+                // Prevent using our own workspace name as external contact's company
+                // This happens when LinkedIn returns incorrect/cached data
+                const invalidCompanyNames = ['InnovareAI', 'Innovare AI', 'innovareai'];
+                const isOurWorkspace = invalidCompanyNames.some(name => 
+                  rawCompany.toLowerCase().includes(name.toLowerCase())
+                );
+                
+                if (isOurWorkspace) {
+                  // Log this issue and leave company blank for manual correction
+                  console.warn(`⚠️ Rejecting invalid company "${rawCompany}" for external contact ${participantName}`);
+                  participantCompany = 'External Contact'; // Generic placeholder
+                } else {
+                  participantCompany = rawCompany;
+                }
+                
                 participantAvatar = attendee.profile_picture_url || attendee.profile_picture_url_large || '';
-                console.log(`📝 Set participant name: ${participantName}`);
+                console.log(`📝 Set participant name: ${participantName}, LinkedIn: ${participantLinkedInUrl}`);
               } else if (attendeeResponse.status === 422) {
                 // 422 means the user might be deleted or inaccessible
                 console.log(`⚠️ User ${chat.attendee_provider_id} not accessible (422)`);
@@ -629,7 +668,9 @@ export class UnipileRealTimeSync {
               chat_type: chat.content_type || chat.folder?.[0] || 'message',
               unread_count: chat.unread_count || 0,
               attendee_id: chat.attendee_provider_id,
-              chat_subject: chat.subject || chat.name || ''
+              chat_subject: chat.subject || chat.name || '',
+              participant_linkedin_url: participantLinkedInUrl,
+              linkedin_message_url: this.createLinkedInMessageUrl(participantLinkedInUrl, chat.attendee_provider_id)
             }
           };
           
@@ -750,6 +791,30 @@ export class UnipileRealTimeSync {
       this.status.errors.push(`Message sync failed for ${account.name}`);
       return 0;
     }
+  }
+
+  /**
+   * Create LinkedIn message URL for direct messaging
+   */
+  private createLinkedInMessageUrl(profileUrl: string, providerId: string): string {
+    if (!profileUrl && !providerId) return '';
+    
+    // Try to extract the LinkedIn identifier from the profile URL
+    if (profileUrl) {
+      const match = profileUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+      if (match) {
+        const identifier = match[1];
+        // Create LinkedIn messaging URL
+        return `https://www.linkedin.com/messaging/compose/?recipient=${identifier}`;
+      }
+    }
+    
+    // Fallback: use provider ID if available
+    if (providerId) {
+      return `https://www.linkedin.com/messaging/compose/?recipient=${providerId}`;
+    }
+    
+    return profileUrl || '';
   }
 
   /**

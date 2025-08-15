@@ -39,6 +39,26 @@ class ContactMessageSyncService {
   private readonly UNIPILE_BASE_URL = 'https://api6.unipile.com:13670/api/v1';
   
   /**
+   * Validate company name to prevent using our own workspace name for external contacts
+   */
+  private validateCompanyName(rawCompany: string | undefined, participantName: string): string {
+    if (!rawCompany) return '';
+    
+    // Prevent using our own workspace name as external contact's company
+    const invalidCompanyNames = ['InnovareAI', 'Innovare AI', 'innovareai'];
+    const isOurWorkspace = invalidCompanyNames.some(name => 
+      rawCompany.toLowerCase().includes(name.toLowerCase())
+    );
+    
+    if (isOurWorkspace) {
+      console.warn(`⚠️ ContactMessageSync: Rejecting invalid company "${rawCompany}" for external contact ${participantName}`);
+      return 'External Contact'; // Generic placeholder
+    }
+    
+    return rawCompany;
+  }
+  
+  /**
    * Main sync function that coordinates both contact and message syncing
    */
   async syncContactsAndMessages(
@@ -281,7 +301,7 @@ class ContactMessageSyncService {
               platform: 'linkedin',
               platform_conversation_id: conversation.id || conversation.chat_id,
               participant_name: participant.name,
-              participant_company: participant.company,
+              participant_company: this.validateCompanyName(participant.company, participant.name),
               participant_avatar_url: avatarUrl,
               participant_title: participant.title,
               status: 'active',
@@ -390,9 +410,9 @@ class ContactMessageSyncService {
               first_name: names[0] || '',
               last_name: names.slice(1).join(' ') || '',
               full_name: conv.participant_name,
-              company: conv.participant_company,
+              company: this.validateCompanyName(conv.participant_company, conv.participant_name || 'Unknown'),
               title: conv.participant_title,
-              linkedin_url: conv.metadata?.linkedin_profile_url,
+              linkedin_url: conv.metadata?.participant_linkedin_url || conv.metadata?.linkedin_profile_url,
               profile_picture_url: conv.participant_avatar_url,
               connection_degree: conv.metadata?.connection_degree,
               engagement_score: 50, // Default score

@@ -13,14 +13,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/integrations/supabase/client';
 import { ContactsListView } from "@/components/contacts/ContactsListView";
-import { AutoSyncControl } from "@/components/AutoSyncControl";
 import { LinkedInConnect } from "@/components/LinkedInConnect";
-import { contactMessageSync } from '@/services/unipile/ContactMessageSync';
-import { backgroundSyncManager } from '@/services/BackgroundSyncManager';
-import { workspaceUnipile } from '@/services/WorkspaceUnipileService';
+import { BackgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { enhancedLinkedInImport } from '@/services/EnhancedLinkedInImport';
-import { testUnipileConnection } from '@/utils/testUnipileConnection';
 import { toast } from 'sonner';
+import { getUserLinkedInAccounts, getUserWorkspaceId } from '@/utils/userDataStorage';
 import { 
   Mail, 
   Phone, 
@@ -45,7 +42,6 @@ import {
   Upload,
   Grid3X3,
   List,
-  RefreshCw,
   Linkedin
 } from "lucide-react";
 import {
@@ -56,18 +52,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Make test functions available globally
-if (typeof window !== 'undefined') {
-  import('@/utils/testUnipileConnection').then(module => {
-    (window as any).testUnipileConnection = module.testUnipileConnection;
-    console.log('🧪 LinkedIn Sync Test Available: window.testUnipileConnection(accountId)');
-  });
-  
-  import('@/utils/testContactSync').then(module => {
-    (window as any).testContactSync = module.testContactSync;
-    console.log('🧪 Contact Sync Test Available: window.testContactSync()');
-  });
-}
 
 export default function Contacts() {
   const [viewMode, setViewMode] = useState<"list" | "tile">("list");
@@ -83,10 +67,34 @@ export default function Contacts() {
   const [filterEngagement, setFilterEngagement] = useState<string>("all");
   const [filterTags, setFilterTags] = useState<string[]>([]);
   
-  // Default workspace and profile for dev mode
-  const DEFAULT_WORKSPACE_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+  // Get dynamic workspace ID (synchronous version for immediate use)
+  const getCurrentWorkspaceId = (): string => {
+    const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+    if (authProfile.workspace_id) return authProfile.workspace_id;
+    
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.workspace_id) return bypassUser.workspace_id;
+    
+    // Try to get from user-specific storage (if user is known)
+    const { data: { user } } = { data: { user: null } }; // Sync check
+    if (user) {
+      const workspaceId = localStorage.getItem(`user_${user.id}_workspace_id`);
+      if (workspaceId) return workspaceId;
+    }
+    
+    // Generate proper UUID fallback
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    return generateUUID();
+  };
+  
+  const DEFAULT_WORKSPACE_ID = getCurrentWorkspaceId();
   const DEFAULT_ACCOUNT_ID = 'default-account';
-  const [isSyncing, setIsSyncing] = useState(false);
   const [backgroundSyncEnabled, setBackgroundSyncEnabled] = useState(false);
   const { contacts, stats, loading, error, refreshData, createContact, updateContact, deleteContact } = useRealContacts();
 
@@ -310,67 +318,42 @@ export default function Contacts() {
     }
   };
 
-  const handleLinkedInSync = async () => {
-    setIsSyncing(true);
-    try {
-      // Initialize workspace Unipile service
-      const config = await workspaceUnipile.initialize();
-      
-      if (!config.linkedin_connected) {
-        toast.error('LinkedIn not connected. Please complete onboarding first.');
-        return;
-      }
-
-      toast.info('Starting LinkedIn contacts sync...');
-      
-      // Sync contacts using centralized service
-      const result = await workspaceUnipile.syncContacts(100);
-      
-      if (result.contactsSynced > 0) {
-        toast.success(`Successfully synced ${result.contactsSynced} LinkedIn contacts`);
-      }
-      
-      // Get workspace ID for background sync
-      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
-      const workspaceId = userProfile.workspace_id || localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID;
-      
-      // Check if background sync is enabled
-      const syncStatus = await backgroundSyncManager.getSyncStatus(workspaceId);
-      
-      if (!syncStatus?.isEnabled) {
-        // Enable background sync for continuous syncing
-        const enableResult = await backgroundSyncManager.enableBackgroundSync(
-          workspaceId,
-          config.account_id,
-          30, // Sync every 30 minutes
-          'both' // Sync both contacts and messages
-        );
-        
-        if (enableResult.success) {
-          setBackgroundSyncEnabled(true);
-          toast.success('Background sync enabled! Your contacts will sync automatically every 30 minutes, even when you leave this page.');
-        }
-      }
-
-      // Refresh the contacts list
-      await refreshData();
-    } catch (error) {
-      console.error('LinkedIn sync error:', error);
-      toast.error('Failed to sync LinkedIn contacts. Please check your LinkedIn connection in Settings.');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+  // Removed manual sync - now handled automatically by cloud sync
 
   // Check background sync status on mount
   useEffect(() => {
     const checkSyncStatus = async () => {
       const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
-      const workspaceId = userProfile.workspace_id || localStorage.getItem('workspace_id') || DEFAULT_WORKSPACE_ID;
+      const workspaceId = userProfile.workspace_id || await getUserWorkspaceId() || DEFAULT_WORKSPACE_ID;
       
       try {
-        const status = await backgroundSyncManager.getSyncStatus(workspaceId);
+        const syncManager = BackgroundSyncManager.getInstance();
+        const status = await syncManager.getSyncStatus(workspaceId);
         setBackgroundSyncEnabled(status?.isEnabled || false);
+        
+        // Automatically enable cloud sync if not already enabled
+        if (!status?.isEnabled) {
+          const accounts = await getUserLinkedInAccounts();
+          if (accounts.length > 0) {
+            const account = accounts[0];
+            const accountId = account.unipileAccountId || account.id || account.account_id;
+            
+            if (accountId) {
+              const result = await syncManager.enableBackgroundSync(
+                workspaceId,
+                accountId,
+                30, // Sync every 30 minutes
+                'contacts' // Sync contacts
+              );
+              
+              if (result.success) {
+                console.log('☁️ Cloud sync enabled for Contacts - will continue syncing when page is closed');
+                setBackgroundSyncEnabled(true);
+                toast.success('Cloud sync enabled for contacts', { duration: 3000 });
+              }
+            }
+          }
+        }
       } catch (error) {
         console.error('Error checking sync status:', error);
         setBackgroundSyncEnabled(false);
@@ -591,11 +574,17 @@ export default function Contacts() {
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="p-6 space-y-6">
-            {/* LinkedIn Connection or Auto-Sync */}
-            <AutoSyncControl 
-              workspaceId={DEFAULT_WORKSPACE_ID}
-              // accountId will be loaded automatically from WorkspaceUnipileService
-            />
+            {/* Cloud sync status indicator */}
+            {backgroundSyncEnabled && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-sm text-green-700">
+                    Cloud sync active - Contacts sync automatically every 30 minutes
+                  </span>
+                </div>
+              </div>
+            )}
             
             {/* Header */}
             <div className="flex items-center justify-between">

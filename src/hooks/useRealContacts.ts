@@ -47,16 +47,34 @@ export function useRealContacts() {
         if (profile.workspace_id) return profile.workspace_id;
       }
       
+      // Check bypass user data
+      const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+      if (bypassUser.workspace_id) return bypassUser.workspace_id;
+      
       // Check alternative storage
       const workspaceId = localStorage.getItem('workspace_id');
       if (workspaceId) return workspaceId;
       
-      // Return default workspace for dev mode
-      return 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+      // Generate UUID fallback
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+      return generateUUID();
     } catch (err) {
       console.error('Error getting workspace ID:', err);
-      // Return default workspace for dev mode
-      return 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+      // Generate UUID fallback
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+      return generateUUID();
     }
   };
 

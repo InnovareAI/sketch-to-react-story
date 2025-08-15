@@ -48,9 +48,36 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
       read: true,
       actionUrl: '/campaigns'
+    },
+    {
+      id: '4',
+      title: 'New Team Member Added',
+      message: 'John Smith has joined your workspace as a team member',
+      type: 'info',
+      timestamp: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
+      read: false,
+      actionUrl: '/accounts'
+    },
+    {
+      id: '5',
+      title: 'Template Saved',
+      message: 'Your LinkedIn outreach template has been auto-saved',
+      type: 'success',
+      timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+      read: false,
+      actionUrl: '/templates'
+    },
+    {
+      id: '6',
+      title: 'Search Completed',
+      message: '245 new prospects found matching your search criteria',
+      type: 'info',
+      timestamp: new Date(Date.now() - 1 * 60 * 1000), // 1 minute ago
+      read: false,
+      actionUrl: '/search'
     }
   ],
-  unreadCount: 2,
+  unreadCount: 5,
 
   addNotification: (notification) => {
     const newNotification: Notification = {
@@ -61,9 +88,18 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     };
     
     set((state) => ({
-      notifications: [newNotification, ...state.notifications],
+      notifications: [newNotification, ...state.notifications].slice(0, 50), // Keep max 50 notifications
       unreadCount: state.unreadCount + 1,
     }));
+
+    // Play a subtle sound effect (optional)
+    try {
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhB');
+      audio.volume = 0.3;
+      audio.play().catch(() => {}); // Ignore if autoplay is blocked
+    } catch (e) {
+      // Ignore audio errors
+    }
   },
 
   markAsRead: (id) => {

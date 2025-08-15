@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Users, Target, MessageSquare, BarChart3, Zap, Rocket, Star, Crown, Activity, ArrowUpRight, Eye, Clock, Globe, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { TrendingUp, TrendingDown, Users, Target, MessageSquare, BarChart3, Zap, Rocket, Star, Crown, Activity, ArrowUpRight, Eye, Clock, Globe, Loader2, Upload, Search, FileText, TestTube, BarChart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ interface CampaignData {
 }
 
 export function WorkspaceDashboard() {
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalCampaigns: 0,
     activeConnections: 0,
@@ -343,21 +345,51 @@ export function WorkspaceDashboard() {
                 <div className="p-2.5 rounded-xl bg-gradient-to-br from-premium-orange to-premium-pink">
                   <Zap className="h-5 w-5 text-white" />
                 </div>
-                <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
+                <CardTitle className="text-lg font-bold">SAM AI Actions</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full justify-start bg-gradient-to-r from-premium-purple/10 to-premium-blue/10 hover:from-premium-purple/20 hover:to-premium-blue/20 border border-premium-purple/20 text-foreground">
+              <Button 
+                onClick={() => navigate('/knowledge')}
+                className="w-full justify-start bg-gradient-to-r from-premium-blue/10 to-premium-purple/10 hover:from-premium-blue/20 hover:to-premium-purple/20 border border-premium-blue/20 text-foreground"
+              >
+                <Upload className="h-4 w-4 mr-3" />
+                Provide Insights Documents
+              </Button>
+              <Button 
+                onClick={() => navigate('/research')}
+                className="w-full justify-start bg-gradient-to-r from-premium-green/10 to-premium-cyan/10 hover:from-premium-green/20 hover:to-premium-cyan/20 border border-premium-green/20 text-foreground"
+              >
+                <Search className="h-4 w-4 mr-3" />
+                Conduct Market and ICP Research
+              </Button>
+              <Button 
+                onClick={() => navigate('/research')}
+                className="w-full justify-start bg-gradient-to-r from-premium-purple/10 to-premium-pink/10 hover:from-premium-purple/20 hover:to-premium-pink/20 border border-premium-purple/20 text-foreground"
+              >
                 <Target className="h-4 w-4 mr-3" />
-                Create New Campaign
+                Find Qualified Leads
               </Button>
-              <Button className="w-full justify-start bg-gradient-to-r from-premium-cyan/10 to-premium-green/10 hover:from-premium-cyan/20 hover:to-premium-green/20 border border-premium-cyan/20 text-foreground">
-                <Users className="h-4 w-4 mr-3" />
-                Import Contacts
-              </Button>
-              <Button className="w-full justify-start bg-gradient-to-r from-premium-orange/10 to-premium-pink/10 hover:from-premium-orange/20 hover:to-premium-pink/20 border border-premium-orange/20 text-foreground">
+              <Button 
+                onClick={() => navigate('/agent')}
+                className="w-full justify-start bg-gradient-to-r from-premium-cyan/10 to-premium-blue/10 hover:from-premium-cyan/20 hover:to-premium-blue/20 border border-premium-cyan/20 text-foreground"
+              >
                 <MessageSquare className="h-4 w-4 mr-3" />
-                Review Messages
+                Write Messaging
+              </Button>
+              <Button 
+                onClick={() => navigate('/campaign-setup')}
+                className="w-full justify-start bg-gradient-to-r from-premium-orange/10 to-premium-pink/10 hover:from-premium-orange/20 hover:to-premium-pink/20 border border-premium-orange/20 text-foreground"
+              >
+                <TestTube className="h-4 w-4 mr-3" />
+                Setup A/B Testing
+              </Button>
+              <Button 
+                onClick={() => navigate('/dashboard')}
+                className="w-full justify-start bg-gradient-to-r from-premium-pink/10 to-premium-orange/10 hover:from-premium-pink/20 hover:to-premium-orange/20 border border-premium-pink/20 text-foreground"
+              >
+                <BarChart className="h-4 w-4 mr-3" />
+                Analyze Performance
               </Button>
             </CardContent>
           </Card>

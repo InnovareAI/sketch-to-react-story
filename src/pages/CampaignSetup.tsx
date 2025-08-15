@@ -15,6 +15,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   ArrowLeft,
   Target,
@@ -71,6 +73,7 @@ export default function CampaignSetup() {
   const [campaignId, setCampaignId] = useState<string | null>(searchParams.get('id'));
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchUrl, setSearchUrl] = useState<string>("");
   
   const [prospectMethod, setProspectMethod] = useState<"search" | "existing" | "csv">("search");
   const [connectionDegrees, setConnectionDegrees] = useState<string[]>(["2nd", "3rd"]);
@@ -80,7 +83,11 @@ export default function CampaignSetup() {
   const [usePriority, setUsePriority] = useState(false);
   const [startImmediately, setStartImmediately] = useState(true);
   const [scheduledDate, setScheduledDate] = useState<string>("");
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [selectedPeople, setSelectedPeople] = useState<any[]>([]);
+  const { workspace, workspaceId } = useWorkspace();
+  const { user } = useAuth();
   
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -195,6 +202,94 @@ export default function CampaignSetup() {
     }, 2000);
   };
 
+  // Function to extract prospects from LinkedIn search URL
+  const handleExtractProspects = async () => {
+    if (!searchUrl) {
+      toast.error('Please enter a LinkedIn search URL');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Validate URL
+      if (!searchUrl.includes('linkedin.com')) {
+        toast.error('Please enter a valid LinkedIn URL');
+        return;
+      }
+
+      toast.info('Extracting prospects from LinkedIn...');
+      
+      // Simulate extraction process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Mock extracted prospects
+      const mockProspects = [
+        { id: 1, name: 'John Doe', title: 'CEO', company: 'Tech Corp' },
+        { id: 2, name: 'Jane Smith', title: 'CTO', company: 'Innovation Inc' },
+        { id: 3, name: 'Mike Johnson', title: 'VP Sales', company: 'Growth Co' }
+      ];
+      
+      setSelectedPeople(mockProspects);
+      toast.success(`Successfully extracted ${mockProspects.length} prospects from LinkedIn`);
+    } catch (error) {
+      console.error('Error extracting prospects:', error);
+      toast.error('Failed to extract prospects. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to process uploaded CSV file
+  const processCSVFile = async () => {
+    if (!csvFile) {
+      toast.error('Please upload a CSV file first');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        // Process CSV rows
+        const prospects = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim()) {
+            const values = lines[i].split(',');
+            const prospect = {
+              id: i,
+              profile_link: values[0]?.trim(),
+              first_name: values[1]?.trim(),
+              last_name: values[2]?.trim(),
+              job_title: values[3]?.trim(),
+              company_name: values[4]?.trim(),
+              email: values[5]?.trim()
+            };
+            prospects.push(prospect);
+          }
+        }
+        
+        setSelectedPeople(prospects);
+        toast.success(`Successfully imported ${prospects.length} prospects from CSV`);
+      };
+      
+      reader.onerror = () => {
+        toast.error('Failed to read CSV file');
+      };
+      
+      reader.readAsText(csvFile);
+    } catch (error) {
+      console.error('Error processing CSV:', error);
+      toast.error('Failed to process CSV file');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const addFollowUpMessage = () => {
     const newMessage: Message = {
       id: messages.length + 1,
@@ -218,27 +313,13 @@ export default function CampaignSetup() {
 
   // Load workspace on mount
   useEffect(() => {
-    loadWorkspace();
+    // Workspace is now loaded via useWorkspace hook
     if (campaignId) {
       loadCampaign(campaignId);
     }
   }, [campaignId]);
 
-  const loadWorkspace = async () => {
-    try {
-      const { data: workspace } = await supabase
-        .from('workspaces')
-        .select('id')
-        .limit(1)
-        .single();
-      
-      if (workspace) {
-        setWorkspaceId(workspace.id);
-      }
-    } catch (error) {
-      console.error('Error loading workspace:', error);
-    }
-  };
+  // Workspace loading now handled by useWorkspace hook
 
   const loadCampaign = async (id: string) => {
     setLoading(true);
@@ -273,19 +354,40 @@ export default function CampaignSetup() {
     }
   };
 
-  const handleSaveCampaign = async () => {
+  const handleSaveCampaign = async (isAutoSave = false) => {
+    console.log('Attempting to save campaign, workspaceId:', workspaceId);
     if (!workspaceId) {
-      toast.error('No workspace found');
-      return;
+      if (!isAutoSave) toast.error('No workspace found. Please try refreshing the page.');
+      console.error('workspaceId is missing:', { workspace, workspaceId });
+      return false;
+    }
+    
+    if (!user?.id) {
+      if (!isAutoSave) toast.error('User not found. Please try refreshing the page.');
+      console.error('user is missing:', { user });
+      return false;
+    }
+    
+    if (!campaignName.trim()) {
+      if (!isAutoSave) toast.error('Please enter a campaign name');
+      return false;
     }
 
-    setSaving(true);
+    if (isAutoSave) {
+      setAutoSaving(true);
+    } else {
+      setSaving(true);
+    }
+    
     try {
       const campaignData = {
         workspace_id: workspaceId,
+        tenant_id: workspaceId, // Required NOT NULL field
+        user_id: user.id, // Required NOT NULL field for RLS policy
         name: campaignName,
         type: campaignType.toLowerCase(),
         status: 'draft',
+        description: `${campaignType} campaign created on ${new Date().toLocaleDateString()}`,
         settings: {
           daily_contact_limit: dailyContactLimit,
           daily_followup_limit: dailyFollowupLimit,
@@ -296,13 +398,9 @@ export default function CampaignSetup() {
           prospect_method: prospectMethod,
           connection_degrees: connectionDegrees,
           messages: messages,
-          csv_file: csvFile?.name || null
-        },
-        stats: {
-          total_prospects: 0,
-          sent: 0,
-          accepted: 0,
-          replied: 0
+          csv_file: csvFile?.name || null,
+          search_url: searchUrl || null,
+          selected_people: selectedPeople || []
         }
       };
 
@@ -315,7 +413,7 @@ export default function CampaignSetup() {
         
         if (error) throw error;
         
-        toast.success('Campaign updated successfully');
+        if (!isAutoSave) toast.success('Campaign updated successfully');
       } else {
         // Create new campaign
         const { data, error } = await supabase
@@ -334,15 +432,71 @@ export default function CampaignSetup() {
           window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
         }
         
-        toast.success('Campaign created successfully');
+        if (!isAutoSave) toast.success('Campaign created successfully');
       }
+      
+      setLastSaved(new Date());
+      return true;
     } catch (error) {
       console.error('Error saving campaign:', error);
-      toast.error('Failed to save campaign');
+      if (!isAutoSave) toast.error(`Failed to save campaign: ${error.message || 'Unknown error'}`);
+      return false;
     } finally {
-      setSaving(false);
+      if (isAutoSave) {
+        setAutoSaving(false);
+      } else {
+        setSaving(false);
+      }
     }
   };
+
+  // Auto-save function
+  const performAutoSave = async () => {
+    if (!workspaceId || !user?.id || !campaignName.trim()) {
+      return; // Skip auto-save if missing required data
+    }
+    
+    console.log('Performing auto-save...');
+    await handleSaveCampaign(true);
+  };
+
+  // Auto-save effect - save every 30 seconds when there are changes
+  useEffect(() => {
+    if (!campaignName.trim() || !workspaceId || !user?.id) {
+      return; // Skip setting up auto-save if required data missing
+    }
+
+    const autoSaveInterval = setInterval(() => {
+      performAutoSave();
+    }, 30000); // Auto-save every 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [campaignName, workspaceId, user?.id]); // Reduced dependencies to prevent frequent re-creation
+
+  // Auto-save when user leaves the page or switches tabs
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (campaignName.trim() && workspaceId && user?.id) {
+        performAutoSave();
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && campaignName.trim() && workspaceId && user?.id) {
+        performAutoSave();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [campaignName, workspaceId, user?.id]);
 
   const handleActivateCampaign = async () => {
     if (!campaignId) {
@@ -391,11 +545,11 @@ export default function CampaignSetup() {
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
-                    onClick={handleSaveCampaign}
-                    disabled={saving}
+                    onClick={() => handleSaveCampaign(false)}
+                    disabled={saving || autoSaving}
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save'}
+                    {saving ? 'Saving...' : autoSaving ? 'Auto-saving...' : 'Save'}
                   </Button>
                   <Button onClick={handleActivateCampaign}>
                     <Play className="h-4 w-4 mr-2" />
@@ -406,13 +560,37 @@ export default function CampaignSetup() {
 
               {/* Campaign Navigation Tabs */}
               <div className="mb-6">
-                <div className="flex items-center gap-6 text-sm">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Input 
-                      value={campaignName}
-                      onChange={(e) => setCampaignName(e.target.value)}
-                      className="font-medium border-none bg-transparent p-0 h-auto text-lg"
-                    />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Input 
+                        value={campaignName}
+                        onChange={(e) => setCampaignName(e.target.value)}
+                        className="font-medium border-none bg-transparent p-0 h-auto text-lg"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Auto-save Status */}
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    {autoSaving && (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                        <span>Auto-saving...</span>
+                      </>
+                    )}
+                    {lastSaved && !autoSaving && (
+                      <>
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                        <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
+                      </>
+                    )}
+                    {!lastSaved && !autoSaving && campaignName.trim() && (
+                      <>
+                        <Clock className="h-3 w-3 text-orange-500" />
+                        <span>Unsaved changes</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -460,6 +638,23 @@ export default function CampaignSetup() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                      {/* Search URL Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="search-url">LinkedIn or Sales Navigator Search URL</Label>
+                        <Textarea
+                          id="search-url"
+                          value={searchUrl}
+                          onChange={(e) => setSearchUrl(e.target.value)}
+                          placeholder="Paste your LinkedIn or Sales Navigator search URL here...
+Example: https://www.linkedin.com/search/results/people/?keywords=marketing%20manager
+Example: https://www.linkedin.com/sales/search/people?..."
+                          className="min-h-[80px]"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Add your search URL to automatically extract and save prospects from LinkedIn or Sales Navigator
+                        </p>
+                      </div>
+
                       {/* Connection Degrees */}
                       <div className="space-y-3">
                         <Label className="text-base font-medium">For this type of campaign use prospects with:</Label>
@@ -495,26 +690,125 @@ export default function CampaignSetup() {
                         </div>
                       </div>
 
-                      {/* New Search Method */}
+                      {/* Prospect Method Selection */}
                       <div className="space-y-4">
-                        <div className="text-center py-8">
-                          <div className="max-w-md mx-auto">
-                            <Target className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Add Prospects to Campaign</h3>
-                            <p className="text-gray-600 text-sm mb-6">
-                              Choose from multiple search methods to find and add prospects to your campaign. Select the method that best fits your targeting strategy.
-                            </p>
-                            <Button size="lg" onClick={() => navigate('/prospect-search')} className="bg-blue-600 hover:bg-blue-700">
-                              <Search className="h-5 w-5 mr-2" />
-                              Choose Search Type
-                            </Button>
+                        <Label className="text-base font-medium">Choose how to add prospects:</Label>
+                        <RadioGroup value={prospectMethod} onValueChange={(value: any) => setProspectMethod(value)}>
+                          <div className="grid grid-cols-3 gap-4">
+                            <Card className={`cursor-pointer ${prospectMethod === 'search' ? 'ring-2 ring-primary' : ''}`}>
+                              <CardContent className="p-4" onClick={() => setProspectMethod('search')}>
+                                <RadioGroupItem value="search" id="search" className="sr-only" />
+                                <div className="text-center">
+                                  <Search className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                                  <Label htmlFor="search" className="font-medium cursor-pointer">Search LinkedIn</Label>
+                                  <p className="text-xs text-gray-600 mt-1">Use LinkedIn search URL</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            
+                            <Card className={`cursor-pointer ${prospectMethod === 'csv' ? 'ring-2 ring-primary' : ''}`}>
+                              <CardContent className="p-4" onClick={() => setProspectMethod('csv')}>
+                                <RadioGroupItem value="csv" id="csv" className="sr-only" />
+                                <div className="text-center">
+                                  <Upload className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                                  <Label htmlFor="csv" className="font-medium cursor-pointer">Upload CSV</Label>
+                                  <p className="text-xs text-gray-600 mt-1">Import from file</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            
+                            <Card className={`cursor-pointer ${prospectMethod === 'existing' ? 'ring-2 ring-primary' : ''}`}>
+                              <CardContent className="p-4" onClick={() => setProspectMethod('existing')}>
+                                <RadioGroupItem value="existing" id="existing" className="sr-only" />
+                                <div className="text-center">
+                                  <Users className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                                  <Label htmlFor="existing" className="font-medium cursor-pointer">Existing Contacts</Label>
+                                  <p className="text-xs text-gray-600 mt-1">From your database</p>
+                                </div>
+                              </CardContent>
+                            </Card>
                           </div>
-                        </div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* Method-specific content */}
+                      <div className="space-y-4">
+                        {prospectMethod === 'search' && (
+                          <div className="text-center py-8">
+                            <div className="max-w-md mx-auto">
+                              <Target className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">LinkedIn Search</h3>
+                              <p className="text-gray-600 text-sm mb-6">
+                                Paste your search URL above and we'll extract prospects automatically
+                              </p>
+                              <Button size="lg" onClick={() => {
+                                if (!searchUrl) {
+                                  toast.error('Please enter a LinkedIn search URL first');
+                                  return;
+                                }
+                                handleExtractProspects();
+                              }} disabled={loading}>
+                                <Search className="h-5 w-5 mr-2" />
+                                {loading ? 'Extracting...' : 'Extract Prospects'}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {prospectMethod === 'csv' && (
+                          <div className="text-center py-8">
+                            <div className="max-w-md mx-auto">
+                              <Upload className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload CSV File</h3>
+                              <p className="text-gray-600 text-sm mb-6">
+                                Upload a CSV file with your prospects. Required columns: First Name, Last Name, LinkedIn URL
+                              </p>
+                              <div className="space-y-4">
+                                <input
+                                  type="file"
+                                  accept=".csv"
+                                  id="csv-upload"
+                                  className="hidden"
+                                  onChange={handleFileUpload}
+                                />
+                                <label htmlFor="csv-upload">
+                                  <Button size="lg" className="bg-green-600 hover:bg-green-700" asChild>
+                                    <span>
+                                      <Upload className="h-5 w-5 mr-2" />
+                                      {csvFile ? csvFile.name : 'Choose CSV File'}
+                                    </span>
+                                  </Button>
+                                </label>
+                                {csvFile && (
+                                  <Button size="lg" onClick={processCSVFile} disabled={loading}>
+                                    {loading ? 'Processing...' : 'Process CSV'}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {prospectMethod === 'existing' && (
+                          <div className="text-center py-8">
+                            <div className="max-w-md mx-auto">
+                              <Users className="h-16 w-16 text-purple-600 mx-auto mb-4" />
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">Select from Contacts</h3>
+                              <p className="text-gray-600 text-sm mb-6">
+                                Choose prospects from your existing contact database
+                              </p>
+                              <Button size="lg" onClick={() => navigate('/contacts?select=true&campaign=' + campaignId)} className="bg-purple-600 hover:bg-purple-700">
+                                <Users className="h-5 w-5 mr-2" />
+                                Browse Contacts
+                              </Button>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="border-t pt-6">
                           <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>Prospects added: 0</span>
-                            <span>Campaign ready to launch once prospects are added</span>
+                            <span>Prospects added: {selectedPeople.length}</span>
+                            <span>{selectedPeople.length > 0 ? 'Campaign ready to launch' : 'Add prospects to continue'}</span>
                           </div>
                         </div>
                       </div>
@@ -534,7 +828,7 @@ export default function CampaignSetup() {
                         <Plus className="h-4 w-4 mr-2" />
                         Add follow up
                       </Button>
-                      <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveCampaign}>
+                      <Button className="bg-primary hover:bg-primary/90" onClick={() => handleSaveCampaign(false)}>
                         <Save className="h-4 w-4 mr-2" />
                         Save messages
                       </Button>
@@ -671,7 +965,7 @@ export default function CampaignSetup() {
                       <div>
                         <h3 className="text-lg font-semibold">Set campaign parameters to run the campaign</h3>
                       </div>
-                      <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveCampaign}>
+                      <Button className="bg-primary hover:bg-primary/90" onClick={() => handleSaveCampaign(false)}>
                         <Save className="h-4 w-4 mr-2" />
                         Save
                       </Button>

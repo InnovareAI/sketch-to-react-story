@@ -46,18 +46,17 @@ export function useRealTemplates() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getCurrentWorkspaceId = (): string | null => {
-    try {
-      const userAuthProfile = localStorage.getItem('user_auth_profile');
-      if (userAuthProfile) {
-        const profile = JSON.parse(userAuthProfile);
-        return profile.workspace_id;
-      }
-      return null;
-    } catch (err) {
-      console.error('Error getting workspace ID:', err);
-      return null;
+  const getCurrentWorkspaceId = (): string => {
+    // Get workspace from authenticated user profile
+    const workspaceId = localStorage.getItem('app_workspace_id') || localStorage.getItem('workspace_id');
+    
+    if (workspaceId && workspaceId !== 'a0000000-0000-0000-0000-000000000000') {
+      return workspaceId;
     }
+    
+    // Generate new workspace if needed
+    const { getWorkspaceId } = require('@/lib/workspace');
+    return getWorkspaceId();
   };
 
   const fetchTemplates = async () => {
@@ -66,9 +65,6 @@ export function useRealTemplates() {
       setError(null);
 
       const workspaceId = getCurrentWorkspaceId();
-      if (!workspaceId) {
-        throw new Error('No workspace found. Please ensure you are logged in.');
-      }
 
       // Get message templates (reusable messages)
       // First, try to get templates from a dedicated templates table if it exists
@@ -95,7 +91,7 @@ export function useRealTemplates() {
             )
           `)
           .eq('workspace_id', workspaceId)
-          .or('status.eq.template,and(not.subject.is.null,status.ne.failed)') // Templates or messages with subjects
+          .or('status.eq.template,status.eq.sent') // Templates or sent messages
           .order('created_at', { ascending: false });
         
         messages = messagesData;
@@ -215,9 +211,6 @@ export function useRealTemplates() {
   }) => {
     try {
       const workspaceId = getCurrentWorkspaceId();
-      if (!workspaceId) {
-        throw new Error('No workspace found. Please ensure you are logged in.');
-      }
 
       const { data, error } = await supabase
         .from('messages')

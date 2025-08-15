@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   BarChart3,
@@ -18,10 +19,14 @@ import {
   Video,
   Folder,
   Search,
+  Shield,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SAMBranding } from '@/components/branding/SAMBranding';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import WorkspaceSelector from './WorkspaceSelector';
+import ReplyModal from '@/components/ReplyModal';
 
 // Main Navigation Items
 const mainNavItems = [
@@ -30,6 +35,7 @@ const mainNavItems = [
   { title: "Search", url: "/search", icon: Search },
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Inbox", url: "/inbox", icon: Mail },
+  { title: "Reply", url: "/reply", icon: MessageSquare },
   { title: "Templates", url: "/templates", icon: FileText },
 ];
 
@@ -45,9 +51,14 @@ const settingsItems = [
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
+// Super Admin Navigation (for InnovareAI workspace only)
+const superAdminItems = [
+  { title: "Tenant Management", url: "/admin/tenants", icon: Shield },
+];
+
 // Agent Mode Navigation
 const agentNavItems = [
-  { title: "AI Agents", url: "/agent/team", icon: Bot },
+  { title: "AI Agents", url: "/agent", icon: Bot },
   { title: "Training", url: "/agent/train", icon: GraduationCap },
 ];
 
@@ -57,7 +68,7 @@ const agentDocumentItems = [
   { title: "Offers", url: "/agent/offer", icon: Gift },
   { title: "Messaging", url: "/agent/messaging", icon: MessageSquare },
   { title: "CTAs", url: "/agent/cta", icon: MousePointer },
-  { title: "Meetings", url: "/agent/meeting", icon: Video },
+  { title: "Meetings", url: "/agent/meeting", icon: Calendar },
   { title: "Documents", url: "/agent/documents", icon: Folder },
 ];
 
@@ -71,58 +82,98 @@ export function WorkspaceSidebar({
   const location = useLocation();
   const currentPath = location.pathname;
   const isTeamMember = true;
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  
+  // Determine if we're in agent mode based on current path
+  const isAgentMode = currentPath.startsWith('/agent');
 
   // Simple navigation item component with no complex interactions
-  const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
-    <NavLink
-      to={item.url}
-      className={() => cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
-        isActive
-          ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1"
-          : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
-      )}
-      onClick={(e) => {
-        e.stopPropagation();
-      }}
-    >
-      <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-blue-500" : "")} />
-      <span className="truncate">{item.title}</span>
-    </NavLink>
-  );
+  const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => {
+    // Special handling for reply to open modal
+    if (item.title === "Reply") {
+      return (
+        <button
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
+            isAgentMode
+              ? "text-gray-300 font-normal hover:bg-gray-800 hover:text-white ml-1"
+              : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
+          )}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowReplyModal(true);
+          }}
+        >
+          <item.icon className={cn("h-4 w-4 flex-shrink-0", isAgentMode ? "text-gray-300" : "")} />
+          <span className="truncate">{item.title}</span>
+        </button>
+      );
+    }
+    
+    return (
+      <NavLink
+        to={item.url}
+        className={() => cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
+          isActive
+            ? (isAgentMode 
+               ? "bg-gradient-to-r from-purple-900/50 to-blue-900/50 text-white font-medium border-l-3 border-purple-400 ml-1"
+               : "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1")
+            : (isAgentMode
+               ? "text-gray-300 font-normal hover:bg-gray-800 hover:text-white ml-1"
+               : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1")
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? (isAgentMode ? "text-white" : "text-blue-500") : (isAgentMode ? "text-gray-300" : ""))} />
+        <span className="truncate">{item.title}</span>
+      </NavLink>
+    );
+  };
 
   return (
     <aside className={cn(
       "w-64 border-r sticky top-0 h-screen flex-shrink-0 overflow-hidden",
-      isConversational ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
+      isAgentMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
     )}>
       <div className="h-full flex flex-col">
         {/* SAM Branding Header */}
-        <div className="p-4 border-b border-gray-200">
+        <div className={cn(
+          "p-4 border-b",
+          isAgentMode ? "border-gray-700" : "border-gray-200"
+        )}>
           <SAMBranding variant="default" showTagline={true} className="mb-4" />
           <div className="flex flex-col gap-3">
-            {/* Workspace Switcher */}
-            <WorkspaceSwitcher />
+            {/* Workspace Selector */}
+            <WorkspaceSelector isAgentMode={isAgentMode} />
             
             {/* Mode Switch Button */}
-            <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg w-full border border-gray-200">
+            <div className={cn(
+              "flex items-center gap-1 p-1 rounded-lg w-full border",
+              isAgentMode 
+                ? "bg-gray-800 border-gray-600" 
+                : "bg-gray-50 border-gray-200"
+            )}>
               <NavLink
                 to="/"
                 className={({ isActive }) => cn(
                   "flex-1 px-3 py-1.5 text-xs font-normal rounded-md text-center transition-all",
-                  !isConversational 
+                  !isAgentMode 
                     ? "bg-white text-blue-600 shadow-sm border border-gray-200" 
-                    : "text-gray-600 hover:text-gray-900"
+                    : "text-gray-300 hover:text-white hover:bg-gray-700"
                 )}
               >
                 Work
               </NavLink>
               <NavLink
-                to="/agent/team"
+                to="/agent"
                 className={({ isActive }) => cn(
                   "flex-1 px-3 py-1.5 text-xs font-normal rounded-md text-center transition-all",
-                  isConversational 
-                    ? "bg-white text-gray-900 shadow-sm border border-gray-200" 
+                  isAgentMode 
+                    ? "bg-black text-white shadow-sm border border-gray-500" 
                     : "text-gray-600 hover:text-gray-900"
                 )}
               >
@@ -136,7 +187,7 @@ export function WorkspaceSidebar({
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
             {/* Main Navigation */}
-            {!isConversational && (
+            {!isAgentMode && (
               <nav className="space-y-1 mb-6">
                 {mainNavItems.map((item) => (
                   <NavItem
@@ -149,7 +200,7 @@ export function WorkspaceSidebar({
             )}
 
             {/* Agent Mode Navigation */}
-            {isConversational && (
+            {isAgentMode && (
               <nav className="space-y-1 mb-6">
                 {agentNavItems.map((item) => (
                   <NavItem
@@ -162,11 +213,11 @@ export function WorkspaceSidebar({
             )}
 
             {/* Team Section */}
-            {!isConversational && isTeamMember && (
+            {!isAgentMode && isTeamMember && (
               <div className="mb-6">
                 <h3 className={cn(
                   "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
-                  isConversational ? "text-gray-400 font-semibold" : "text-gray-400 font-normal"
+                  isAgentMode ? "text-gray-300 font-normal" : "text-gray-400 font-normal"
                 )}>
                   Team
                 </h3>
@@ -183,11 +234,11 @@ export function WorkspaceSidebar({
             )}
 
             {/* Agent Documents - Always Expanded */}
-            {isConversational && (
+            {isAgentMode && (
               <div className="mb-6">
                 <h3 className={cn(
                   "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
-                  "text-gray-400 font-normal"
+                  isAgentMode ? "text-gray-300 font-normal" : "text-gray-400 font-normal"
                 )}>
                   Documents
                 </h3>
@@ -205,11 +256,12 @@ export function WorkspaceSidebar({
           </div>
         </div>
 
-        {/* Settings Section */}
+        {/* Settings Section - Only show in Work mode */}
+        {!isAgentMode && (
         <div className="border-t border-gray-100 p-4 bg-gray-50">
           <h3 className={cn(
             "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
-            isConversational ? "text-gray-400 font-semibold" : "text-gray-400 font-normal"
+            isAgentMode ? "text-gray-300 font-normal" : "text-gray-400 font-normal"
           )}>
             Settings
           </h3>
@@ -223,7 +275,14 @@ export function WorkspaceSidebar({
             ))}
           </nav>
         </div>
+        )}
       </div>
+      
+      {/* Reply Modal */}
+      <ReplyModal 
+        isOpen={showReplyModal} 
+        onClose={() => setShowReplyModal(false)} 
+      />
     </aside>
   );
 }

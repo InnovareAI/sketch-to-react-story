@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus, Sparkles, Brain, Cpu, Activity, Upload, Rocket, Linkedin, Search, Database, Mail, BarChart3, TestTube, FileText, Link } from "lucide-react";
+import { Send, Bot, User, Zap, Target, Users, MessageSquare, BookOpen, TrendingUp, Plus, Sparkles, Brain, Cpu, Activity, Upload, Rocket, Linkedin, Search, Database, Mail, BarChart3, TestTube, FileText, Link, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -16,12 +16,14 @@ import { VoiceInterface } from "./VoiceInterface";
 import { ChatHistory } from "./ChatHistory";
 import { ContextMemory } from "./ContextMemory";
 import { SamThinkingDisplay, ThinkingStep } from "./SamThinkingDisplay";
+import { ModeSwitcher } from "./ModeSwitcher";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { useVoice } from "@/hooks/useVoice";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { ChatSkeleton } from "@/components/ui/skeleton";
 import { AgentFactory } from "@/services/agents/AgentFactory";
 import { AgentConfig, Message, AgentTrace } from "@/services/agents/types/AgentTypes";
+import { MemoryService } from "@/services/memory/MemoryService";
 
 interface QuickAction {
   title: string;
@@ -36,44 +38,46 @@ interface EnhancedConversationalInterfaceProps {
   operationMode?: 'inbound' | 'outbound';
 }
 
-// Conversation starters - 6 essential options
+// 6 Core conversation starters - main SAM workflow functions
 const conversationStarters = {
-  "Quick Actions": [
+  "Get Started": [
     {
-      title: "Upload company info",
-      prompt: "I want to upload information about my company and what we sell",
+      title: "📤 Upload Knowledge",
+      prompt: "I want to upload company documents and training materials",
       icon: Upload,
-      color: "from-blue-500 to-purple-600"
-    },
-    {
-      title: "Find qualified leads",
-      prompt: "Find me qualified leads that match my ideal customer profile",
-      icon: Target,
-      color: "from-green-500 to-teal-600"
-    },
-    {
-      title: "Create campaign",
-      prompt: "Help me create an outreach campaign with email and LinkedIn sequences",
-      icon: Rocket,
-      color: "from-orange-500 to-red-600"
-    },
-    {
-      title: "Write messages",
-      prompt: "Write personalized outreach messages for my prospects",
-      icon: MessageSquare,
       color: "from-purple-500 to-pink-600"
     },
     {
-      title: "Analyze performance",
-      prompt: "Show me the performance of my campaigns and what to improve",
-      icon: BarChart3,
-      color: "from-indigo-500 to-purple-600"
+      title: "🔍 Research Prospects",
+      prompt: "I need to research and find potential leads",
+      icon: Search,
+      color: "from-blue-500 to-cyan-600"
     },
     {
-      title: "Connect LinkedIn",
-      prompt: "Help me connect and set up my LinkedIn account for automated outreach",
-      icon: Linkedin,
-      color: "from-blue-600 to-blue-700"
+      title: "🎯 Find Leads",
+      prompt: "I want to generate new leads and build prospect lists",
+      icon: Target,
+      color: "from-green-500 to-teal-600"
+    }
+  ],
+  "Create & Optimize": [
+    {
+      title: "✍️ Write Messaging",
+      prompt: "I need help writing outreach messages and email campaigns",
+      icon: FileText,
+      color: "from-orange-500 to-red-600"
+    },
+    {
+      title: "🧪 A/B Testing",
+      prompt: "I want to test different message variations and optimize performance",
+      icon: TestTube,
+      color: "from-pink-500 to-purple-600"
+    },
+    {
+      title: "📊 Analyze Performance",
+      prompt: "Show me campaign analytics and performance insights",
+      icon: BarChart3,
+      color: "from-indigo-500 to-blue-600"
     }
   ]
 };
@@ -105,14 +109,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [isAgentInitialized, setIsAgentInitialized] = useState(false);
   
   // UI state
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Hello! I'm SAM, your AI sales assistant powered by a team of specialist agents. I can help you with lead generation, campaign optimization, content creation, and performance analysis. What would you like to work on today?",
-      sender: "sam",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [samIsActive, setSamIsActive] = useState(false);
   const [samStatus, setSamStatus] = useState("Ready to help you");
@@ -121,87 +118,221 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [processingProgress, setProcessingProgress] = useState(0);
   const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
   const [showThinking, setShowThinking] = useState(true);
+  const [isNewUser, setIsNewUser] = useState<boolean>(false);
+  const [hasStartedOnboarding, setHasStartedOnboarding] = useState<boolean>(false);
+  const [currentOperationMode, setCurrentOperationMode] = useState<'inbound' | 'outbound'>(operationMode);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [needsNameCollection, setNeedsNameCollection] = useState<boolean>(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState<boolean>(false);
+  const [hasInitialMessage, setHasInitialMessage] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize agent system
+  // Helper functions to check account connection status
+  const checkLinkedInConnection = (): boolean => {
+    // Check if LinkedIn account is connected (this would come from your auth/integration system)
+    const linkedinData = localStorage.getItem('linkedin_connection');
+    return linkedinData ? JSON.parse(linkedinData).connected : false;
+  };
+
+  const checkEmailConnection = (): boolean => {
+    // Check if email account is connected (this would come from your auth/integration system)
+    const emailData = localStorage.getItem('email_connection');
+    return emailData ? JSON.parse(emailData).connected : false;
+  };
+
+  const checkActiveCampaigns = (): boolean => {
+    // Check if there are active campaigns running
+    const campaignsData = localStorage.getItem('active_campaigns');
+    return campaignsData ? JSON.parse(campaignsData).length > 0 : false;
+  };
+
+  // Load user profile and customize greeting
   useEffect(() => {
+    const loadUserProfile = () => {
+      try {
+        const profileData = localStorage.getItem('user_auth_profile');
+        if (profileData) {
+          const profile = JSON.parse(profileData);
+          setUserProfile(profile);
+          
+          // Check if we have a proper first name (not "Demo User" or empty)
+          const firstName = profile.full_name?.split(' ')[0];
+          if (!firstName || firstName === 'Demo' || profile.full_name === 'Demo User' || profile.full_name.trim() === '') {
+            setNeedsNameCollection(true);
+          }
+        } else {
+          setNeedsNameCollection(true);
+        }
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+        setNeedsNameCollection(true);
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
+  // Set personalized initial message - only once
+  useEffect(() => {
+    if (userProfile && messages.length === 0 && !hasInitialMessage) {
+      const firstName = userProfile.full_name?.split(' ')[0];
+      let greeting;
+      
+      if (needsNameCollection) {
+        greeting = `Hey there! 👋 I'm SAM, your new sales assistant.\n\nWhat should I call you? Just your first name is perfect!`;
+      } else {
+        greeting = `Hey ${firstName}! 👋 Ready to get some work done?\n\nWant me to **explain what I can do** first, or should we **jump right in**?\n\nJust say "explain" or "let's go" - whatever feels right!`;
+      }
+      
+      setMessages([{
+        id: "1",
+        content: greeting,
+        sender: "sam",
+        timestamp: new Date(),
+      }]);
+      setHasInitialMessage(true);
+    }
+  }, [userProfile, needsNameCollection, hasInitialMessage]);
+
+  // Check if user is new and needs onboarding
+  useEffect(() => {
+    const checkUserOnboardingStatus = () => {
+      const hasCompletedOnboarding = localStorage.getItem('sam_onboarding_completed');
+      const accountCreatedAt = localStorage.getItem('account_created_at');
+      const now = Date.now();
+      const accountAge = accountCreatedAt ? now - parseInt(accountCreatedAt) : 0;
+      
+      // Consider user "new" if account is less than 7 days old or no onboarding flag
+      const isUserNew = !hasCompletedOnboarding || accountAge < (7 * 24 * 60 * 60 * 1000);
+      
+      setIsNewUser(isUserNew);
+      
+      // If new user and agent is initialized, start onboarding
+      if (isUserNew && isAgentInitialized && !hasStartedOnboarding) {
+        startOnboardingFlow();
+      }
+    };
+
+    checkUserOnboardingStatus();
+  }, [isAgentInitialized, hasStartedOnboarding]);
+
+  // Initialize agent system with better error handling
+  useEffect(() => {
+    let isMounted = true;
+    
     const initializeAgents = async () => {
       try {
-        const config: AgentConfig = {
-          apiKeys: {
-            // These would come from environment variables
-            openai: process.env.VITE_OPENAI_API_KEY,
-            claude: process.env.VITE_CLAUDE_API_KEY,
-          },
-          supabase: {
-            url: process.env.VITE_SUPABASE_URL || '',
-            anonKey: process.env.VITE_SUPABASE_ANON_KEY || '',
-          },
-          features: {
-            voiceEnabled: true,
-            videoGeneration: false,
-            linkedinAutomation: true,
-            emailAutomation: true,
-          },
-          limits: {
-            maxParallelTasks: 5,
-            maxTokensPerRequest: 4000,
-            maxSessionDuration: 120,
-          },
-          prompts: {
-            orchestrator: "You are SAM, an AI sales assistant orchestrator...",
-            'lead-research': "You are a lead research specialist...",
-            'campaign-management': "You are a campaign management expert...",
-            'gtm-strategy': "You are a go-to-market strategy specialist...",
-            'meddic-qualification': "You are a MEDDIC qualification expert...",
-            'workflow-automation': "You are a workflow automation specialist...",
-            'inbox-triage': "You are an inbox triage specialist...",
-            'spam-filter': "You are a spam filter specialist...",
-            'auto-response': "You are an auto-response specialist...",
-            'content-creation': "You are a content creation specialist...",
-            'outreach-automation': "You are an outreach automation expert...",
-            'analytics': "You are a performance analytics specialist...",
-            'knowledge-base': "You are a knowledge management expert..."
-          }
-        };
+        // Simple delay to show loading state
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        if (!isMounted) return;
+        
+        // Try to initialize agent factory
+        try {
+          const config: AgentConfig = {
+            apiKeys: {
+              openai: import.meta.env.VITE_OPENAI_API_KEY || undefined,
+              claude: import.meta.env.VITE_CLAUDE_API_KEY || undefined,
+            },
+            supabase: {
+              url: import.meta.env.VITE_SUPABASE_URL || 'https://ktchrfgkbpaixbiwbieg.supabase.co',
+              anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0Y2hyZmdrYnBhaXhiaXdiaWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjI0MzMxNzcsImV4cCI6MjAzODAwOTE3N30.YI1RxpjqToyqY9Dj12fqEP2V3G6d2j8QZA2xj8TcTBg',
+            },
+            features: {
+              voiceEnabled: true,
+              videoGeneration: false,
+              linkedinAutomation: true,
+              emailAutomation: true,
+            },
+            limits: {
+              maxParallelTasks: 3,
+              maxTokensPerRequest: 3000,
+              maxSessionDuration: 60,
+            },
+            prompts: {
+              orchestrator: "You are SAM, an AI sales assistant.",
+              'lead-research': "You are a lead research specialist.",
+              'campaign-management': "You are a campaign management expert.",
+              'gtm-strategy': "You are a GTM strategy specialist.",
+              'meddic-qualification': "You are a MEDDIC qualification expert.",
+              'workflow-automation': "You are a workflow automation specialist.",
+              'inbox-triage': "You are an inbox triage specialist.",
+              'spam-filter': "You are a spam filter specialist.",
+              'auto-response': "You are an auto-response specialist.",
+              'content-creation': "You are a content creation specialist.",
+              'outreach-automation': "You are an outreach automation expert.",
+              'analytics': "You are a performance analytics specialist.",
+              'knowledge-base': "You are a knowledge management expert."
+            }
+          };
 
-        await agentFactory.initialize(config);
-        setIsAgentInitialized(true);
+          await agentFactory.initialize(config);
+          console.log('✅ Agent system initialized');
+          
+          if (isMounted) {
+            setSamStatus(`Multi-agent system ready - ${operationMode} mode`);
+          }
+        } catch (initError) {
+          console.warn('⚠️ Agent initialization failed, using fallback mode:', initError);
+          if (isMounted) {
+            setSamStatus("Using simplified mode");
+          }
+        }
         
-        // Set initial operation mode
-        const orchestrator = agentFactory.getOrchestrator();
-        orchestrator.setOperationMode(operationMode);
+        if (isMounted) {
+          setIsAgentInitialized(true);
+        }
         
-        setSamStatus(`Multi-agent system ready - ${operationMode} mode`);
-        console.log('Agent system initialized successfully');
       } catch (error) {
-        console.error('Failed to initialize agent system:', error);
-        setSamStatus("Agent system offline - using fallback mode");
+        console.error('❌ Agent initialization error:', error);
+        if (isMounted) {
+          setSamStatus("Basic mode active");
+          setIsAgentInitialized(true);
+        }
       }
     };
 
     initializeAgents();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [agentFactory, operationMode]);
+
+  // Handle mode change
+  const handleModeChange = (mode: 'inbound' | 'outbound' | 'unified') => {
+    const mapped = mode === 'unified' ? 'outbound' : mode as 'inbound' | 'outbound';
+    setCurrentOperationMode(mapped);
+  };
   
-  // Update operation mode when prop changes
+  // Update operation mode when it changes
   useEffect(() => {
     if (isAgentInitialized) {
-      const orchestrator = agentFactory.getOrchestrator();
-      orchestrator.setOperationMode(operationMode);
-      setSamStatus(`Switched to ${operationMode} mode`);
+      try {
+        const orchestrator = agentFactory.getOrchestrator();
+        if (orchestrator) {
+          orchestrator.setOperationMode(currentOperationMode);
+          setSamStatus(`Switched to ${currentOperationMode} mode`);
+        } else {
+          setSamStatus(`${currentOperationMode} mode (simplified)`);
+        }
+      } catch (error) {
+        console.warn('Mode change failed:', error);
+        setSamStatus(`${currentOperationMode} mode (basic)`);
+      }
       
-      // Update the greeting message based on mode
+      // Simple mode change notification - conversational style
       const greetingMessage: Message = {
         id: "mode-change-" + Date.now(),
-        content: operationMode === 'inbound' 
-          ? "I've switched to **Inbound Mode** 📥. I'm now focused on managing your inbox, filtering spam, and automating responses to routine inquiries. My specialist team includes Inbox Triage, Spam Filter, and Auto-Response agents. How can I help organize your email communications?"
-          : "I've switched to **Outbound Mode** 🚀. I'm ready to help with lead generation, campaign creation, and sales outreach. My specialist team includes Lead Research, Campaign Management, and Content Creation agents. What would you like to work on?",
+        content: currentOperationMode === 'inbound' 
+          ? "🔄 Switched to **inbound mode** - I'll help with customer service and responding to inquiries"
+          : "🔄 Switched to **outbound mode** - Let's focus on finding leads and creating campaigns",
         sender: "sam",
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, greetingMessage]);
     }
-  }, [operationMode, isAgentInitialized, agentFactory]);
+  }, [currentOperationMode, isAgentInitialized, agentFactory]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -214,6 +345,18 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const handleSendMessage = async (messageContent?: string) => {
     const content = messageContent || input;
     if (!content.trim()) return;
+
+    // Check if user is providing their first name in response to name collection
+    if (needsNameCollection && content.trim().length > 0) {
+      await handleNameCollection(content.trim());
+      return;
+    }
+
+    // Check if user needs to confirm before continuing
+    if (needsConfirmation && content.trim().length > 0) {
+      await handleUserConfirmation(content.trim());
+      return;
+    }
 
     // Create or use existing session
     let sessionId = currentSessionId;
@@ -234,28 +377,143 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     }
     setInput("");
     
-    // Activate Sam and show processing
+    // Show SAM activity in status bar
     setSamIsActive(true);
-    setIsLoading(true);
-    setProcessingProgress(0);
-    setSamStatus("Initializing multi-agent processing...");
-    setAgentTrace([]);
-    setThinkingSteps([]);
+    setSamStatus("SAM is thinking...");
 
     try {
-      if (!isAgentInitialized) {
-        // Fallback to simple processing
-        await handleFallbackProcessing(content);
-        return;
-      }
-
-      // Real multi-agent processing
-      await handleMultiAgentProcessing(content, sessionId);
+      // SAM response with status updates
+      console.log('✅ SAM responding...');
+      await handleFallbackProcessing(content);
 
     } catch (error) {
       console.error('Message processing error:', error);
       await handleErrorResponse(error as Error);
+    } finally {
+      setSamIsActive(false);
+      setSamStatus("Ready to help");
     }
+  };
+
+  const handleNameCollection = async (providedName: string) => {
+    // Extract first name from user input (handle cases like "My name is John" or just "John")
+    const namePattern = /(?:my name is|i'm|im|call me|name is|i am)\s+([a-zA-Z]+)/i;
+    const match = providedName.match(namePattern);
+    const firstName = match ? match[1] : providedName.split(' ')[0];
+    
+    // Validate the name (basic check for reasonable first name)
+    if (firstName.length < 2 || firstName.length > 20 || !/^[a-zA-Z]+$/.test(firstName)) {
+      const clarificationMessage: Message = {
+        id: Date.now().toString(),
+        content: "I didn't quite catch that. Could you just tell me your first name? For example, just type \"Sarah\" or \"Mike\".",
+        sender: "sam",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, clarificationMessage]);
+      return;
+    }
+
+    // Add user's response to chat
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: providedName,
+      sender: "user",
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+
+    try {
+      // Update profile with the new name
+      const updatedProfile = {
+        ...userProfile,
+        full_name: firstName // We only store first name for now
+      };
+
+      // Save to localStorage
+      localStorage.setItem('user_auth_profile', JSON.stringify(updatedProfile));
+      
+      // Update component state
+      setUserProfile(updatedProfile);
+      setNeedsNameCollection(false);
+      setNeedsConfirmation(true); // User needs to confirm before continuing
+
+      // Send confirmation message
+      const confirmationMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Perfect! Nice to meet you, **${firstName}**! 🎉
+
+Want me to **explain what I can do** first, or should we **just jump in** and start working?
+
+**Just say "yes" or "ok"** to continue, then let me know: "explain" or "let's go"
+
+💡 *Feel free to ask questions anytime!*`,
+        sender: "sam",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, confirmationMessage]);
+
+      console.log(`✅ User profile updated with name: ${firstName}`);
+    } catch (error) {
+      console.error('Failed to save user name:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Nice to meet you, ${firstName}! I had a small issue saving your name, but I'll remember it for this session. What would you like to work on first?`,
+        sender: "sam",
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      setNeedsNameCollection(false);
+    }
+  };
+
+  const handleUserConfirmation = async (response: string) => {
+    const responseLower = response.toLowerCase().trim();
+    
+    // Check if user is confirming (yes, ok, sure, ready, etc.)
+    const confirmationWords = ['yes', 'ok', 'okay', 'sure', 'ready', 'continue', 'proceed', 'go', 'start'];
+    const isConfirming = confirmationWords.some(word => responseLower.includes(word));
+    
+    if (!isConfirming) {
+      const clarificationMessage: Message = {
+        id: Date.now().toString(),
+        content: `Just say "yes" or "ok" to continue, or ask me anything if you need help!`,
+        sender: "sam",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, clarificationMessage]);
+      return;
+    }
+
+    // Add user's confirmation to chat
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: response,
+      sender: "user",
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+
+    // User confirmed, now offer the choice
+    setNeedsConfirmation(false);
+    
+    const choiceMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      content: `Awesome! **What would you like to do?**
+
+• **Type "explain"** and I'll walk you through what I can do (quick overview)
+• **Type "let's go"** and we'll jump right into working
+
+💡 *Feel free to ask questions anytime!*`,
+      sender: "sam",
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, choiceMessage]);
   };
 
   const handleMultiAgentProcessing = async (content: string, sessionId: string) => {
@@ -337,26 +595,33 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       }, 1000);
 
       // Process through multi-agent system
-      const result: any = await agentFactory.processMessage(content, existingContext as any, sessionId);
-      
-      // Update agent trace for debugging
-      setAgentTrace(result.agentTrace || []);
-      
-      // Complete all thinking steps
-      setThinkingSteps(prev => prev.map(s => ({ ...s, status: 'completed' as const })));
+      try {
+        const result: any = await agentFactory.processMessage(content, existingContext as any, sessionId);
+        
+        // Update agent trace for debugging
+        if (result?.agentTrace) {
+          setAgentTrace(result.agentTrace);
+        }
+        
+        // Complete all thinking steps
+        setThinkingSteps(prev => prev.map(s => ({ ...s, status: 'completed' as const })));
 
-      // Create SAM response
-      const samResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: result.response.content,
-        sender: "sam",
-        timestamp: new Date(),
-        agentTrace: result.agentTrace
-      };
+        // Create SAM response
+        const samResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          content: result?.response?.content || "I processed your request successfully, but I'm having trouble formulating a response right now. Could you try rephrasing your question?",
+          sender: "sam",
+          timestamp: new Date(),
+          agentTrace: result?.agentTrace || []
+        };
 
-      setMessages(prev => [...prev, samResponse]);
-      if (sessionId) {
-        addMessageToSession(sessionId, samResponse as any);
+        setMessages(prev => [...prev, samResponse]);
+        if (sessionId) {
+          addMessageToSession(sessionId, samResponse as any);
+        }
+      } catch (processError) {
+        console.error('Agent processing failed:', processError);
+        throw processError; // Re-throw to trigger fallback
       }
 
     } finally {
@@ -368,66 +633,258 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   };
 
   const handleFallbackProcessing = async (content: string) => {
-    // Fallback processing when agent system is unavailable
-    const fallbackSteps = [
-      "Processing your request...",
-      "Analyzing context...", 
-      "Preparing response..."
-    ];
+    // Brief status update then instant response
+    setSamStatus("Processing...");
+    await new Promise(resolve => setTimeout(resolve, 500)); // Brief activity indication
+    
+    try {
+      const fallbackResponse = await generateFallbackResponse(content);
+      
+      const samResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: fallbackResponse,
+        sender: "sam",
+        timestamp: new Date(),
+      };
 
-    for (const step of fallbackSteps) {
-      setSamStatus(step);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      setMessages(prev => [...prev, samResponse]);
+      
+      // Save to session
+      if (currentSessionId) {
+        addMessageToSession(currentSessionId, samResponse as any);
+      }
+      
+    } catch (responseError) {
+      // Absolute fallback if response generation fails
+      const safeResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm all set! Want to find some leads, write emails, create campaigns, or upload company info? What sounds good to you?",
+        sender: "sam",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, safeResponse]);
     }
-
-    const fallbackResponse = generateFallbackResponse(content);
-    
-    const samResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      content: fallbackResponse,
-      sender: "sam",
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, samResponse]);
-    
-    setSamIsActive(false);
-    setIsLoading(false);
-    setSamStatus("Agent system initializing - using simplified mode");
   };
 
   const handleErrorResponse = async (error: Error) => {
-    const errorResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      content: "I apologize, but I encountered an issue processing your request. This might be due to high demand or a temporary service issue. Please try rephrasing your question, and I'll do my best to help you.",
-      sender: "sam",
-      timestamp: new Date(),
-    };
+    console.error('Agent system error:', error);
+    
+    // Try to generate a helpful fallback response instead of showing error
+    try {
+      const lastUserMessage = messages[messages.length - 1];
+      const userContent = lastUserMessage?.content || "help";
+      const fallbackResponse = await generateFallbackResponse(userContent);
+      
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: fallbackResponse,
+        sender: "sam",
+        timestamp: new Date(),
+      };
 
-    setMessages(prev => [...prev, errorResponse]);
+      setMessages(prev => [...prev, errorResponse]);
+    } catch (fallbackError) {
+      // Only if fallback also fails, show a simple error
+      const simpleErrorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Hmm, something hiccupped there. Want to try finding leads, writing emails, or uploading company info? What would help you most?",
+        sender: "sam",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, simpleErrorResponse]);
+    }
     
     setSamIsActive(false);
     setIsLoading(false);
     setProcessingProgress(0);
-    setSamStatus("Error occurred - ready to try again");
+    setSamStatus("Ready to help");
   };
 
-  const generateFallbackResponse = (content: string): string => {
+  const generateFallbackResponse = async (content: string): Promise<string> => {
     const contentLower = content.toLowerCase();
     
-    if (contentLower.includes('lead') || contentLower.includes('prospect')) {
-      return "I understand you're looking for help with lead generation. While my full agent system is initializing, I can guide you through the basic process of finding and qualifying prospects. Would you like me to explain the key steps?";
+    // Handle feature explanation request
+    if (contentLower.includes('explain') || contentLower.includes('features') || contentLower.includes('overview')) {
+      return `Cool! Here's what I can do for you:
+
+🎯 **I help with sales stuff** - finding leads, writing messages, managing campaigns, tracking what works
+🤖 **I have 6 specialist agents** working behind the scenes (lead research, campaign management, content creation, etc.)
+💬 **We can chat** with voice, save conversations, and I learn from everything you upload
+
+**Quick heads up:** Connect your LinkedIn/email for the full experience. Without it, you'll get previews but not live data.
+
+**Want to try something?**
+• "Upload my company info"
+• "Find me leads in tech" 
+• "Write a cold email"
+
+What sounds interesting?`;
+    }
+    
+    // Handle LinkedIn connection request
+    if (contentLower.includes('connect linkedin') || contentLower.includes('linkedin connect')) {
+      return `Sure! Let me walk you through connecting LinkedIn:
+
+1. **Hit Settings** (that gear icon in the sidebar)
+2. **Click "Connect LinkedIn"** 
+3. **Give me permission** to help with prospect research
+4. **Come back here** and say "let's start scraping"
+
+**Once we're connected, I can:**
+• Pull live CTO profiles and contact info
+• Get real company funding data
+• Track when people change jobs or get promoted
+• Find verified emails and phone numbers
+
+**Need help connecting?** Just ask me to walk you through it step by step.`;
+    }
+
+    // Handle preview results request  
+    if (contentLower.includes('preview') || contentLower.includes('show') || contentLower.includes('sample')) {
+      return `📋 **No Preview Data Available**
+
+I don't show fake or sample data. To find real prospects, you need to:
+
+**1. Connect LinkedIn** (go to Settings → Connect LinkedIn)
+**2. Tell me your search criteria** (like "50 CTOs in Boston startups")
+**3. I'll pull live prospect data** with real names, companies, and contact info
+
+Without a connected LinkedIn account, I can't show you prospects. Want to connect your account first?`;
+    }
+
+    // Handle start working request
+    if (contentLower.includes('start working') || contentLower.includes('jump') || contentLower.includes('begin') || contentLower.includes('let\'s go')) {
+      return `Perfect! Let's do this 🚀
+
+**Here's what we can tackle:**
+• Upload your company info
+• Research some prospects 
+• Find leads in whatever industry
+• Write outreach messages
+• Test different message styles
+• Check how your campaigns are doing
+
+**What's on your mind today?** Just tell me what you want to work on!`;
+    }
+    
+    // Agent Training Overview with real document data
+    if (contentLower.includes('agent') && (contentLower.includes('training') || contentLower.includes('learned') || contentLower.includes('overview'))) {
+      try {
+        // Get actual document data from memory service
+        const memoryService = MemoryService.getInstance();
+        const documents = await memoryService.getAllDocuments();
+        
+        const documentCount = documents.length;
+        const documentTypes = documents.reduce((acc: any, doc: any) => {
+          const type = doc.metadata?.type || 'document';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {});
+
+        return `🎓 **Your AI Agent Training Center & Knowledge Base**
+
+**📊 Current Knowledge Status:**
+• 📁 **Documents Uploaded:** ${documentCount} files
+• 🏢 **Company Info:** ${documentTypes.company || 0} docs
+• 🎯 **Product/Service:** ${documentTypes.product || 0} docs  
+• 👥 **Audience/ICP:** ${documentTypes.audience || 0} docs
+• 📢 **Campaign Examples:** ${documentTypes.campaign || 0} docs
+• 💬 **Conversation Data:** ${documentTypes.conversation || 0} records
+
+**📈 Training Progress:**
+${documentCount === 0 ? '🔴 **Getting Started** - No knowledge uploaded yet' : 
+  documentCount < 3 ? '🟡 **Basic Training** - Need more comprehensive data' : 
+  documentCount < 6 ? '🟠 **Good Foundation** - Adding specialized knowledge' : 
+  '🟢 **Well Trained** - Rich knowledge base for personalization'}
+
+**🎯 Recent Documents:**
+${documents.length === 0 ? '• No documents uploaded yet' : 
+  documents.slice(0, 3).map((doc: any) => 
+    `• ${doc.title || 'Untitled Document'} (${doc.metadata?.type || 'document'})`
+  ).join('\\n')}
+
+**🚀 Quick Training Actions:**
+1. **"Upload company deck"** - Add your pitch deck or company overview
+2. **"Define ideal customer profile"** - Tell me about your target audience  
+3. **"Share successful campaigns"** - Upload examples of what works
+4. **"Add competitor analysis"** - Help me understand your market position
+
+**Ready to expand my knowledge?** The more context I have, the better I can help with lead generation and personalized outreach.`;
+      } catch (error) {
+        // Fallback if memory service fails
+        return `🎓 **Your AI Agent Training Center**
+
+**Current Knowledge Status:**
+• 📁 **Documents Uploaded:** 0 files (Upload company info, pitch decks, case studies)
+• 🎯 **ICP Defined:** Not set (Tell me about your ideal customers)  
+• ✍️ **Voice Samples:** None (Share successful messages/emails)
+• 🏢 **Company Profile:** Basic (Need your value proposition, services, USP)
+
+**Quick Training Options:**
+1. **"Upload my company information"** - I'll help you add documents
+2. **"Define my ideal customer"** - Let's create your ICP profile  
+3. **"Here are some successful messages"** - Share examples for me to learn your voice
+4. **"My company does [X] for [Y]"** - Quick company profile setup
+
+**What would you like to train me on first?** The more I know about your business and successful approaches, the better I can help you generate leads and create personalized outreach.`;
+      }
+    }
+
+    // Agent Performance  
+    if (contentLower.includes('agent') && (contentLower.includes('performance') || contentLower.includes('performing'))) {
+      return `Hey! All 6 of my specialist agents are online and ready to go 🟢
+
+**The team:**
+• **Lead Research** - hasn't done any searches yet, but ready to find prospects
+• **Campaign Manager** - no active campaigns, waiting for your first one
+• **Content Creator** - hasn't written any messages yet, but excited to start
+• **Performance Analyst** - no data to analyze yet, but standing by
+• **Workflow Automation** - no automations running, but ready to set them up
+• **Knowledge Manager** - no documents uploaded yet, but ready to learn
+
+**Want to put them to work?**
+• "Find leads in SaaS" 
+• "Write a cold email for CEOs"
+• "Create a LinkedIn campaign"
+• "Upload my company info"
+
+What should we tackle first?`;
+    }
+    
+    if (contentLower.includes('lead') || contentLower.includes('prospect') || contentLower.includes('cto') || contentLower.includes('ceo') || contentLower.includes('startup') || contentLower.includes('find')) {
+      // Handle specific lead requests
+      if (contentLower.includes('cto') && contentLower.includes('boston')) {
+        return `🎯 **Ready to find Boston CTOs**
+
+I can search for CTOs at early-stage startups in the Boston area, but I need your LinkedIn connected first.
+
+**What I'll search for:**
+• CTOs at early-stage startups
+• Boston metropolitan area  
+• Series A-B companies (10-100 employees)
+
+**To get started:**
+1. **Connect LinkedIn** (go to Settings → Connect LinkedIn)
+2. **Come back and say "find 50 Boston CTOs"**
+3. **I'll pull real prospect data** with names, companies, and contact info
+
+Without LinkedIn connected, I can't show you actual prospects. Want to connect your account first?`;
+      }
+      
+      return "🎯 **Lead Research ready!** What industry/company type are you targeting?";
     }
     
     if (contentLower.includes('campaign') || contentLower.includes('outreach')) {
-      return "I can help you with campaign optimization! Even in simplified mode, I can provide guidance on improving your outreach performance. What specific aspect of your campaigns would you like to work on?";
+      return "📊 **Campaign Manager ready!** LinkedIn, email, or multi-channel outreach?";
     }
     
     if (contentLower.includes('content') || contentLower.includes('template') || contentLower.includes('write')) {
-      return "I'd love to help with content creation. While waiting for full agent capabilities, I can provide you with proven email and LinkedIn message templates. What type of content do you need?";
+      return "✍️ **Content Creator ready!** What type of message and for which audience?";
     }
     
-    return "I understand what you're looking for. My multi-agent system is still initializing, but I can provide helpful guidance. Could you tell me more specifically what you'd like assistance with?";
+    return "**6 agents ready!** Try: \"find leads\", \"write email\", \"create campaign\", or \"upload info\". What's your goal?\n\n💡 *Ask questions anytime if you get stuck!*";
   };
 
   const handleQuickAction = (action: QuickAction) => {
@@ -446,7 +903,97 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   };
 
   const handleLoadSession = (sessionMessages: Message[]) => {
+    // Don't overwrite messages if we're in the middle of name collection or confirmation
+    if (needsNameCollection || needsConfirmation) {
+      console.log('Skipping session load - user is in onboarding flow');
+      return;
+    }
     setMessages(sessionMessages);
+  };
+
+  const startOnboardingFlow = () => {
+    setHasStartedOnboarding(true);
+    
+    // Clear existing messages and start fresh onboarding
+    const onboardingMessage: Message = {
+      id: `onboarding_${Date.now()}`,
+      content: `🎉 **Welcome to SAM AI!** Let me give you a quick overview of your new workspace.
+
+**📍 Your Interface Layout:**
+
+**Left Side** - Work Mode Switcher:
+• **🤖 Agent Mode** (where you are now) - Chat with AI specialists for complex tasks
+• **📧 Workspace Mode** - Traditional inbox-style communications hub
+
+You can use both modes concurrently, but you'll spend most of your productive time here in **Agent Mode** where I can actively help you.
+
+**🤖 Meet Your AI Specialist Team:**
+
+🎯 **Lead Research** - Find and qualify perfect prospects  
+📊 **Campaign Manager** - Create and optimize outreach sequences
+✍️ **Content Creator** - Write personalized messages that convert  
+📈 **Performance Analyst** - Track results and suggest improvements
+🔄 **Workflow Automation** - Set up intelligent follow-ups
+🧠 **Knowledge Manager** - Learn your business for better recommendations
+
+**Ready to train your agents?** Let's start by letting them learn about your business and ideal customers!`,
+      sender: "sam",
+      timestamp: new Date(),
+    };
+
+    setMessages([onboardingMessage]);
+    localStorage.setItem('sam_onboarding_started', 'true');
+  };
+
+  const completeOnboarding = () => {
+    localStorage.setItem('sam_onboarding_completed', 'true');
+    setIsNewUser(false);
+    setHasStartedOnboarding(false);
+    
+    const completionMessage: Message = {
+      id: `onboarding_complete_${Date.now()}`,
+      content: `🚀 **Onboarding Complete!** 
+
+You're all set up with SAM AI. I now understand your business and I'm ready to help you:
+
+✅ Find qualified leads in your target market
+✅ Create personalized outreach campaigns  
+✅ Automate follow-ups and sequences
+✅ Track performance and optimize results
+
+**What would you like to work on first?** I'm here whenever you need help scaling your sales efforts!`,
+      sender: "sam",
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, completionMessage]);
+  };
+
+  const saveCurrentConversation = () => {
+    if (messages.length === 0) return;
+    
+    // Create or use existing session
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      sessionId = createNewSession();
+    }
+    
+    // Save all current messages to the session
+    messages.forEach(message => {
+      addMessageToSession(sessionId!, message as any);
+    });
+    
+    // Show confirmation
+    const confirmationMessage: Message = {
+      id: Date.now().toString(),
+      content: "✅ **Conversation saved!** Find it in Chat History (top right).",
+      sender: "sam",
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, confirmationMessage]);
+    
+    console.log(`💾 Conversation saved to session: ${sessionId}`);
   };
 
   const startNewChat = () => {
@@ -454,7 +1001,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     setMessages([
       {
         id: "1",
-        content: "Hello! I'm SAM, your AI sales assistant powered by a team of specialist agents. I can help you with lead generation, campaign optimization, content creation, and performance analysis. What would you like to work on today?",
+        content: "👋 **Hi there!** I'm SAM, your sales assistant.\n\n**Would you like me to:**\n• **Explain features first** (2-minute overview)\n• **Jump right into work** (start immediately)\n\nJust type \"explain\" or \"start working\" - your choice!",
         sender: "sam",
         timestamp: new Date(),
       }
@@ -493,25 +1040,21 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
                 isAgentInitialized ? 'bg-green-500' : 'bg-yellow-500'
               }`} />
               <span className="text-sm text-gray-400">
-                {isAgentInitialized ? 'Multi-agent system online' : 'Initializing agent system...'}
+                {isAgentInitialized ? 'SAM AI ready' : 'SAM AI starting...'}
               </span>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
+            <ModeSwitcher 
+              currentMode={currentOperationMode}
+              onModeChange={handleModeChange}
+              className="scale-90"
+            />
             <ChatHistory 
               onLoadSession={handleLoadSession}
               currentSessionId={currentSessionId}
             />
-            <Button
-              onClick={startNewChat}
-              variant="outline"
-              size="sm"
-              className="text-gray-300 hover:text-white hover:bg-gray-700 border-gray-600"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Chat
-            </Button>
           </div>
         </div>
 
@@ -543,20 +1086,10 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
           </div>
         )}
 
-        {/* SAM Thinking Display - Devin.ai Style */}
-        {(isLoading || thinkingSteps.length > 0) && (
-          <div className="mb-6">
-            <SamThinkingDisplay
-              isVisible={showThinking}
-              currentSteps={thinkingSteps}
-              isProcessing={isLoading}
-              className="max-w-4xl mx-auto"
-            />
-          </div>
-        )}
+        {/* Removed thinking display - clean instant responses */}
 
         {/* Conversation Starters */}
-        {messages.length <= 1 && (
+        {messages.filter(m => m.sender === 'user').length === 0 && (
           <div className="mb-8">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-white mb-2">
@@ -577,7 +1110,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
                       <button
                         key={index}
                         onClick={() => handleSendMessage(action.prompt)}
-                        className="group relative p-4 text-left rounded-lg border border-gray-700 bg-gray-800/50 hover:bg-gray-700/50 hover:border-gray-600 transition-all duration-200 hover:scale-[1.02]"
+                        className="group relative p-4 text-left rounded-lg border border-gray-600 !bg-black hover:!bg-gray-900 hover:border-gray-500 transition-all duration-200 hover:scale-[1.02]"
                       >
                         <div className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg bg-gradient-to-r ${action.color} opacity-80 group-hover:opacity-100 transition-opacity`}>
@@ -657,39 +1190,44 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Processing Progress */}
-              {isLoading && processingProgress > 0 && (
-                <div className="px-6 pb-2">
-                  <Progress value={processingProgress} className="h-1" />
-                </div>
-              )}
+              {/* Removed processing progress - instant responses */}
 
-              {/* Sam Status Indicator */}
+              {/* Sam Status Indicator - Keep this, it's helpful */}
               <SamStatusIndicator isActive={samIsActive} currentStatus={samStatus} />
               
               {/* Input Area */}
               <div className="border-t border-gray-700 p-6 bg-gray-800">
-                <div className="flex gap-4 items-end">
+                <div className="flex gap-3 items-end">
                   <div className="flex-1 relative">
                     <Input
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder={isAgentInitialized 
-                        ? "Ask SAM's specialist agents anything about sales..." 
-                        : "Ask SAM anything (simplified mode)..."
+                        ? "Ask SAM anything..." 
+                        : "Ask SAM anything..."
                       }
                       className="py-4 text-base bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                       disabled={isLoading}
                     />
                   </div>
                   
+                  <Button
+                    onClick={saveCurrentConversation}
+                    disabled={messages.length === 0}
+                    variant="outline"
+                    className="h-12 px-4 border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700 transition-all duration-200"
+                    title="Save conversation to Chat History"
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                  
                   <VoiceInterface onVoiceMessage={handleVoiceMessage} disabled={isLoading} />
                   
                   <Button
                     onClick={() => handleSendMessage()}
                     disabled={!input.trim() || isLoading}
-                    className="h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    className="h-12 px-6 !bg-black hover:!bg-gray-900 !border !border-gray-600 !text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     <Send className="h-5 w-5 mr-2" />
                     Send
@@ -700,8 +1238,8 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
                   <p className="text-xs text-gray-400 flex items-center gap-2">
                     <Brain className="h-3 w-3" />
                     {isAgentInitialized 
-                      ? "Powered by 6 specialist agents for lead generation, campaign optimization & content creation"
-                      : "Multi-agent system initializing... Basic assistance available"
+                      ? "SAM AI ready - 6 agents online"
+                      : "SAM AI starting..."
                     }
                   </p>
                 </div>

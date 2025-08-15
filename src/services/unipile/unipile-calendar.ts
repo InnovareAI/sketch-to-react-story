@@ -71,8 +71,8 @@ export class UnipileCalendarService {
         scopes: 'calendar.read calendar.write'
       });
       
-      // Unipile hosted auth endpoint
-      const authUrl = `https://app.unipile.com/oauth/authorize?${authParams.toString()}`;
+      // TODO: Replace with actual Unipile OAuth endpoint
+      const authUrl = `${window.location.origin}/auth/calendar/init?${authParams.toString()}`;
       
       console.log('Generated Unipile auth URL:', authUrl);
       return authUrl;

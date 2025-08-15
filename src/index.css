@@ -13,6 +13,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Notification animations */
+@keyframes notification-bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes notification-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+.animate-notification {
+  animation: notification-bounce 0.5s ease-in-out;
+}
+
+.animate-shake {
+  animation: notification-shake 0.3s ease-in-out;
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

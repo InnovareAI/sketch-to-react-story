@@ -26,7 +26,7 @@ import { useEffect } from 'react';
 export default function WorkspaceLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser, loading: authLoading, signOut, isAuthenticated } = useAuth();
+  const { user: userProfile, authUser, loading: authLoading, signOut, isAuthenticated } = useAuth();
   const { workspace } = useWorkspace();
 
   // Handle authentication check with proper loading state
@@ -41,8 +41,8 @@ export default function WorkspaceLayout() {
       return;
     }
     
-    console.log('User authenticated:', authUser?.email);
-  }, [isAuthenticated, authLoading, navigate, authUser]);
+    console.log('User authenticated:', userProfile?.email);
+  }, [isAuthenticated, authLoading, navigate, userProfile]);
 
   // Show loading screen while auth is loading
   if (authLoading) {
@@ -61,10 +61,16 @@ export default function WorkspaceLayout() {
     return null;
   }
 
-  // Use authUser (we know it exists due to isAuthenticated check)
-  const user = {
-    ...authUser!,
-    workspace_name: workspace?.name || authUser!.workspace_name || 'My Company'
+  // Use userProfile (we know it exists due to isAuthenticated check)
+  const user = userProfile || {
+    id: 'unknown',
+    email: 'unknown@example.com',
+    full_name: 'Unknown User',
+    role: 'user',
+    workspace_id: 'unknown',
+    workspace_name: workspace?.name || 'My Company',
+    workspace_plan: 'free',
+    status: 'active'
   };
 
   const handleSignOut = async () => {
@@ -215,7 +221,7 @@ export default function WorkspaceLayout() {
             {/* User profile section */}
             <div className="flex items-center space-x-4">
               <div className="flex gap-2">
-                {authUser && (
+                {userProfile && (
                   <Button 
                     variant="ghost" 
                     onClick={handleSignOut} 

@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useLinkedInSync } from '@/hooks/useLinkedInSync';
+import { useBusinessMetrics } from '@/hooks/useBusinessMetrics';
 import { toast } from 'sonner';
 import { previewSync } from '@/services/unipile/PreviewSync';
 import FollowUpModal from '@/components/FollowUpModal';
+import { getUserLinkedInAccounts } from '@/utils/userDataStorage';
 // import MessageComposer from '@/components/MessageComposer'; // Temporarily disabled
 
 interface Message {
@@ -44,7 +47,6 @@ import {
   Archive, 
   Trash2, 
   Reply, 
-  Forward, 
   Star,
   MoreHorizontal,
   Clock,
@@ -53,13 +55,13 @@ import {
   TrendingUp,
   Users,
   Calendar,
-  Video,
   RefreshCw,
   X,
   Tag,
-  Plus,
   Linkedin,
-  Send
+  Plus,
+  Send,
+  Target
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -70,11 +72,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function GlobalInbox() {
+  const location = useLocation();
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("all");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Determine page title based on route
+  const isTeamInbox = location.pathname === '/global-inbox';
+  const pageTitle = isTeamInbox ? 'Team Inbox' : 'Inbox';
   const [showComposer, setShowComposer] = useState(false);
   const [composerMode, setComposerMode] = useState<'reply' | 'new'>('new');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
@@ -83,11 +90,14 @@ export default function GlobalInbox() {
   const [searchFilter, setSearchFilter] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all');
   const [filterTag, setFilterTag] = useState<string>('all');
+  const [filterMessageType, setFilterMessageType] = useState<'all' | 'linkedin' | 'inmail'>('all');
   const [showTagModal, setShowTagModal] = useState(false);
   const [selectedMessageForTag, setSelectedMessageForTag] = useState<Message | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedMessageForFollowUp, setSelectedMessageForFollowUp] = useState<Message | null>(null);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [filterAccount, setFilterAccount] = useState<string>('all');
   
   // Predefined tags
   const predefinedTags = [
@@ -101,26 +111,20 @@ export default function GlobalInbox() {
     { value: 'later', label: 'Later', color: 'bg-gray-100 text-gray-800' },
   ];
   
-  // Use the LinkedIn sync hook
+  // Use the LinkedIn sync hook and business metrics
   const { syncState, performManualSync, toggleAutoSync } = useLinkedInSync();
+  const businessMetrics = useBusinessMetrics();
   
   // Modal states
   const [replyModalOpen, setReplyModalOpen] = useState(false);
-  const [forwardModalOpen, setForwardModalOpen] = useState(false);
-  const [scheduleMeetingModalOpen, setScheduleMeetingModalOpen] = useState(false);
   
   // Form states
   const [replyContent, setReplyContent] = useState("");
-  const [forwardTo, setForwardTo] = useState("");
-  const [forwardContent, setForwardContent] = useState("");
-  const [meetingTitle, setMeetingTitle] = useState("");
-  const [meetingDate, setMeetingDate] = useState("");
-  const [meetingTime, setMeetingTime] = useState("");
-  const [meetingDescription, setMeetingDescription] = useState("");
   const [isManualSyncing, setIsManualSyncing] = useState(false);
 
   useEffect(() => {
     loadMessages();
+    setupCloudSync();
     
     // Set up real-time updates
     const channel = supabase
@@ -135,6 +139,53 @@ export default function GlobalInbox() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Helper function to get workspace
+  const getWorkspace = async () => {
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('id')
+      .limit(1)
+      .single();
+    return workspace;
+  };
+
+  // Setup cloud-based background sync
+  const setupCloudSync = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const workspace = await getWorkspace();
+      if (!workspace) return;
+
+      // Check if LinkedIn is connected using user-specific storage
+      const accounts = await getUserLinkedInAccounts();
+      if (accounts.length > 0) {
+        const account = accounts[0];
+        const accountId = account.unipileAccountId || account.id || account.account_id;
+        
+        if (accountId) {
+          // Enable cloud sync through BackgroundSyncManager
+          const { BackgroundSyncManager } = await import('@/services/BackgroundSyncManager');
+          const syncManager = BackgroundSyncManager.getInstance();
+          
+          const result = await syncManager.enableBackgroundSync(
+            workspace.id,
+            accountId,
+            30, // Sync every 30 minutes
+            'both' // Sync both contacts and messages
+          );
+          
+          if (result.success) {
+            console.log('☁️ Cloud sync enabled for GlobalInbox - will continue syncing when page is closed');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error setting up cloud sync:', error);
+    }
+  };
 
   const loadMessages = async () => {
     try {
@@ -223,7 +274,9 @@ export default function GlobalInbox() {
           messageType: isInMail ? 'inmail' : 'message', // Add message type
           subject: `Message from ${conv.participant_name}`,
           preview: latestMessage?.content || conv.metadata?.last_message_preview || 'No message content',
-          time: new Date(conv.last_message_at).toLocaleTimeString('en-US', { 
+          time: new Date(conv.last_message_at).toLocaleString('en-US', { 
+            month: 'short',
+            day: 'numeric',
             hour: 'numeric', 
             minute: '2-digit',
             hour12: true 
@@ -239,6 +292,11 @@ export default function GlobalInbox() {
       });
       
       setMessages(inboxMessages);
+      
+      // Also refresh business metrics when messages are loaded
+      if (!businessMetrics.loading) {
+        businessMetrics.refetch();
+      }
     } catch (error) {
       setMessages([]);
     } finally {
@@ -350,6 +408,60 @@ export default function GlobalInbox() {
       setShowTagModal(false);
       setSelectedMessageForTag(null);
       setSelectedTags([]);
+    }
+  };
+
+  // Archive all read messages
+  const archiveAllRead = async () => {
+    try {
+      const readMessages = messages.filter(m => m.read);
+      if (readMessages.length === 0) {
+        toast.info('No read messages to archive');
+        return;
+      }
+
+      // Update local state first
+      setMessages(prevMessages => prevMessages.filter(msg => !msg.read));
+      
+      // Get workspace ID
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('id')
+        .limit(1)
+        .single();
+        
+      if (!workspace) {
+        toast.error('No workspace found');
+        return;
+      }
+      
+      // Archive read conversations in database
+      const { error } = await supabase
+        .from('inbox_conversations')
+        .update({ 
+          status: 'archived',
+          metadata: supabase.sql`
+            CASE 
+              WHEN metadata IS NULL THEN '{"archived": true, "archived_at": "' || NOW() || '"}'::jsonb
+              ELSE metadata || ('{"archived": true, "archived_at": "' || NOW() || '"}')::jsonb
+            END
+          `
+        })
+        .eq('workspace_id', workspace.id)
+        .eq('status', 'active')
+        .in('metadata->read', [true]);
+      
+      if (error) {
+        console.error('Error archiving messages:', error);
+        toast.error('Failed to archive messages');
+        await loadMessages(); // Reload on error
+      } else {
+        toast.success(`Archived ${readMessages.length} read messages`);
+      }
+    } catch (error) {
+      console.error('Error in archiveAllRead:', error);
+      toast.error('Failed to archive messages');
+      await loadMessages();
     }
   };
 
@@ -468,40 +580,73 @@ export default function GlobalInbox() {
   // Action handlers
   const handleReply = () => {
     if (selectedMessage) {
-      setSelectedMessageForFollowUp(selectedMessage);
-      setShowFollowUpModal(true);
-    }
-  };
-
-  const handleForward = () => {
-    if (selectedMessage) {
-      setForwardContent(`---------- Forwarded message ----------\nFrom: ${selectedMessage.from}\nSubject: ${selectedMessage.subject}\n\n${selectedMessage.preview}`);
-      setForwardModalOpen(true);
+      setReplyModalOpen(true);
     }
   };
 
   const handleScheduleMeeting = () => {
     if (selectedMessage) {
-      setMeetingTitle(`Meeting with ${selectedMessage.from}`);
-      setMeetingDescription(`Following up on: ${selectedMessage.subject}`);
-      setScheduleMeetingModalOpen(true);
+      // Navigate to calendar/settings for meeting scheduling
+      toast.info('Opening calendar settings for meeting scheduling...');
+      // This would navigate to the calendar integration in settings
+      // For now, show a message that this will integrate with calendar settings
+      setTimeout(() => {
+        window.location.href = '/settings#calendar';
+      }, 1000);
     }
   };
 
   const sendReply = async () => {
     try {
-      if (!selectedMessage || !replyContent.trim()) return;
+      if (!selectedMessage || !replyContent.trim()) {
+        toast.error('Please enter a reply message');
+        return;
+      }
       
-      toast.info('Sending reply...');
+      toast.info('Sending reply via LinkedIn...');
+      console.log('🔄 Sending reply via Unipile...');
       
-      // Try to send via Unipile API
+      // Configure and send via Unipile API
       const { unipileRealTimeSync } = await import('@/services/unipile/UnipileRealTimeSync');
-      const accounts = await unipileRealTimeSync.testConnection();
       
-      if (accounts.success && accounts.accounts.length > 0) {
+      // Check if Unipile is configured
+      if (!unipileRealTimeSync.isConfigured()) {
+        console.log('📝 Configuring Unipile for reply...');
+        const { getUserLinkedInAccounts } = await import('@/utils/userDataStorage');
+        const { getUnipileApiKey } = await import('@/config/unipile');
+        
+        const accounts = await getUserLinkedInAccounts();
+        if (accounts.length > 0) {
+          const account = accounts[0];
+          const accountId = account.unipileAccountId || account.id || account.account_id;
+          
+          if (accountId) {
+            unipileRealTimeSync.configure({
+              apiKey: getUnipileApiKey(),
+              accountId: accountId
+            });
+            console.log('✅ Unipile configured for reply');
+          } else {
+            throw new Error('No valid LinkedIn account ID found');
+          }
+        } else {
+          throw new Error('No LinkedIn account connected');
+        }
+      }
+      
+      // Test connection and get accounts
+      const connectionTest = await unipileRealTimeSync.testConnection();
+      
+      if (connectionTest.success && connectionTest.accounts.length > 0) {
         // Get the chat ID from conversation data
         const chatId = selectedMessage.conversationData?.platform_conversation_id;
-        const account = accounts.accounts[0];
+        const account = connectionTest.accounts[0];
+        
+        console.log('📤 Sending reply:', {
+          accountId: account.id,
+          chatId: chatId,
+          messageLength: replyContent.length
+        });
         
         if (chatId && account) {
           // Send the actual message via Unipile
@@ -512,15 +657,22 @@ export default function GlobalInbox() {
           );
           
           if (success) {
-            toast.success('Reply sent successfully!');
+            console.log('✅ Reply sent successfully via Unipile');
+            toast.success('Reply sent via LinkedIn!');
+          } else {
+            throw new Error('Failed to send message via Unipile');
           }
+        } else {
+          throw new Error('Missing chat ID or account information');
         }
+      } else {
+        throw new Error('Unable to connect to LinkedIn via Unipile');
       }
       
-      // Save to our database
-      const { data: { user } } = await supabase.auth.getUser();
+      // Save to our database for record keeping
       if (selectedMessage.conversationData?.id) {
-        await supabase
+        console.log('💾 Saving reply to database...');
+        const { error } = await supabase
           .from('inbox_messages')
           .insert({
             conversation_id: selectedMessage.conversationData.id,
@@ -530,102 +682,36 @@ export default function GlobalInbox() {
               type: 'reply',
               sender_name: 'You',
               direction: 'outbound',
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              sent_via: 'unipile',
+              platform: 'linkedin'
             }
           });
+          
+        if (error) {
+          console.error('Error saving reply to database:', error);
+          // Don't fail the whole operation if DB save fails
+          toast.warning('Reply sent but not saved to history');
+        } else {
+          console.log('✅ Reply saved to database');
+        }
       }
 
       setReplyModalOpen(false);
       setReplyContent("");
       
-      // Refresh messages
-      loadMessages();
+      // Refresh messages to show the new reply
+      setTimeout(() => {
+        loadMessages();
+      }, 1000);
       
     } catch (error) {
-      console.error('Error sending reply:', error);
-      toast.error('Failed to send reply');
+      console.error('❌ Error sending reply:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to send reply: ${errorMessage}`);
     }
   };
 
-  const sendForward = async () => {
-    try {
-      if (!selectedMessage) return;
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
-      
-      // Insert forward message into database
-      const { error } = await supabase
-        .from('conversation_messages')
-        .insert({
-          conversation_id: `forward_${Date.now()}`, // Generate unique conversation ID
-          role: 'user',
-          content: forwardContent,
-          metadata: {
-            type: 'forward',
-            original_message_id: selectedMessage.id,
-            recipient: forwardTo
-          }
-        });
-
-      if (error) throw error;
-
-      setForwardModalOpen(false);
-      setForwardTo("");
-      setForwardContent("");
-      
-      // Refresh messages
-      loadMessages();
-    } catch (error) {
-      console.error('Error forwarding message:', error);
-    }
-  };
-
-  const scheduleMeeting = async () => {
-    try {
-      if (!selectedMessage) return;
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const userProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
-      
-      // Insert meeting schedule into database
-      const { error } = await supabase
-        .from('conversation_messages')
-        .insert({
-          conversation_id: `meeting_${Date.now()}`, // Generate unique conversation ID
-          role: 'system',
-          content: `Meeting scheduled: ${meetingTitle}`,
-          metadata: {
-            type: 'meeting_schedule',
-            original_message_id: selectedMessage.id,
-            meeting_details: {
-              title: meetingTitle,
-              date: meetingDate,
-              time: meetingTime,
-              description: meetingDescription,
-              attendee: selectedMessage.from
-            }
-          }
-        });
-
-      if (error) throw error;
-
-      setScheduleMeetingModalOpen(false);
-      setMeetingTitle("");
-      setMeetingDate("");
-      setMeetingTime("");
-      setMeetingDescription("");
-      
-      // Refresh messages
-      loadMessages();
-    } catch (error) {
-      console.error('Error scheduling meeting:', error);
-    }
-  };
 
   // Empty messages array - will be populated from database
   const demoMessages: Message[] = [];
@@ -658,6 +744,10 @@ export default function GlobalInbox() {
     
     // Filter by tag
     if (filterTag !== 'all' && !message.customTags?.includes(filterTag)) return false;
+    
+    // Filter by message type (LinkedIn vs InMail)
+    if (filterMessageType === 'linkedin' && message.messageType === 'inmail') return false;
+    if (filterMessageType === 'inmail' && message.messageType !== 'inmail') return false;
     
     // Filter by search term
     if (searchFilter) {
@@ -695,107 +785,12 @@ export default function GlobalInbox() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inbox</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{pageTitle}</h1>
           <p className="text-gray-600 mt-1">
             Manage all your conversations across channels
-            {syncState.lastSyncTime && (
-              <span className="text-sm ml-2">
-                • Last sync: {syncState.lastSyncTime.toLocaleTimeString()}
-              </span>
-            )}
-            {syncState.autoSyncEnabled && syncState.nextSyncTime && (
-              <span className="text-sm ml-2">
-                • Next auto-sync: {syncState.nextSyncTime.toLocaleTimeString()}
-              </span>
-            )}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Syncing up to 500 most recent conversations with 20 messages each
           </p>
         </div>
         <div className="flex gap-2">
-          {/* Manual Sync Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                setIsManualSyncing(true);
-                console.log('🔄 Starting manual sync...');
-                toast.info('Starting LinkedIn sync...');
-                
-                // Import and run syncAll
-                const { unipileRealTimeSync } = await import('@/services/unipile/UnipileRealTimeSync');
-                
-                // Check if configured
-                if (!unipileRealTimeSync.isConfigured()) {
-                  console.log('📝 Configuring Unipile...');
-                  const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
-                  if (accounts.length > 0) {
-                    const account = accounts[0];
-                    const accountId = account.unipileAccountId || account.id || account.account_id;
-                    console.log('Using account ID:', accountId);
-                    if (accountId) {
-                      unipileRealTimeSync.configure({
-                        apiKey: 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
-                        accountId: accountId
-                      });
-                    } else {
-                      throw new Error('No valid account ID found');
-                    }
-                  } else {
-                    throw new Error('No LinkedIn account connected');
-                  }
-                }
-                
-                // Run the sync
-                console.log('Running syncAll...');
-                await unipileRealTimeSync.syncAll();
-                
-                // Save sync status to localStorage (the hook will pick this up)
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                  const syncStatus = {
-                    lastSyncTime: new Date().toISOString(),
-                    initialSyncComplete: true,
-                    messageCount: 0,
-                    contactCount: 0
-                  };
-                  localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify(syncStatus));
-                  console.log('Sync status saved:', syncStatus);
-                }
-                
-                toast.success('Sync completed! Refreshing inbox...');
-                
-                // Refresh the inbox data after a short delay
-                setTimeout(() => {
-                  window.location.reload();
-                }, 1500);
-                
-              } catch (error: any) {
-                console.error('Manual sync error:', error);
-                toast.error(`Sync failed: ${error.message || 'Unknown error'}`);
-              } finally {
-                setIsManualSyncing(false);
-              }
-            }}
-            disabled={isManualSyncing}
-            className={isManualSyncing ? "bg-yellow-50 border-yellow-200" : "bg-blue-50 hover:bg-blue-100 border-blue-200"}
-            title="Manually sync LinkedIn messages and contacts"
-          >
-            {isManualSyncing ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Syncing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Sync Now
-              </>
-            )}
-          </Button>
-          
           <Button
             onClick={() => setShowNewMessageModal(true)}
           >
@@ -803,24 +798,6 @@ export default function GlobalInbox() {
             New Message
           </Button>
           
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => toggleAutoSync(!syncState.autoSyncEnabled)}
-            title={syncState.autoSyncEnabled ? 'Disable auto-sync' : 'Enable hourly auto-sync'}
-          >
-            {syncState.autoSyncEnabled ? (
-              <>
-                <Clock className="h-4 w-4 mr-2" />
-                Auto-sync ON
-              </>
-            ) : (
-              <>
-                <Clock className="h-4 w-4 mr-2 opacity-50" />
-                Auto-sync OFF
-              </>
-            )}
-          </Button>
           <Button 
             variant="outline"
             onClick={markAllAsRead}
@@ -830,13 +807,183 @@ export default function GlobalInbox() {
             <CheckCircle className="h-4 w-4 mr-2" />
             Mark All Read
           </Button>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline">
+          <DropdownMenu open={showFilterDropdown} onOpenChange={setShowFilterDropdown}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="p-2">
+                <div className="text-sm font-medium mb-2">Filter by Status</div>
+                <div className="space-y-1">
+                  <Button
+                    variant={filterType === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterType('all');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    All Messages
+                  </Button>
+                  <Button
+                    variant={filterType === 'unread' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterType('unread');
+                      setActiveTab('unread');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Unread Only
+                  </Button>
+                  <Button
+                    variant={filterType === 'read' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterType('read');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Read Only
+                  </Button>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="p-2">
+                <div className="text-sm font-medium mb-2">Filter by Tag</div>
+                <div className="space-y-1">
+                  <Button
+                    variant={filterTag === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterTag('all');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    All Tags
+                  </Button>
+                  {predefinedTags.map(tag => (
+                    <Button
+                      key={tag.value}
+                      variant={filterTag === tag.value ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        setFilterTag(tag.value);
+                        setShowFilterDropdown(false);
+                      }}
+                    >
+                      {tag.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="p-2">
+                <div className="text-sm font-medium mb-2">Filter by LinkedIn Account</div>
+                <div className="space-y-1">
+                  <Button
+                    variant={filterAccount === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterAccount('all');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    All Accounts
+                  </Button>
+                  <Button
+                    variant={filterAccount === 'primary' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterAccount('primary');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Primary Account
+                  </Button>
+                  <Button
+                    variant={filterAccount === 'team1' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterAccount('team1');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Team Account 1
+                  </Button>
+                  <Button
+                    variant={filterAccount === 'team2' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterAccount('team2');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Team Account 2
+                  </Button>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="p-2">
+                <div className="text-sm font-medium mb-2">Filter by Message Type</div>
+                <div className="space-y-1">
+                  <Button
+                    variant={filterMessageType === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterMessageType('all');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    All Messages
+                  </Button>
+                  <Button
+                    variant={filterMessageType === 'linkedin' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterMessageType('linkedin');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    LinkedIn Messages
+                  </Button>
+                  <Button
+                    variant={filterMessageType === 'inmail' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterMessageType('inmail');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    InMail Messages
+                  </Button>
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button 
+            variant="outline"
+            onClick={archiveAllRead}
+            disabled={messages.filter(m => m.read).length === 0}
+            title={`Archive ${messages.filter(m => m.read).length} read messages`}
+          >
             <Archive className="h-4 w-4 mr-2" />
-            Archive All Read
+            Archive All Read ({messages.filter(m => m.read).length})
           </Button>
         </div>
       </div>
@@ -882,6 +1029,15 @@ export default function GlobalInbox() {
               <option key={tag.value} value={tag.value}>{tag.label}</option>
             ))}
           </select>
+          <select 
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            value={filterMessageType}
+            onChange={(e) => setFilterMessageType(e.target.value as 'all' | 'linkedin' | 'inmail')}
+          >
+            <option value="all">All Types</option>
+            <option value="linkedin">LinkedIn Messages</option>
+            <option value="inmail">InMail</option>
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">
@@ -891,7 +1047,7 @@ export default function GlobalInbox() {
               `${filteredMessages.length} of ${messages.length}`
             )}
           </span>
-          {(searchFilter || filterType !== 'all' || filterTag !== 'all') && (
+          {(searchFilter || filterType !== 'all' || filterTag !== 'all' || filterMessageType !== 'all') && (
             <Button
               variant="outline"
               size="sm"
@@ -899,6 +1055,7 @@ export default function GlobalInbox() {
                 setSearchFilter('');
                 setFilterType('all');
                 setFilterTag('all');
+                setFilterMessageType('all');
               }}
             >
               Clear Filters
@@ -907,58 +1064,31 @@ export default function GlobalInbox() {
         </div>
       </div>
 
-      {/* Inbox Stats */}
+      {/* Business Metrics Stats - Real Data from Supabase */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">{messages.length}</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {businessMetrics.loading ? '...' : businessMetrics.totalMessages.toLocaleString()}
+                </div>
                 <div className="text-sm text-gray-600">Total Messages</div>
                 {messages.filter(m => !m.read).length > 0 && (
                   <Badge className="mt-1 bg-blue-100 text-blue-800">
                     {messages.filter(m => !m.read).length} unread
                   </Badge>
                 )}
+                {businessMetrics.error && (
+                  <Badge className="mt-1 bg-red-100 text-red-800">
+                    Error loading
+                  </Badge>
+                )}
               </div>
               <Inbox className="h-8 w-8 text-premium-purple" />
             </div>
-            {messages.length > 0 && (
-              <p className="text-xs text-gray-500 mt-2">
-                Synced from LinkedIn
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{messages.filter(m => !m.read).length}</div>
-                <div className="text-sm text-gray-600">Unread</div>
-              </div>
-              <AlertCircle className="h-8 w-8 text-premium-orange" />
-            </div>
-            {messages.filter(m => !m.read).length > 0 && (
-              <p className="text-xs text-orange-600 mt-2">
-                Requires attention
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-gray-900">0</div>
-                <div className="text-sm text-gray-600">Sent Today</div>
-              </div>
-              <CheckCircle className="h-8 w-8 text-premium-cyan" />
-            </div>
             <p className="text-xs text-gray-500 mt-2">
-              Track sent messages
+              Team + User Level
             </p>
           </CardContent>
         </Card>
@@ -967,13 +1097,79 @@ export default function GlobalInbox() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-gray-900">0</div>
-                <div className="text-sm text-gray-600">High Priority</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {businessMetrics.loading ? '...' : businessMetrics.connectionsAccepted.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">Connection Requests Accepted</div>
+                <Badge className="mt-1 bg-green-100 text-green-800">
+                  +{businessMetrics.loading ? '...' : businessMetrics.connectionsThisWeek} this week
+                </Badge>
               </div>
-              <Star className="h-8 w-8 text-yellow-500" />
+              <Users className="h-8 w-8 text-green-600" />
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Important messages
+              Growing network
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {businessMetrics.loading ? '...' : businessMetrics.interestedContacts.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">Interested</div>
+                <Badge className="mt-1 bg-orange-100 text-orange-800">
+                  +{businessMetrics.loading ? '...' : businessMetrics.interestedThisWeek} this week
+                </Badge>
+              </div>
+              <Target className="h-8 w-8 text-orange-600" />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Engaged leads
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {businessMetrics.loading ? '...' : businessMetrics.meetingsBooked.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">Meetings Booked</div>
+                <Badge className="mt-1 bg-purple-100 text-purple-800">
+                  +{businessMetrics.loading ? '...' : businessMetrics.meetingsThisWeek} this week
+                </Badge>
+              </div>
+              <Calendar className="h-8 w-8 text-purple-600" />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Conversion success
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Message Type Breakdown */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {messages.filter(m => m.messageType === 'inmail').length.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">InMail Messages</div>
+                <Badge className="mt-1 bg-orange-100 text-orange-800">
+                  {messages.filter(m => m.messageType !== 'inmail').length} LinkedIn
+                </Badge>
+              </div>
+              <Mail className="h-8 w-8 text-orange-600" />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Message breakdown
             </p>
           </CardContent>
         </Card>
@@ -1107,11 +1303,15 @@ export default function GlobalInbox() {
                               <span className={`text-sm font-medium ${!message.read ? "font-semibold" : ""}`}>
                                 {message.from}
                               </span>
-                              {message.messageType === 'inmail' && (
-                                <Badge variant="outline" className="text-xs h-5 px-1.5">
+                              {message.messageType === 'inmail' ? (
+                                <Badge variant="outline" className="text-xs h-5 px-1.5 border-orange-300 text-orange-700 bg-orange-50">
                                   InMail
                                 </Badge>
-                              )}
+                              ) : message.channel === 'linkedin' ? (
+                                <Badge variant="outline" className="text-xs h-5 px-1.5 border-blue-300 text-blue-700 bg-blue-50">
+                                  LinkedIn
+                                </Badge>
+                              ) : null}
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-500">{formatTime(message.time)}</span>
@@ -1121,10 +1321,10 @@ export default function GlobalInbox() {
                                 className="h-6 w-6 p-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedMessageForFollowUp(message);
-                                  setShowFollowUpModal(true);
+                                  setSelectedMessage(message);
+                                  setReplyModalOpen(true);
                                 }}
-                                title="Create follow-up"
+                                title="Reply to message"
                               >
                                 <Reply className="h-3 w-3" />
                               </Button>
@@ -1247,7 +1447,16 @@ export default function GlobalInbox() {
                   <h3 className="font-semibold text-lg mb-2">{selectedMessage.subject}</h3>
                   <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                     <Clock className="h-4 w-4" />
-                    {selectedMessage.time}
+                    {selectedMessage.conversationData?.last_message_at ? 
+                      new Date(selectedMessage.conversationData.last_message_at).toLocaleString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      }) : selectedMessage.time}
                     {selectedMessage.priority && (
                       <Badge className={getPriorityColor(selectedMessage.priority)}>
                         {selectedMessage.priority} priority
@@ -1312,7 +1521,14 @@ export default function GlobalInbox() {
                                       {senderName}
                                     </span>
                                     <span className="text-xs text-gray-500">
-                                      {new Date(msg.created_at || msg.metadata?.timestamp || Date.now()).toLocaleString()}
+                                      {new Date(msg.created_at || msg.metadata?.timestamp || Date.now()).toLocaleString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true
+                                      })}
                                     </span>
                                     {msg.metadata?.message_type === 'placeholder' && (
                                       <Badge variant="outline" className="text-xs">
@@ -1358,19 +1574,30 @@ export default function GlobalInbox() {
                 <div className="flex gap-2 pt-4 border-t">
                   <Button onClick={handleReply}>
                     <Reply className="h-4 w-4 mr-2" />
-                    Follow Up
+                    Reply
                   </Button>
-                  <Button variant="outline" onClick={handleForward}>
-                    <Forward className="h-4 w-4 mr-2" />
-                    Forward
-                  </Button>
+                  
+                  {/* LinkedIn messaging button - appears when LinkedIn URL available */}
+                  {(selectedMessage?.conversationData?.metadata?.linkedin_message_url || 
+                    selectedMessage?.conversationData?.metadata?.participant_linkedin_url) && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        const linkedinUrl = selectedMessage.conversationData.metadata.linkedin_message_url || 
+                                          selectedMessage.conversationData.metadata.participant_linkedin_url;
+                        window.open(linkedinUrl, '_blank');
+                        toast.success('Opening LinkedIn messaging...');
+                      }}
+                      title="Message this contact directly on LinkedIn"
+                    >
+                      <Linkedin className="h-4 w-4 mr-2" />
+                      Message on LinkedIn
+                    </Button>
+                  )}
+                  
                   <Button variant="outline" onClick={handleScheduleMeeting}>
                     <Calendar className="h-4 w-4 mr-2" />
                     Schedule Meeting
-                  </Button>
-                  <Button variant="outline">
-                    <Video className="h-4 w-4 mr-2" />
-                    Video Call
                   </Button>
                 </div>
               </div>
@@ -1419,107 +1646,6 @@ export default function GlobalInbox() {
         </DialogContent>
       </Dialog>
 
-      {/* Forward Modal */}
-      <Dialog open={forwardModalOpen} onOpenChange={setForwardModalOpen}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>Forward Message</DialogTitle>
-            <DialogDescription>
-              Forward this message to another contact
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="forward-to">Forward To</Label>
-              <Input
-                id="forward-to"
-                placeholder="Enter email address"
-                value={forwardTo}
-                onChange={(e) => setForwardTo(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="forward-content">Message</Label>
-              <Textarea
-                id="forward-content"
-                placeholder="Add a note (optional)"
-                value={forwardContent}
-                onChange={(e) => setForwardContent(e.target.value)}
-                className="min-h-[150px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setForwardModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={sendForward} disabled={!forwardTo.trim()}>
-              Forward Message
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Schedule Meeting Modal */}
-      <Dialog open={scheduleMeetingModalOpen} onOpenChange={setScheduleMeetingModalOpen}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>Schedule Meeting</DialogTitle>
-            <DialogDescription>
-              Schedule a meeting with {selectedMessage?.from}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="meeting-title">Meeting Title</Label>
-              <Input
-                id="meeting-title"
-                placeholder="Enter meeting title"
-                value={meetingTitle}
-                onChange={(e) => setMeetingTitle(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="meeting-date">Date</Label>
-                <Input
-                  id="meeting-date"
-                  type="date"
-                  value={meetingDate}
-                  onChange={(e) => setMeetingDate(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="meeting-time">Time</Label>
-                <Input
-                  id="meeting-time"
-                  type="time"
-                  value={meetingTime}
-                  onChange={(e) => setMeetingTime(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="meeting-description">Description</Label>
-              <Textarea
-                id="meeting-description"
-                placeholder="Meeting agenda and details..."
-                value={meetingDescription}
-                onChange={(e) => setMeetingDescription(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setScheduleMeetingModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={scheduleMeeting} disabled={!meetingTitle.trim() || !meetingDate || !meetingTime}>
-              Schedule Meeting
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* New Message Modal */}
       <Dialog open={showNewMessageModal} onOpenChange={setShowNewMessageModal}>
@@ -1610,7 +1736,7 @@ export default function GlobalInbox() {
                   if (msgError) throw msgError;
 
                   toast.success('Message sent successfully!');
-                  refreshData();
+                  loadMessages();
                 }
                 
                 setShowNewMessageModal(false);
@@ -1709,7 +1835,7 @@ export default function GlobalInbox() {
             console.log('Follow-up created:', followUpData);
             toast('Follow-up scheduled successfully');
             // Refresh messages to show follow-up indicator
-            loadInboxMessages();
+            loadMessages();
           }}
         />
       )}

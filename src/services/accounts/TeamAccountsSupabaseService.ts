@@ -75,9 +75,46 @@ export interface AccountRotationRules {
 
 export class TeamAccountsSupabaseService {
   private static instance: TeamAccountsSupabaseService;
-  private workspaceId: string = 'df5d730f-1915-4269-bd5a-9534478b17af'; // Default workspace
+  private workspaceId: string;
 
-  private constructor() {}
+  private constructor() {
+    // Get workspace ID dynamically from auth context
+    this.workspaceId = this.getCurrentWorkspaceId();
+  }
+
+  /**
+   * Get current workspace ID from various sources
+   */
+  private getCurrentWorkspaceId(): string {
+    // Check auth profile
+    const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+    if (authProfile.workspace_id) return authProfile.workspace_id;
+    
+    // Check bypass user data
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.workspace_id) return bypassUser.workspace_id;
+    
+    // Check direct storage
+    const workspaceId = localStorage.getItem('workspace_id');
+    if (workspaceId) return workspaceId;
+    
+    // Generate proper UUID fallback workspace ID
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    return generateUUID();
+  }
+
+  /**
+   * Update workspace ID (useful when workspace changes)
+   */
+  public updateWorkspaceId(workspaceId?: string): void {
+    this.workspaceId = workspaceId || this.getCurrentWorkspaceId();
+  }
 
   public static getInstance(): TeamAccountsSupabaseService {
     if (!TeamAccountsSupabaseService.instance) {

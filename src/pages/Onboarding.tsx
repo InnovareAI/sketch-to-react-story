@@ -24,8 +24,8 @@ export default function Onboarding() {
           .single();
 
         if (workspace?.unipile_account_id) {
-          // Already onboarded, redirect to dashboard
-          navigate('/dashboard');
+          // Already onboarded, redirect to agent space
+          navigate('/agent');
         }
       }
     } catch (error) {

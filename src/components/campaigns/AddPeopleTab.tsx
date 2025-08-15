@@ -23,7 +23,8 @@ import {
   Building2,
   User,
   Trash2,
-  Edit
+  Edit,
+  Save
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProspectValidator } from './ProspectValidator';
@@ -443,10 +444,63 @@ export function AddPeopleTab({ selectedPeople, onPeopleChange, campaignType }: A
       {selectedPeople.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Added Prospects ({selectedPeople.length})
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Added Prospects ({selectedPeople.length})
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Export to CSV
+                    const csv = [
+                      ['First Name', 'Last Name', 'Email', 'Title', 'Company', 'LinkedIn URL', 'Source'].join(','),
+                      ...selectedPeople.map(p => [
+                        p.first_name || '',
+                        p.last_name || '',
+                        p.email || '',
+                        p.title || '',
+                        p.company || '',
+                        p.linkedin_url || '',
+                        p.source || ''
+                      ].map(v => `"${v.replace(/"/g, '""')}"`).join(','))
+                    ].join('\n');
+                    
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `prospects-${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success('Prospects exported successfully');
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Save search/list
+                    const searchData = {
+                      url: searchUrl,
+                      prospects: selectedPeople,
+                      timestamp: new Date().toISOString(),
+                      campaignType
+                    };
+                    localStorage.setItem(`saved_search_${Date.now()}`, JSON.stringify(searchData));
+                    toast.success('Search saved successfully');
+                  }}
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Save List
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">

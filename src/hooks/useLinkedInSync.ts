@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { unipileRealTimeSync } from '@/services/unipile/UnipileRealTimeSync';
+import { BackgroundSyncManager } from '@/services/BackgroundSyncManager';
 import { toast } from 'sonner';
+import { getUserLinkedInAccounts, getUserWorkspaceId } from '@/utils/userDataStorage';
 
 interface SyncState {
   isInitialSyncComplete: boolean;
@@ -25,24 +27,24 @@ export function useLinkedInSync() {
     contactCount: 0,
     autoSyncEnabled: true
   });
+  
+  const backgroundSync = BackgroundSyncManager.getInstance();
 
   // Check if initial sync has been done
   useEffect(() => {
     checkInitialSyncStatus();
     setupAutoSync();
     
-    return () => {
-      // Cleanup auto-sync on unmount
-      unipileRealTimeSync.stopAutoSync();
-    };
+    // NO CLEANUP - Auto-sync should continue running in background
+    // Even when component unmounts or user navigates away
   }, []);
 
   const checkInitialSyncStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Check localStorage for sync status
-    const syncStatus = localStorage.getItem(`linkedin_sync_${user.id}`);
+    // Check user-specific localStorage for sync status
+    const syncStatus = localStorage.getItem(`user_${user.id}_linkedin_sync`);
     if (syncStatus) {
       const status = JSON.parse(syncStatus);
       setSyncState(prev => ({
@@ -76,21 +78,50 @@ export function useLinkedInSync() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Check user preferences for auto-sync
-    const autoSyncPref = localStorage.getItem(`auto_sync_${user.id}`);
-    const autoSyncEnabled = autoSyncPref !== 'false'; // Default to true
+    // Get workspace ID for current user
+    const workspaceId = await getUserWorkspaceId();
+    if (!workspaceId) {
+      console.error('No workspace ID found for background sync setup');
+      return;
+    }
+
+    // Auto-sync is ALWAYS enabled - no manual sync allowed
+    const autoSyncEnabled = true; // Always true, no user preference
 
     if (autoSyncEnabled && unipileRealTimeSync.isConfigured()) {
-      // Start auto-sync with 60-minute interval
-      unipileRealTimeSync.startAutoSync(60);
+      // Get LinkedIn account ID for current user
+      const accounts = await getUserLinkedInAccounts();
+      if (accounts.length > 0) {
+        const account = accounts[0];
+        const accountId = account.unipileAccountId || account.id || account.account_id;
+        
+        if (accountId) {
+          // Enable CLOUD-BASED background sync that continues when page is closed
+          const result = await backgroundSync.enableBackgroundSync(
+            workspaceId,
+            accountId,
+            5, // Sync every 5 minutes for real-time updates
+            'both' // Sync both contacts and messages
+          );
+          
+          if (result.success) {
+            console.log('☁️ Cloud-based background sync enabled - will continue even when page is closed');
+            toast.success('Auto-sync enabled - messages sync every 5 minutes', {
+              duration: 5000
+            });
+          } else {
+            console.error('Failed to enable cloud sync:', result.error);
+            // Fallback to browser-based sync
+            unipileRealTimeSync.startAutoSync(60);
+          }
+        }
+      }
       
       setSyncState(prev => ({
         ...prev,
         autoSyncEnabled: true,
-        nextSyncTime: new Date(Date.now() + 60 * 60 * 1000) // 1 hour from now
+        nextSyncTime: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes from now
       }));
-
-      console.log('⏰ Auto-sync enabled: Every 60 minutes');
     }
   };
 
@@ -112,7 +143,7 @@ export function useLinkedInSync() {
           messageCount: status.messagessynced,
           contactCount: status.contactsSynced
         };
-        localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify(syncData));
+        localStorage.setItem(`user_${user.id}_linkedin_sync`, JSON.stringify(syncData));
       }
 
       setSyncState(prev => ({
@@ -154,7 +185,7 @@ export function useLinkedInSync() {
       // Update sync status
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const currentStatus = localStorage.getItem(`linkedin_sync_${user.id}`);
+        const currentStatus = localStorage.getItem(`user_${user.id}_linkedin_sync`);
         const statusData = currentStatus ? JSON.parse(currentStatus) : {};
         
         const updatedStatus = {
@@ -164,7 +195,7 @@ export function useLinkedInSync() {
           contactCount: status.contactsSynced
         };
         
-        localStorage.setItem(`linkedin_sync_${user.id}`, JSON.stringify(updatedStatus));
+        localStorage.setItem(`user_${user.id}_linkedin_sync`, JSON.stringify(updatedStatus));
       }
 
       setSyncState(prev => ({
@@ -201,6 +232,14 @@ export function useLinkedInSync() {
         return;
       }
 
+      // Get workspace ID
+      const workspaceId = localStorage.getItem('workspace_id') || user.user_metadata?.workspace_id;
+      if (!workspaceId) {
+        console.error('No workspace ID found');
+        toast.error('Unable to toggle sync - workspace not found');
+        return;
+      }
+
       localStorage.setItem(`auto_sync_${user.id}`, String(enabled));
       
       if (enabled) {
@@ -216,20 +255,44 @@ export function useLinkedInSync() {
                 apiKey: 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
                 accountId: accountId
               });
+              
+              // Enable cloud-based background sync
+              const result = await backgroundSync.enableBackgroundSync(
+                workspaceId,
+                accountId,
+                5, // Every 5 minutes
+                'both'
+              );
+              
+              if (result.success) {
+                toast.success('☁️ Cloud sync enabled - will continue syncing in background');
+              }
             }
+          }
+        } else {
+          // Already configured, just enable background sync
+          const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+          if (accounts.length > 0) {
+            const accountId = accounts[0].unipileAccountId || accounts[0].id;
+            await backgroundSync.enableBackgroundSync(workspaceId, accountId, 30, 'both');
           }
         }
         
-        unipileRealTimeSync.startAutoSync(60);
-        toast.success('Auto-sync enabled (every hour)');
         setSyncState(prev => ({
           ...prev,
           autoSyncEnabled: true,
-          nextSyncTime: new Date(Date.now() + 60 * 60 * 1000)
+          nextSyncTime: new Date(Date.now() + 30 * 60 * 1000)
         }));
       } else {
+        // Disable cloud sync
+        const accounts = JSON.parse(localStorage.getItem('linkedin_accounts') || '[]');
+        if (accounts.length > 0) {
+          const accountId = accounts[0].unipileAccountId || accounts[0].id;
+          await backgroundSync.disableBackgroundSync(workspaceId, accountId);
+        }
+        
         unipileRealTimeSync.stopAutoSync();
-        toast.info('Auto-sync disabled');
+        toast.info('Cloud sync disabled');
         setSyncState(prev => ({
           ...prev,
           autoSyncEnabled: false,
@@ -240,7 +303,7 @@ export function useLinkedInSync() {
       console.error('Error toggling auto-sync:', error);
       toast.error('Failed to toggle auto-sync');
     }
-  }, []);
+  }, [backgroundSync]);
 
   return {
     syncState,

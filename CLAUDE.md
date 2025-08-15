@@ -13,9 +13,9 @@
 ## Project Overview
 Pharmaceutical SEO content automation platform for drug information management:
 - React + TypeScript + Vite + Supabase
-- AI-powered pharmaceutical content generation
+- AI-powered pharmaceutical content generation with 4-stage development prompts
 - Medical accuracy validation and compliance scoring
-- SEO optimization for drug submissions
+- SEO optimization for drug submissions with audience differentiation
 - Workflow management for pharmaceutical content review
 
 ## Tech Stack
@@ -26,21 +26,43 @@ Pharmaceutical SEO content automation platform for drug information management:
 - **Database**: PostgreSQL with submissions table, RLS security
 - **Deployment**: Netlify (auto-deploy from main branch)
 
-## Key Components
-- **Submissions Form** - HTML form at `/dist/WORKING_FORM.html` for drug submissions
-- **Target Audience Selection** - HCP vs Patient content differentiation
-- **AI Content Generation** - Edge function generates audience-specific SEO content
-- **Database Integration** - Direct PostgreSQL submissions table with 86+ entries
-- **Medical Validation** - Compliance scoring and accuracy verification
-- **SEO Optimization** - Meta tags, keywords, schema markup generation
+## Key Features - 4-Stage Pharmaceutical SEO System
+### STAGE 1: Market Shaping
+- **Disease education content** without brand names
+- Builds disease category awareness before product promotion
+- Based on regulatory examples (ntmfacts.com, yourattentionplease.com)
+
+### STAGE 2: Phase III Clinical Trial
+- **Pre-launch clinical focus** with trial data emphasis
+- Regulatory pathway and approval timeline content
+- Clinical efficacy and safety findings
+
+### STAGE 3: Market Launch 1-6 Months
+- **Early adoption focus** highlighting NEW availability
+- FDA approval and innovative treatment messaging
+- Access and availability information
+
+### STAGE 4: Market Launch 7-12 Months
+- **Established experience focus** with proven efficacy
+- Real-world evidence and outcomes
+- Widespread prescriber adoption messaging
+
+## Target Audience Differentiation
+- **HCP Content**: Medical terminology, clinical data, prescribing information
+- **Patient Content**: Accessible language, quality of life focus, prescription safety
+
+## SEO Formatting Requirements
+- **Title Format**: `Condition | BRAND® (generic)` (Stages 2-4 only)
+- **Meta Description**: Condition descriptors, NO clinical trials (except Phase III)
+- **H1 Tags**: NO brand names, treatment/condition focus only
 
 ## Current Database Status
-- **86+ pharmaceutical submissions** in production database (as of 2025-08-15)
-- **Active drugs**: Keytruda, Ozempic, Ibrance, Kisqali, Skyrizi, Rinvoq, Advil, Metformin
-- **Therapeutic areas**: Oncology, Immunology, Endocrinology, Dermatology, Pain Management
-- **Target audiences**: Both HCP and Patient content supported
-- **AI processing pipeline**: Fully operational with audience-specific content generation
-- **Database connection**: PostgreSQL via Supabase with auto-processing triggers
+- **100+ pharmaceutical submissions** in production database
+- **Active drugs**: Keytruda, Ozempic, Ibrance, Kisqali, Skyrizi, Rinvoq, AUTOTEST-DRUG
+- **Therapeutic areas**: Oncology, Immunology, Endocrinology, Dermatology
+- **Target audiences**: Both HCP and Patient content fully operational
+- **AI processing pipeline**: 4-stage prompts with auto-triggers functional
+- **Database connection**: PostgreSQL via Supabase with real-time processing
 
 ## Deployment Commands
 ```bash
@@ -54,15 +76,17 @@ git push origin main
 - SUPABASE_URL - Database connection
 - SUPABASE_SERVICE_ROLE_KEY - Admin access
 - SUPABASE_ANON_KEY - Public API access (for forms)
+- OPENROUTER_API_KEY - AI processing via Claude-3.5-Sonnet
 
 ## Important Notes for Next Assistant
-- **Pharmaceutical focus only** - No LinkedIn, social media, N8N, Perplexity, or OpenRouter
-- **Current tech stack**: React + Supabase + Edge Functions ONLY
-- **Form submission**: `/dist/WORKING_FORM.html` connects directly to PostgreSQL
+- **Pharmaceutical focus only** - Complete 4-stage SEO system operational
+- **Real prescription drugs only** - No fake data or test compounds
+- **Stage-specific prompts**: Market Shaping (disease education), Phase III (clinical), Launch 1-6mo (new), Launch 7-12mo (proven)
 - **Target audience feature**: HCP vs Patient content differentiation implemented
-- **AI processing**: `direct-llm-processor` Edge Function handles content generation
-- **Database operational** - 86+ pharmaceutical submissions with auto-processing
+- **AI processing**: `direct-llm-processor` Edge Function with OpenRouter/Claude
+- **Database operational** - 100+ pharmaceutical submissions with auto-processing
 - **Workflow stages**: pending_review → processing → ai_processed → seo_review
-- **Medical compliance validation** - Accuracy scoring and regulatory compliance checks
+- **Medical compliance**: Accuracy scoring and regulatory compliance checks
+- **SEO dashboard**: `/seo-review` shows all generated content with audience badges
 
-## Status: Pharmaceutical SEO Platform OPERATIONAL ✅
+## Status: 4-Stage Pharmaceutical SEO Platform FULLY OPERATIONAL ✅

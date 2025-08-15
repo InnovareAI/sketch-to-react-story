@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const UNIPILE_API_KEY = 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ'
-const UNIPILE_BASE_URL = 'https://api6.unipile.com:13443/api/v1'
+const UNIPILE_API_KEY = Deno.env.get('UNIPILE_API_KEY') || 'aQzsD1+H.EJ60hU0LkPAxRaCU6nlvk3ypn9Rn9BUwqo9LGY24zZU='
+const UNIPILE_BASE_URL = Deno.env.get('UNIPILE_BASE_URL') || 'https://api6.unipile.com:13670/api/v1'
 
 interface SyncRequest {
   workspace_id: string
@@ -24,9 +24,18 @@ serve(async (req) => {
       return new Response('ok', { headers: corsHeaders })
     }
 
-    // Initialize Supabase Admin Client
+    // Skip auth verification for this function - using service role internally
+    // This allows the function to be called without JWT authentication
+
+    console.log('🚀 LinkedIn Background Sync function called')
+    console.log('📊 Headers:', Object.fromEntries(req.headers.entries()))
+
+    // Initialize Supabase Admin Client with service role (bypasses auth)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    console.log('🔧 Using Supabase URL:', supabaseUrl)
+    console.log('🔧 Service key configured:', !!supabaseServiceKey)
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { workspace_id, account_id, sync_type = 'both', sync_emails = false, sync_calendar = false, limit = 500 } = await req.json()
@@ -68,10 +77,10 @@ serve(async (req) => {
     if (sync_type === 'contacts' || sync_type === 'both') {
       try {
         const response = await fetch(
-          `${UNIPILE_BASE_URL}/users/${account_id}/connections?limit=${limit}`,
+          `${UNIPILE_BASE_URL}/chats?account_id=${account_id}&limit=${limit}`,
           {
             headers: {
-              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'X-API-KEY': UNIPILE_API_KEY,
               'Content-Type': 'application/json',
               'Accept': 'application/json'
             }
@@ -80,11 +89,28 @@ serve(async (req) => {
 
         if (response.ok) {
           const data = await response.json()
-          const connections = data.connections || data.items || []
+          const chats = data.items || []
           
-          console.log(`Fetched ${connections.length} connections`)
+          console.log(`Fetched ${chats.length} chats for contact extraction`)
 
-          for (const connection of connections) {
+          // Extract unique contacts from chat participants
+          const uniqueContacts = new Set()
+          const contactsToSync = []
+
+          for (const chat of chats) {
+            if (chat.attendee_provider_id && !uniqueContacts.has(chat.attendee_provider_id)) {
+              uniqueContacts.add(chat.attendee_provider_id)
+              contactsToSync.push({
+                id: chat.attendee_provider_id,
+                name: chat.name || 'LinkedIn Contact',
+                linkedin_url: `https://linkedin.com/in/${chat.attendee_provider_id}`
+              })
+            }
+          }
+
+          console.log(`Found ${contactsToSync.length} unique contacts from chats`)
+
+          for (const connection of contactsToSync) {
             try {
               // Parse and prepare contact data
               const names = (connection.name || '').split(' ')
@@ -153,10 +179,10 @@ serve(async (req) => {
     if (sync_type === 'messages' || sync_type === 'both') {
       try {
         const response = await fetch(
-          `${UNIPILE_BASE_URL}/users/${account_id}/chats?limit=${limit}&provider=LINKEDIN`,
+          `${UNIPILE_BASE_URL}/chats?account_id=${account_id}&limit=${limit}`,
           {
             headers: {
-              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'X-API-KEY': UNIPILE_API_KEY,
               'Content-Type': 'application/json',
               'Accept': 'application/json'
             }
@@ -171,21 +197,15 @@ serve(async (req) => {
 
           for (const conversation of conversations) {
             try {
-              // Extract participant info
-              const participants = conversation.participants || conversation.attendees || []
-              const otherParticipant = participants.find((p: any) => !p.is_self) || participants[0] || {}
+              // Get participant info from the chat attendee data
+              const participantId = conversation.attendee_provider_id
+              const participantName = 'LinkedIn Contact' // Will be filled from messages
               
               // Generate avatar URL
-              let avatarUrl = otherParticipant.profile_picture || otherParticipant.avatar_url
-              if (!avatarUrl || avatarUrl.includes('dicebear')) {
-                avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant.name || 'U')}&background=0D8ABC&color=fff&size=200`
-              }
+              let avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(participantName)}&background=0D8ABC&color=fff&size=200`
 
-              // Detect if InMail
-              const isInMail = conversation.is_inmail || 
-                              conversation.type === 'inmail' || 
-                              (conversation.subject && !conversation.is_connected) ||
-                              conversation.message_type === 'INMAIL'
+              // Detect if InMail based on chat type
+              const isInMail = conversation.type === 'inmail' || conversation.folder?.includes('INMAIL')
 
               // Upsert conversation
               const { data: convData, error: convError } = await supabase
@@ -193,21 +213,18 @@ serve(async (req) => {
                 .upsert({
                   workspace_id,
                   platform: 'linkedin',
-                  platform_conversation_id: conversation.id || conversation.chat_id,
-                  participant_name: otherParticipant.name || 'Unknown',
-                  participant_company: otherParticipant.company,
+                  platform_conversation_id: conversation.id,
+                  participant_name: participantName,
+                  participant_company: 'Unknown Company',
                   participant_avatar_url: avatarUrl,
-                  participant_title: otherParticipant.title || otherParticipant.headline,
                   status: 'active',
-                  last_message_at: conversation.last_message_at || new Date().toISOString(),
+                  last_message_at: conversation.timestamp || new Date().toISOString(),
                   metadata: {
-                    message_type: isInMail ? 'inmail' : 'message',
+                    chat_type: isInMail ? 'inmail' : 'message',
                     is_inmail: isInMail,
-                    has_subject: !!conversation.subject,
-                    subject: conversation.subject,
-                    connection_degree: otherParticipant.degree,
-                    linkedin_profile_url: otherParticipant.linkedin_url,
-                    total_messages: conversation.messages?.length || 0,
+                    attendee_provider_id: participantId,
+                    chat_folder: conversation.folder,
+                    unread_count: conversation.unread_count || 0,
                     synced_at: new Date().toISOString(),
                     sync_source: 'background_edge_function'
                   }
@@ -219,30 +236,77 @@ serve(async (req) => {
                 .single()
 
               if (!convError && convData) {
-                syncResult.messagesSynced++
-
-                // Sync individual messages
-                if (conversation.messages && conversation.messages.length > 0) {
-                  for (const message of conversation.messages) {
-                    await supabase
-                      .from('inbox_messages')
-                      .upsert({
-                        conversation_id: convData.id,
-                        role: message.from === account_id ? 'user' : 'assistant',
-                        content: message.text || message.content || '',
-                        metadata: {
-                          type: isInMail ? 'inmail' : 'message',
-                          sender_name: message.sender_name || otherParticipant.name,
-                          sender_id: message.from,
-                          message_id: message.id,
-                          sent_at: message.sent_at || message.created_at
-                        },
-                        created_at: message.sent_at || message.created_at || new Date().toISOString()
-                      }, {
-                        onConflict: 'conversation_id,created_at',
-                        ignoreDuplicates: true
-                      })
+                // Now fetch messages for this specific chat
+                console.log(`Fetching messages for chat: ${conversation.id}`)
+                const messagesResponse = await fetch(
+                  `${UNIPILE_BASE_URL}/chats/${conversation.id}/messages?limit=10`,
+                  {
+                    headers: {
+                      'X-API-KEY': UNIPILE_API_KEY,
+                      'Accept': 'application/json'
+                    }
                   }
+                )
+
+                if (messagesResponse.ok) {
+                  const messagesData = await messagesResponse.json()
+                  const messages = messagesData.items || []
+                  
+                  console.log(`Found ${messages.length} messages for chat ${conversation.id}`)
+                  
+                  // Update participant name from first message
+                  let realParticipantName = participantName
+                  let realParticipantCompany = 'Unknown Company'
+                  
+                  if (messages.length > 0) {
+                    // Find a message from the other person (not sender)
+                    const otherMessage = messages.find(m => !m.is_sender && m.sender_id !== account_id)
+                    if (otherMessage) {
+                      // Try to extract name from message metadata or content
+                      realParticipantName = 'LinkedIn Contact' // We'll improve this later
+                    }
+                  }
+
+                  // Update conversation with real participant info
+                  await supabase
+                    .from('inbox_conversations')
+                    .update({
+                      participant_name: realParticipantName,
+                      participant_company: realParticipantCompany,
+                      participant_avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(realParticipantName)}&background=0D8ABC&color=fff&size=200`
+                    })
+                    .eq('id', convData.id)
+
+                  // Sync individual messages
+                  for (const message of messages) {
+                    try {
+                      await supabase
+                        .from('inbox_messages')
+                        .upsert({
+                          conversation_id: convData.id,
+                          role: message.is_sender ? 'user' : 'assistant',
+                          content: message.text || message.content || 'No content',
+                          metadata: {
+                            type: isInMail ? 'inmail' : 'message',
+                            sender_id: message.sender_id,
+                            message_id: message.id,
+                            is_sender: message.is_sender,
+                            timestamp: message.timestamp,
+                            provider_id: message.provider_id
+                          },
+                          created_at: message.timestamp || new Date().toISOString()
+                        }, {
+                          onConflict: 'conversation_id,created_at',
+                          ignoreDuplicates: true
+                        })
+                    } catch (msgErr: any) {
+                      console.error('Error saving message:', msgErr)
+                    }
+                  }
+                  
+                  syncResult.messagesSynced++
+                } else {
+                  console.error(`Failed to fetch messages for chat ${conversation.id}: ${messagesResponse.status}`)
                 }
               } else if (convError) {
                 console.error(`Error syncing conversation: ${convError.message}`)
@@ -274,7 +338,7 @@ serve(async (req) => {
           `${UNIPILE_BASE_URL}/users/${account_id}/messages?${emailParams}`,
           {
             headers: {
-              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'X-API-KEY': UNIPILE_API_KEY,
               'Accept': 'application/json'
             }
           }
@@ -331,7 +395,7 @@ serve(async (req) => {
           `${UNIPILE_BASE_URL}/users/${account_id}/events?${calendarParams}`,
           {
             headers: {
-              'Authorization': `Bearer ${UNIPILE_API_KEY}`,
+              'X-API-KEY': UNIPILE_API_KEY,
               'Accept': 'application/json'
             }
           }

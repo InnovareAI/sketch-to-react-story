@@ -18,9 +18,8 @@ interface WorkspaceData {
 export function useWorkspace() {
   const { user: authUser } = useAuth();
   
-  // Use default workspace ID when user is not authenticated
-  const DEFAULT_WORKSPACE_ID = 'df5d730f-1915-4269-bd5a-9534478b17af';
-  const workspaceId = authUser?.workspace_id || DEFAULT_WORKSPACE_ID;
+  // Get workspace ID from authenticated user profile
+  const workspaceId = authUser?.workspace_id || null;
   
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,8 +77,11 @@ export function useWorkspace() {
         .single();
         
       if (supabaseError) {
+        console.error('Supabase workspace query error:', supabaseError);
+        
         if (supabaseError.code === 'PGRST116') {
-          // Workspace doesn't exist, create it
+          // Workspace doesn't exist, create a default one
+          
           console.log('Workspace not found, creating default workspace...');
           const { data: newWorkspace, error: createError } = await supabase
             .from('workspaces')
@@ -103,14 +105,14 @@ export function useWorkspace() {
             .single();
             
           if (createError) {
-            setError('Failed to create workspace');
+            setError(`Failed to create workspace: ${createError.message}`);
             console.error('Error creating workspace:', createError);
             return;
           }
           
           setWorkspace(newWorkspace);
         } else {
-          setError('Failed to load workspace');
+          setError(`Failed to load workspace: ${supabaseError.message}`);
           console.error('Error loading workspace:', supabaseError);
         }
         return;
@@ -118,8 +120,14 @@ export function useWorkspace() {
       
       setWorkspace(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load workspace');
+      const errorMessage = err.message || 'Failed to load workspace';
+      setError(errorMessage);
       console.error('Error in loadWorkspace:', err);
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        workspaceId
+      });
     } finally {
       setLoading(false);
     }

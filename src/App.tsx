@@ -1,10 +1,15 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import AuthGate from "@/components/AuthGate";
+import { globalAutoSync } from "@/services/GlobalAutoSync";
+import { migrateLinkedInAccountsToUserStorage } from "@/utils/migrateLinkedInAccounts";
+import { initializeDataMigration } from "@/utils/completeDataMigration";
+import "@/utils/clearBadUUIDs"; // Auto-runs to clean bad UUIDs
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -19,6 +24,7 @@ import TestInbox from "./pages/TestInbox";
 import InboxDirect from "./pages/InboxDirect";
 import MessageQueue from "./pages/MessageQueue";
 import Templates from "./pages/Templates";
+import TemplatesEnhanced from "./pages/TemplatesEnhanced";
 import Requests from "./pages/Requests";
 import Placeholders from "./pages/Placeholders";
 import Members from "./pages/Members";
@@ -33,6 +39,7 @@ import LinkedInCallback from "./pages/auth/LinkedInCallback";
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
 import UserLogin from "./pages/auth/UserLogin";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
+import TenantManagement from "./pages/admin/TenantManagement";
 import Settings from "./pages/Settings";
 import SeoReview from "./pages/SeoReview";
 // Analytics merged with Dashboard - no longer needed as separate page
@@ -45,12 +52,68 @@ import LinkedInDiagnostic from "./pages/LinkedInDiagnostic";
 import LinkedInOnboarding from "./pages/LinkedInOnboarding";
 import ContactSyncTest from "./pages/ContactSyncTest";
 import Onboarding from "./pages/Onboarding";
+import OnboardingPage from "./pages/OnboardingPage";
+import ResearchPage from "./pages/ResearchPage";
+import KnowledgePage from "./pages/KnowledgePage";
 import OnboardingCallback from "./pages/OnboardingCallback";
+import UserSetup from "./pages/UserSetup";
+import FollowUps from "./pages/FollowUps";
+import FollowUpRedirect from "./components/FollowUpRedirect";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
 
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
+  // Initialize demo authentication immediately, then other initialization
+  useEffect(() => {
+    // Set up demo authentication IMMEDIATELY (no delay)
+    const setupDemoAuth = () => {
+      if (!localStorage.getItem('is_authenticated')) {
+        console.log('🔧 Setting up demo authentication...');
+        localStorage.setItem('is_authenticated', 'true');
+        localStorage.setItem('demo_workspace_id', 'df5d730f-1915-4269-bd5a-9534478b17af');
+        localStorage.setItem('demo_user_id', 'cc000000-0000-0000-0000-000000000001');
+        
+        // Test name collection flow with email-only user
+        const demoProfile = {
+          id: 'cc000000-0000-0000-0000-000000000001',
+          email: 'demo@sameaisalesassistant.com',
+          full_name: '', // Empty name to trigger name collection
+          role: 'admin',
+          workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+          workspace_name: 'SAM AI Demo',
+          workspace_plan: 'premium',
+          status: 'active'
+        };
+        
+        localStorage.setItem('user_auth_profile', JSON.stringify(demoProfile));
+        console.log('✅ Demo authentication setup complete');
+      }
+    };
+    
+    // Run auth setup immediately
+    setupDemoAuth();
+    
+    // Then run other initialization with delay
+    const initialize = async () => {
+      console.log('🚀 Starting app initialization...');
+      
+      // Run comprehensive data migration to user-specific storage
+      await initializeDataMigration();
+      
+      // First migrate LinkedIn accounts to user-specific storage (backward compatibility)
+      await migrateLinkedInAccountsToUserStorage();
+      
+      // Then initialize auto-sync
+      await globalAutoSync.initialize();
+    };
+    
+    // Start other initialization after a short delay
+    const timer = setTimeout(initialize, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -58,25 +121,31 @@ const App: React.FC = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              {/* Public/Auth Routes */}
-              <Route path="/login" element={<UserLogin />} />
-              <Route path="/auth/login" element={<UserLogin />} />
-              <Route path="/admin/login" element={<SuperAdminLogin />} />
-              <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
-              <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
-              <Route path="/test-inbox" element={<TestInbox />} />
-              <Route path="/inbox-direct" element={<InboxDirect />} />
-              <Route path="/simple-inbox" element={<TestInbox />} />
-              <Route path="/linkedin-setup" element={<LinkedInAccountSetup />} />
-              <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
-              <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
-              <Route path="/linkedin-onboarding" element={<LinkedInOnboarding />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/onboarding/callback" element={<OnboardingCallback />} />
-              
-              {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
-              <Route 
+            <AuthGate>
+              <Routes>
+                {/* Public/Auth Routes */}
+                <Route path="/login" element={<UserLogin />} />
+                <Route path="/auth/login" element={<UserLogin />} />
+                <Route path="/admin/login" element={<SuperAdminLogin />} />
+                <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
+                <Route path="/admin/tenants" element={<TenantManagement />} />
+                <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
+                <Route path="/test-inbox" element={<TestInbox />} />
+                <Route path="/inbox-direct" element={<InboxDirect />} />
+                <Route path="/simple-inbox" element={<TestInbox />} />
+                <Route path="/follow-ups-public" element={<FollowUps />} />
+                <Route path="/follow-ups" element={<FollowUpRedirect />} />
+                <Route path="/linkedin-setup" element={<LinkedInAccountSetup />} />
+                <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
+                <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
+                <Route path="/linkedin-onboarding" element={<LinkedInOnboarding />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding-sam" element={<OnboardingPage />} />
+                <Route path="/onboarding/callback" element={<OnboardingCallback />} />
+                <Route path="/setup/:token" element={<UserSetup />} />
+                
+                {/* Protected Workspace Routes - All authenticated pages use WorkspaceLayout */}
+                <Route 
                 path="/" 
                 element={<WorkspaceLayout />}
               >
@@ -106,6 +175,8 @@ const App: React.FC = () => {
                 {/* Campaign & Setup Routes */}
                 <Route path="campaign-setup" element={<CampaignSetup />} />
                 <Route path="prospect-search" element={<ProspectSearch />} />
+                <Route path="research" element={<ResearchPage />} />
+                <Route path="knowledge" element={<KnowledgePage />} />
                 <Route path="search" element={<Search />} />
                 <Route path="search-results" element={<SearchResults />} />
                 <Route path="message-queue" element={<MessageQueue />} />
@@ -141,7 +212,8 @@ const App: React.FC = () => {
               </Route>
               
               <Route path="*" element={<NotFound />} />
-            </Routes>
+              </Routes>
+            </AuthGate>
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>

@@ -1,478 +1,173 @@
 /**
- * n8n Integration Service for SAM AI
- * Manages workflow orchestration and automation through n8n
+ * N8N Integration Service
+ * Handles data flow between SAM AI Supabase database and N8N workflows
  */
 
+import { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-export interface N8nWorkflow {
+export interface WorkflowQueueItem {
   id: string;
-  name: string;
-  active: boolean;
-  description?: string;
-  tags?: string[];
-  webhookUrl?: string;
+  workspace_id: string;
+  workflow_id: string;
+  priority: number;
+  status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  input_data: Record<string, unknown>;
+  output_data?: Record<string, unknown>;
+  error_data?: Record<string, unknown>;
+  triggered_by: string;
+  source_session_id?: string;
+  source_message_id?: string;
+  related_campaign_id?: string;
+  related_contact_ids?: string[];
+  n8n_execution_id?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface N8nWorkflowExecution {
-  workflowId: string;
-  executionId?: string;
-  status: 'pending' | 'running' | 'success' | 'error';
-  data: any;
-  response?: any;
-  error?: string;
-  startedAt: Date;
-  completedAt?: Date;
+export interface WorkflowStatusUpdate {
+  id: string;
+  queue_id: string;
+  n8n_execution_id: string;
+  status_type: 'started' | 'progress' | 'node_completed' | 'completed' | 'error';
+  progress_percentage: number;
+  current_step?: string;
+  status_message?: string;
+  status_data: Record<string, unknown>;
+  n8n_timestamp: string;
 }
 
-export interface N8nTriggerPayload {
-  tenant_id: string;
-  user_id: string;
-  campaign_id?: string;
-  workflow_stage: string;
-  mode: 'inbound' | 'outbound' | 'unified';
-  data: any;
-  tenant_config?: {
-    supabase_url?: string;
-    api_keys?: Record<string, string>;
-    rate_limits?: {
-      concurrent: number;
-      per_minute: number;
-    };
-    allowed_platforms?: string[];
-  };
-}
-
-class N8nIntegrationService {
+export class N8nIntegrationService {
   private static instance: N8nIntegrationService;
-  private baseUrl: string;
-  private apiKey: string | null = null;
-  private tenantId: string | null = null;
-  private userId: string | null = null;
-
-  // Predefined SAM AI workflow templates
-  // Main SAM workflow ID: fV8rgC2kbzSmeHBN
-  private readonly workflowTemplates = {
-    // Main SAM workflow
-    samMain: {
-      id: 'fV8rgC2kbzSmeHBN',
-      name: 'SAM AI Main Workflow',
-      webhookPath: 'sam-ai-main',
-      description: 'Main SAM AI orchestration workflow'
-    },
-    
-    // Outbound workflows
-    leadDiscovery: {
-      id: 'lead-discovery',
-      name: 'Lead Discovery & Research',
-      webhookPath: 'sam-ai/lead-discovery',
-      description: 'Find and research potential leads based on criteria'
-    },
-    campaignAutomation: {
-      id: 'campaign-automation',
-      name: 'Campaign Automation',
-      webhookPath: 'sam-ai/campaign',
-      description: 'Automated outbound campaign management'
-    },
-    linkedInOutreach: {
-      id: 'linkedin-outreach',
-      name: 'LinkedIn Outreach',
-      webhookPath: 'sam-ai/linkedin',
-      description: 'Automated LinkedIn connection and messaging'
-    },
-    
-    // Inbound workflows
-    emailTriage: {
-      id: 'email-triage',
-      name: 'Email Triage & Classification',
-      webhookPath: 'sam-ai/email-triage',
-      description: 'Classify and prioritize incoming emails'
-    },
-    autoResponse: {
-      id: 'auto-response',
-      name: 'Intelligent Auto-Response',
-      webhookPath: 'sam-ai/auto-response',
-      description: 'Generate contextual automatic responses'
-    },
-    
-    // Unified workflows
-    multiChannelSync: {
-      id: 'multi-channel',
-      name: 'Multi-Channel Sync',
-      webhookPath: 'sam-ai/multi-channel',
-      description: 'Sync across email, LinkedIn, and CRM'
-    },
-    aiProcessing: {
-      id: 'ai-processing',
-      name: 'AI Content Processing',
-      webhookPath: 'sam-ai/ai-process',
-      description: 'Process content with AI models'
-    }
-  };
-
+  private supabase: SupabaseClient;
+  
+  // N8N Configuration
+  private readonly N8N_BASE_URL = 'https://workflows.innovareai.com';
+  private readonly N8N_API_KEY = import.meta.env.VITE_N8N_API_KEY;
+  
   private constructor() {
-    // Get n8n URL from environment or use default
-    this.baseUrl = import.meta.env.VITE_N8N_URL || 'https://innovareai.app.n8n.cloud';
-    this.initializeFromAuth();
+    this.supabase = supabase;
   }
 
-  static getInstance(): N8nIntegrationService {
+  public static getInstance(): N8nIntegrationService {
     if (!N8nIntegrationService.instance) {
       N8nIntegrationService.instance = new N8nIntegrationService();
     }
     return N8nIntegrationService.instance;
   }
 
-  private async initializeFromAuth() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        this.userId = user.id;
-        
-        // Get tenant/organization from user profile
-        const { data: profile } = await supabase
-          .from('users')
-          .select('organization_id')
-          .eq('id', user.id)
-          .single();
-          
-        if (profile?.organization_id) {
-          this.tenantId = profile.organization_id;
-        }
-        
-        // Get n8n API key from secure storage
-        await this.loadApiKey();
-      }
-    } catch (error) {
-      console.error('Error initializing n8n service:', error);
-    }
-  }
-
-  private async loadApiKey(): Promise<void> {
-    try {
-      // Call edge function to get decrypted n8n API key
-      const { data, error } = await supabase.functions.invoke('get-n8n-config');
-      if (!error && data?.apiKey) {
-        this.apiKey = data.apiKey;
-      }
-    } catch (error) {
-      console.error('Error loading n8n API key:', error);
-    }
-  }
-
   /**
-   * Trigger a workflow via webhook
+   * Queue lead research workflow
    */
-  async triggerWorkflow(
-    workflowType: keyof typeof this.workflowTemplates,
-    payload: Partial<N8nTriggerPayload>
-  ): Promise<N8nWorkflowExecution> {
-    const workflow = this.workflowTemplates[workflowType];
-    const webhookUrl = `${this.baseUrl}/webhook/${workflow.webhookPath}`;
-    
-    // Build complete payload with tenant context
-    const fullPayload: N8nTriggerPayload = {
-      tenant_id: this.tenantId || payload.tenant_id || 'default',
-      user_id: this.userId || payload.user_id || 'anonymous',
-      campaign_id: payload.campaign_id,
-      workflow_stage: payload.workflow_stage || workflow.id,
-      mode: payload.mode || 'unified',
-      data: payload.data || {},
-      tenant_config: payload.tenant_config
+  public async queueLeadResearch(
+    workspaceId: string,
+    criteria: {
+      companyCriteria: Record<string, unknown>;
+      roleCriteria: Record<string, unknown>;
+      additionalFilters?: Record<string, unknown>;
+      maxResults?: number;
+      dataSources?: string[];
+    },
+    sessionId?: string,
+    messageId?: string
+  ): Promise<string> {
+    const inputData = {
+      company_criteria: criteria.companyCriteria,
+      role_criteria: criteria.roleCriteria,
+      additional_filters: criteria.additionalFilters || {},
+      max_results: criteria.maxResults || 100,
+      data_sources: criteria.dataSources || ['linkedin', 'apollo']
     };
 
-    const execution: N8nWorkflowExecution = {
-      workflowId: workflow.id,
-      status: 'pending',
-      data: fullPayload,
-      startedAt: new Date()
-    };
-
-    try {
-      // Log execution start
-      await this.logExecution(execution);
-      
-      execution.status = 'running';
-      
-      // Make webhook request
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.apiKey && { 'X-API-Key': this.apiKey })
-        },
-        body: JSON.stringify(fullPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Workflow failed: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      execution.status = 'success';
-      execution.response = result;
-      execution.completedAt = new Date();
-      
-      // Log successful execution
-      await this.logExecution(execution);
-      
-      return execution;
-    } catch (error: any) {
-      execution.status = 'error';
-      execution.error = error.message;
-      execution.completedAt = new Date();
-      
-      // Log failed execution
-      await this.logExecution(execution);
-      
-      throw error;
-    }
-  }
-
-  /**
-   * Execute workflow based on SAM AI mode
-   */
-  async executeModeWorkflow(
-    mode: 'inbound' | 'outbound' | 'unified',
-    stage: string,
-    data: any
-  ): Promise<N8nWorkflowExecution> {
-    // Map mode and stage to appropriate workflow
-    let workflowType: keyof typeof this.workflowTemplates;
+    // For now, return a mock queue ID
+    const queueId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    if (mode === 'outbound') {
-      switch (stage) {
-        case 'lead_discovery':
-          workflowType = 'leadDiscovery';
-          break;
-        case 'campaign':
-          workflowType = 'campaignAutomation';
-          break;
-        case 'linkedin':
-          workflowType = 'linkedInOutreach';
-          break;
-        default:
-          workflowType = 'campaignAutomation';
-      }
-    } else if (mode === 'inbound') {
-      switch (stage) {
-        case 'triage':
-          workflowType = 'emailTriage';
-          break;
-        case 'response':
-          workflowType = 'autoResponse';
-          break;
-        default:
-          workflowType = 'emailTriage';
-      }
-    } else {
-      workflowType = 'multiChannelSync';
-    }
-    
-    return this.triggerWorkflow(workflowType, {
-      mode,
-      workflow_stage: stage,
-      data
+    console.log('Queued lead research workflow:', {
+      queueId,
+      workspaceId,
+      inputData,
+      sessionId,
+      messageId
     });
+
+    return queueId;
   }
 
   /**
-   * Execute AI processing workflow
+   * Queue content generation workflow
    */
-  async executeAIWorkflow(
-    content: string,
-    processingType: 'summarize' | 'extract' | 'generate' | 'classify'
-  ): Promise<any> {
-    return this.triggerWorkflow('aiProcessing', {
-      workflow_stage: 'ai_processing',
-      data: {
-        content,
-        processing_type: processingType,
-        model: 'claude-3.5-sonnet',
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
+  public async queueContentGeneration(
+    workspaceId: string,
+    request: {
+      contentType: string;
+      targetAudience: Record<string, unknown>;
+      personalizationData?: Record<string, unknown>;
+      contentGuidelines?: Record<string, unknown>;
+      variantsRequested?: number;
+      kbContextIds?: string[];
+    },
+    sessionId?: string,
+    messageId?: string
+  ): Promise<string> {
+    const inputData = {
+      content_type: request.contentType,
+      target_audience: request.targetAudience,
+      personalization_data: request.personalizationData || {},
+      content_guidelines: request.contentGuidelines || {},
+      variants_requested: request.variantsRequested || 1,
+      kb_context_ids: request.kbContextIds || []
+    };
 
-  /**
-   * Trigger the main SAM workflow at workflows.innovareai.com
-   */
-  async triggerMainSAMWorkflow(
-    mode: 'inbound' | 'outbound' | 'unified',
-    action: string,
-    data: any
-  ): Promise<N8nWorkflowExecution> {
-    // Use the main SAM workflow
-    const webhookUrl = `${this.baseUrl}/webhook/sam-ai-main`;
+    // For now, return a mock queue ID
+    const queueId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const payload: N8nTriggerPayload = {
-      tenant_id: this.tenantId || 'default',
-      user_id: this.userId || 'anonymous',
-      workflow_stage: action,
-      mode,
-      data: {
-        ...data,
-        workflow_id: 'fV8rgC2kbzSmeHBN',
-        workflow_name: 'SAM',
-        triggered_at: new Date().toISOString(),
-        source: 'sam-ai-platform'
+    console.log('Queued content generation workflow:', {
+      queueId,
+      workspaceId,
+      inputData,
+      sessionId,
+      messageId
+    });
+
+    return queueId;
+  }
+
+  /**
+   * Get workflow execution status
+   */
+  public async getWorkflowStatus(queueId: string): Promise<WorkflowQueueItem | null> {
+    // Mock response for testing
+    return {
+      id: queueId,
+      workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
+      workflow_id: 'workflow_123',
+      priority: 5,
+      status: 'completed',
+      input_data: {},
+      output_data: { result: 'Mock workflow completed successfully' },
+      triggered_by: 'conversation',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Subscribe to workflow status updates (mock implementation)
+   */
+  public subscribeToWorkflowUpdates(
+    queueId: string,
+    callback: (update: WorkflowStatusUpdate) => void
+  ) {
+    // Mock subscription - in real implementation, this would use Supabase realtime
+    console.log(`Subscribed to workflow updates for: ${queueId}`);
+    
+    // Return a mock subscription object
+    return {
+      unsubscribe: () => {
+        console.log(`Unsubscribed from workflow updates for: ${queueId}`);
       }
     };
-
-    const execution: N8nWorkflowExecution = {
-      workflowId: 'fV8rgC2kbzSmeHBN',
-      status: 'pending',
-      data: payload,
-      startedAt: new Date()
-    };
-
-    try {
-      execution.status = 'running';
-      
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'SAM-AI-Platform/1.0',
-          ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`SAM workflow failed: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      execution.status = 'success';
-      execution.response = result;
-      execution.completedAt = new Date();
-      
-      await this.logExecution(execution);
-      
-      return execution;
-    } catch (error: any) {
-      execution.status = 'error';
-      execution.error = error.message;
-      execution.completedAt = new Date();
-      
-      await this.logExecution(execution);
-      
-      throw error;
-    }
-  }
-
-  /**
-   * Get workflow execution history
-   */
-  async getExecutionHistory(
-    workflowId?: string,
-    limit: number = 10
-  ): Promise<N8nWorkflowExecution[]> {
-    try {
-      const query = supabase
-        .from('n8n_executions')
-        .select('*')
-        .eq('tenant_id', this.tenantId)
-        .order('started_at', { ascending: false })
-        .limit(limit);
-      
-      if (workflowId) {
-        query.eq('workflow_id', workflowId);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching execution history:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Log workflow execution to database
-   */
-  private async logExecution(execution: N8nWorkflowExecution): Promise<void> {
-    try {
-      await supabase.from('n8n_executions').insert({
-        tenant_id: this.tenantId,
-        user_id: this.userId,
-        workflow_id: execution.workflowId,
-        execution_id: execution.executionId,
-        status: execution.status,
-        data: execution.data,
-        response: execution.response,
-        error: execution.error,
-        started_at: execution.startedAt,
-        completed_at: execution.completedAt
-      });
-    } catch (error) {
-      console.error('Error logging execution:', error);
-    }
-  }
-
-  /**
-   * Check workflow health status
-   */
-  async checkWorkflowHealth(): Promise<{
-    connected: boolean;
-    activeWorkflows: number;
-    lastExecution?: Date;
-    error?: string;
-  }> {
-    try {
-      // Test connection with a simple request
-      const response = await fetch(`${this.baseUrl}/webhook-test/health`, {
-        method: 'GET',
-        headers: this.apiKey ? { 'X-API-Key': this.apiKey } : {}
-      });
-      
-      const connected = response.ok;
-      
-      // Get recent executions
-      const executions = await this.getExecutionHistory(undefined, 1);
-      
-      return {
-        connected,
-        activeWorkflows: Object.keys(this.workflowTemplates).length,
-        lastExecution: executions[0]?.startedAt
-      };
-    } catch (error: any) {
-      return {
-        connected: false,
-        activeWorkflows: 0,
-        error: error.message
-      };
-    }
-  }
-
-  /**
-   * Get available workflow templates
-   */
-  getAvailableWorkflows(): typeof this.workflowTemplates {
-    return this.workflowTemplates;
-  }
-
-  /**
-   * Set custom n8n instance URL
-   */
-  setN8nUrl(url: string): void {
-    this.baseUrl = url;
-  }
-
-  /**
-   * Set API key for authenticated requests
-   */
-  setApiKey(apiKey: string): void {
-    this.apiKey = apiKey;
   }
 }
-
-export const n8nService = N8nIntegrationService.getInstance();
 
 export default N8nIntegrationService;

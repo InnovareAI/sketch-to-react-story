@@ -44,10 +44,44 @@ export default function CampaignSetupFlow() {
   const campaignType = searchParams.get('type') || 'connector';
   const campaignId = searchParams.get('id');
   
-  // Use existing workspace and user IDs from auth context
-  const WORKSPACE_ID = 'df5d730f-1915-4269-bd5a-9534478b17af';
-  const TENANT_ID = '367b6c5c-43d7-4546-96d4-4f5f22641de1'; // InnovareAI tenant
-  const USER_ID = '03ca8428-384a-482d-8371-66928fee1063'; // CL user
+  // Get dynamic workspace and user IDs from auth context
+  const getCurrentWorkspaceId = (): string => {
+    // Get workspace from authenticated user profile
+    const workspaceId = localStorage.getItem('app_workspace_id') || localStorage.getItem('workspace_id');
+    
+    if (workspaceId && workspaceId !== 'a0000000-0000-0000-0000-000000000000') {
+      return workspaceId;
+    }
+    
+    // Generate new workspace if needed
+    const { getWorkspaceId } = require('@/lib/workspace');
+    return getWorkspaceId();
+  };
+
+  const getCurrentUserId = (): string => {
+    const authProfile = JSON.parse(localStorage.getItem('user_auth_profile') || '{}');
+    if (authProfile.id) return authProfile.id;
+    
+    const bypassUser = JSON.parse(localStorage.getItem('bypass_user') || '{}');
+    if (bypassUser.id) return bypassUser.id;
+    
+    // Generate a proper UUID if no user ID found
+    const generateUUID = (): string => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    
+    // Store the generated UUID for consistency
+    const newUserId = generateUUID();
+    localStorage.setItem('temp_user_id', newUserId);
+    return newUserId;
+  };
+
+  const WORKSPACE_ID = getCurrentWorkspaceId();
+  const USER_ID = getCurrentUserId();
   
   const [activeTab, setActiveTab] = useState('name');
   const [campaignName, setCampaignName] = useState('');
@@ -269,10 +303,25 @@ export default function CampaignSetupFlow() {
         }
       };
 
+      // Get workspace ID from localStorage
+      const workspaceId = localStorage.getItem('workspace_id') || 'a0000000-0000-0000-0000-000000000000';
+      
+      // Get user ID from localStorage
+      let userId = null;
+      const bypassUser = localStorage.getItem('bypass_user');
+      if (bypassUser) {
+        try {
+          const userData = JSON.parse(bypassUser);
+          userId = userData.id;
+        } catch (e) {
+          console.error('Failed to parse bypass user:', e);
+        }
+      }
+      
       const campaignData: Omit<Campaign, 'id' | 'created_at' | 'updated_at'> = {
-        workspace_id: WORKSPACE_ID,
-        tenant_id: TENANT_ID,
-        user_id: USER_ID,
+        workspace_id: workspaceId,
+        tenant_id: workspaceId, // Use workspace_id as tenant_id
+        user_id: userId,
         name: campaignName,
         description: campaignDescription,
         type: mapCampaignType(campaignType),

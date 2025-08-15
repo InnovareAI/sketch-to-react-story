@@ -18,7 +18,7 @@ const searchItems = [
   { id: 'contacts', title: 'Contacts', url: '/contacts', category: 'CRM' },
   { id: 'campaigns', title: 'Campaigns', url: '/campaigns', category: 'Marketing' },
   { id: 'templates', title: 'Templates', url: '/templates', category: 'Marketing' },
-  { id: 'inbox', title: 'Global Inbox', url: '/global-inbox', category: 'Communication' },
+  { id: 'inbox', title: 'Team Inbox', url: '/global-inbox', category: 'Communication' },
   { id: 'accounts', title: 'Accounts', url: '/accounts', category: 'CRM' },
   { id: 'search', title: 'Search', url: '/search', category: 'Tools' },
   { id: 'settings', title: 'Workspace Settings', url: '/workspace-settings', category: 'Settings' },

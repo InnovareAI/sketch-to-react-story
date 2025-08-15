@@ -50,14 +50,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true); // Start with loading true for proper auth check
 
-  // Check for bypass user on mount
+  // Check for bypass user on mount (still shared for development)
   const checkBypassUser = (): UserProfile | null => {
     const bypassAuth = localStorage.getItem('bypass_auth');
     const bypassUserData = localStorage.getItem('bypass_user');
     
     if (bypassAuth === 'true' && bypassUserData) {
       try {
-        return JSON.parse(bypassUserData) as UserProfile;
+        const profile = JSON.parse(bypassUserData) as UserProfile;
+        // Store user-specific workspace ID when bypassing
+        if (profile.workspace_id) {
+          localStorage.setItem(`user_${profile.id}_workspace_id`, profile.workspace_id);
+        }
+        return profile;
       } catch (error) {
         console.error('Error parsing bypass user data:', error);
         localStorage.removeItem('bypass_auth');
@@ -88,8 +93,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return null;
       }
 
-      // First, check if workspace exists or create default one
-      let workspaceId = 'df5d730f-1915-4269-bd5a-9534478b17af'; // Default workspace
+      // Create a new workspace for this user
+      let workspaceId = crypto.randomUUID();
       
       const { data: workspace, error: workspaceError } = await supabase
         .from('workspaces')
@@ -103,8 +108,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .from('workspaces')
           .insert({
             id: workspaceId,
-            name: 'InnovareAI',
-            slug: 'innovareai',
+            name: `${authUser.email.split('@')[0]}'s Workspace`,
+            slug: authUser.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
             subscription_tier: 'pro'
           })
           .select()
@@ -267,23 +272,73 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       
       // Check for bypass users
-      const bypassEmails = ['tl@innovareai.com', 'cl@innovareai.com'];
+      const bypassEmails = ['tl@innovareai.com', 'cl@innovareai.com', 'cs@innovareai.com'];
       if (bypassEmails.includes(email.toLowerCase())) {
         console.log(`Using bypass authentication for ${email}`);
         
         // Create mock user profile based on email
-        const isCL = email.toLowerCase() === 'cl@innovareai.com';
-        const mockUser: UserProfile = {
-          id: isCL ? 'cc000000-0000-0000-0000-000000000001' : 'cc000000-0000-0000-0000-000000000002',
-          email: email.toLowerCase(),
-          full_name: isCL ? 'Christopher Lee' : 'Thorsten Linz',
-          role: isCL ? 'admin' : 'owner',
-          workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
-          workspace_name: 'InnovareAI',
-          workspace_plan: 'pro',
-          status: 'active',
-          avatar_url: null
+        const userEmail = email.toLowerCase();
+        let mockUser: UserProfile;
+        
+        // Generate a proper UUID v4 format
+        const generateUUID = (): string => {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
         };
+        
+        // All InnovareAI team members share the same workspace
+        const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
+        
+        // Use consistent UUIDs for each user (stored in localStorage for persistence)
+        const userIdKey = `${userEmail}_uuid`;
+        let userId = localStorage.getItem(userIdKey);
+        if (!userId) {
+          userId = generateUUID();
+          localStorage.setItem(userIdKey, userId);
+        }
+        const workspaceId = INNOVARE_WORKSPACE_ID;
+        
+        if (userEmail === 'cl@innovareai.com') {
+          mockUser = {
+            id: userId,
+            email: userEmail,
+            full_name: 'Chona Lamberte',
+            role: 'admin',
+            workspace_id: workspaceId,
+            workspace_name: 'InnovareAI Workspace',
+            workspace_plan: 'pro',
+            status: 'active',
+            avatar_url: null
+          };
+        } else if (userEmail === 'cs@innovareai.com') {
+          mockUser = {
+            id: userId,
+            email: userEmail,
+            full_name: 'Charissa Saniel',
+            role: 'member',
+            workspace_id: workspaceId,
+            workspace_name: 'InnovareAI Workspace',
+            workspace_plan: 'pro',
+            status: 'active',
+            avatar_url: null
+          };
+        } else {
+          // TL
+          mockUser = {
+            id: userId,
+            email: userEmail,
+            full_name: 'Thorsten Linz',
+            role: 'owner',
+            workspace_id: workspaceId,
+            workspace_name: 'InnovareAI Workspace',
+            workspace_plan: 'pro',
+            status: 'active',
+            avatar_url: null
+          };
+        }
         
         // Create mock auth user
         const mockAuthUser = {
@@ -292,9 +347,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           user_metadata: { full_name: mockUser.full_name }
         } as User;
         
+        // Load user's actual workspace from database
+        try {
+          const userProfile = await loadUserProfile(mockUser.id);
+          if (userProfile && userProfile.workspace_id) {
+            mockUser.workspace_id = userProfile.workspace_id;
+            mockUser.workspace_name = userProfile.workspace_name;
+          }
+        } catch (error) {
+          console.log('Could not load workspace for bypass user, will use default');
+        }
+        
+        // Clear any old data first (especially for CS account fixes)
+        if (userEmail === 'cs@innovareai.com') {
+          console.log('🧹 Clearing old CS account data...');
+          localStorage.removeItem('bypass_user');
+          localStorage.removeItem('user_auth_profile');
+          localStorage.removeItem('workspace_id');
+          localStorage.removeItem('user_email');
+        }
+
         // Store bypass data in localStorage
         localStorage.setItem('bypass_user', JSON.stringify(mockUser));
         localStorage.setItem('bypass_auth', 'true');
+        localStorage.setItem('user_email', userEmail);
+        localStorage.setItem('workspace_id', workspaceId);
+        // Also store in the key that other components expect
+        localStorage.setItem('user_auth_profile', JSON.stringify(mockUser));
+        
+        // Debug logging for CS account
+        if (userEmail === 'cs@innovareai.com') {
+          console.log('🔍 CS DEBUG: mockUser created:', mockUser);
+          console.log('🔍 CS DEBUG: workspace_id set:', workspaceId);
+          console.log('🔍 CS DEBUG: localStorage bypass_user:', localStorage.getItem('bypass_user'));
+          console.log('🔍 CS DEBUG: localStorage workspace_id:', localStorage.getItem('workspace_id'));
+          console.log('🔍 CS DEBUG: localStorage user_email:', localStorage.getItem('user_email'));
+        }
         
         setAuthUser(mockAuthUser);
         setUser(mockUser);
@@ -373,7 +461,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const bypassUser = checkBypassUser();
         if (bypassUser) {
           console.log('🚀 Found bypass user on initialization:', bypassUser.email);
+          
+          // Ensure bypass user has proper workspace_id
+          if (!bypassUser.workspace_id) {
+            try {
+              const userProfile = await loadUserProfile(bypassUser.id);
+              if (userProfile && userProfile.workspace_id) {
+                bypassUser.workspace_id = userProfile.workspace_id;
+                bypassUser.workspace_name = userProfile.workspace_name;
+                localStorage.setItem('bypass_user', JSON.stringify(bypassUser));
+              } else {
+                // All InnovareAI team members share the same workspace
+                const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
+                
+                bypassUser.workspace_id = INNOVARE_WORKSPACE_ID;
+                bypassUser.workspace_name = 'InnovareAI Workspace';
+                localStorage.setItem('bypass_user', JSON.stringify(bypassUser));
+                localStorage.setItem('workspace_id', INNOVARE_WORKSPACE_ID);
+                localStorage.setItem('user_email', bypassUser.email);
+                
+                console.log('Set shared InnovareAI workspace ID for bypass user:', INNOVARE_WORKSPACE_ID);
+              }
+            } catch (error) {
+              console.log('Could not load workspace for bypass user, using shared workspace');
+              // Use shared InnovareAI workspace as fallback
+              const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
+              
+              bypassUser.workspace_id = INNOVARE_WORKSPACE_ID;
+              bypassUser.workspace_name = 'InnovareAI Workspace';
+              localStorage.setItem('bypass_user', JSON.stringify(bypassUser));
+              localStorage.setItem('workspace_id', INNOVARE_WORKSPACE_ID);
+              localStorage.setItem('user_email', bypassUser.email);
+            }
+          }
+          
           setUser(bypassUser);
+          // Ensure user_auth_profile is also set
+          localStorage.setItem('user_auth_profile', JSON.stringify(bypassUser));
           // Create mock auth user for bypass
           const mockAuthUser = {
             id: bypassUser.id,
