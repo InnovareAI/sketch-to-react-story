@@ -138,7 +138,6 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
       setTimeout(() => {
         onClose();
         if (onSuccess) onSuccess();
-        window.location.reload(); // Refresh to apply auth state
       }, 2000);
       
     } catch (err: any) {
