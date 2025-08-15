@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { generateUUID } from '@/lib/workspace';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface Workspace {
   id: string;
@@ -33,7 +34,7 @@ interface Workspace {
   memberCount?: number;
 }
 
-export default function WorkspaceSelector() {
+export default function WorkspaceSelector({ isAgentMode = false }: { isAgentMode?: boolean }) {
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
@@ -161,16 +162,16 @@ export default function WorkspaceSelector() {
           >
             <div className="flex items-center gap-2">
               <div className="rounded-md bg-primary/10 p-1.5">
-                <Building2 className="h-4 w-4 text-primary" />
+                <Building2 className={cn("h-4 w-4", isAgentMode ? "text-white" : "text-primary")} />
               </div>
               <div className="text-left">
-                <div className="text-sm font-medium">{currentWorkspace.name}</div>
-                <div className="text-xs text-muted-foreground capitalize">
+                <div className={cn("text-sm font-medium", isAgentMode ? "text-white" : "")}>{currentWorkspace.name}</div>
+                <div className={cn("text-xs capitalize", isAgentMode ? "text-gray-300" : "text-muted-foreground")}>
                   {currentWorkspace.role} • {currentWorkspace.memberCount || 1} member{(currentWorkspace.memberCount || 1) !== 1 ? 's' : ''}
                 </div>
               </div>
             </div>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <ChevronDown className={cn("h-4 w-4", isAgentMode ? "text-gray-300" : "text-muted-foreground")} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64">

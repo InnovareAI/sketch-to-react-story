@@ -141,21 +141,29 @@ export function WorkspaceSidebar({
     )}>
       <div className="h-full flex flex-col">
         {/* SAM Branding Header */}
-        <div className="p-4 border-b border-gray-200">
+        <div className={cn(
+          "p-4 border-b",
+          isAgentMode ? "border-gray-700" : "border-gray-200"
+        )}>
           <SAMBranding variant="default" showTagline={true} className="mb-4" />
           <div className="flex flex-col gap-3">
             {/* Workspace Selector */}
-            <WorkspaceSelector />
+            <WorkspaceSelector isAgentMode={isAgentMode} />
             
             {/* Mode Switch Button */}
-            <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg w-full border border-gray-200">
+            <div className={cn(
+              "flex items-center gap-1 p-1 rounded-lg w-full border",
+              isAgentMode 
+                ? "bg-gray-800 border-gray-600" 
+                : "bg-gray-50 border-gray-200"
+            )}>
               <NavLink
                 to="/"
                 className={({ isActive }) => cn(
                   "flex-1 px-3 py-1.5 text-xs font-normal rounded-md text-center transition-all",
                   !isAgentMode 
                     ? "bg-white text-blue-600 shadow-sm border border-gray-200" 
-                    : "text-gray-600 hover:text-gray-900"
+                    : "text-gray-300 hover:text-white hover:bg-gray-700"
                 )}
               >
                 Work
@@ -165,7 +173,7 @@ export function WorkspaceSidebar({
                 className={({ isActive }) => cn(
                   "flex-1 px-3 py-1.5 text-xs font-normal rounded-md text-center transition-all",
                   isAgentMode 
-                    ? "bg-white text-gray-900 shadow-sm border border-gray-200" 
+                    ? "bg-black text-white shadow-sm border border-gray-500" 
                     : "text-gray-600 hover:text-gray-900"
                 )}
               >
@@ -248,13 +256,9 @@ export function WorkspaceSidebar({
           </div>
         </div>
 
-        {/* Settings Section */}
-        <div className={cn(
-          "border-t p-4",
-          isAgentMode 
-            ? "border-gray-700 bg-gray-800" 
-            : "border-gray-100 bg-gray-50"
-        )}>
+        {/* Settings Section - Only show in Work mode */}
+        {!isAgentMode && (
+        <div className="border-t border-gray-100 p-4 bg-gray-50">
           <h3 className={cn(
             "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
             isAgentMode ? "text-gray-300 font-normal" : "text-gray-400 font-normal"
@@ -271,6 +275,7 @@ export function WorkspaceSidebar({
             ))}
           </nav>
         </div>
+        )}
       </div>
       
       {/* Reply Modal */}
