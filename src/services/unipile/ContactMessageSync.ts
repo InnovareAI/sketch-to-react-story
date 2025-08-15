@@ -412,7 +412,7 @@ class ContactMessageSyncService {
               full_name: conv.participant_name,
               company: this.validateCompanyName(conv.participant_company, conv.participant_name || 'Unknown'),
               title: conv.participant_title,
-              linkedin_url: conv.metadata?.linkedin_profile_url,
+              linkedin_url: conv.metadata?.participant_linkedin_url || conv.metadata?.linkedin_profile_url,
               profile_picture_url: conv.participant_avatar_url,
               connection_degree: conv.metadata?.connection_degree,
               engagement_score: 50, // Default score
