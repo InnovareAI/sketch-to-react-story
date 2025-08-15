@@ -138,6 +138,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
       setTimeout(() => {
         onClose();
         if (onSuccess) onSuccess();
+        window.location.href = '/dashboard';
       }, 2000);
       
     } catch (err: any) {
