@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { EnhancedConversationalInterface } from "@/components/workspace/EnhancedConversationalInterface";
 import { ModeSwitcher } from "@/components/workspace/ModeSwitcher";
-import { Menu, X, Command, Home, Settings, LogOut, HelpCircle, MessageSquare, BarChart3 } from "lucide-react";
+import { Menu, X, Command, Home, Settings, LogOut, HelpCircle, MessageSquare, BarChart3, ArrowLeft } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,11 +20,60 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('AgentFullScreen Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+          <div className="text-center text-white p-8">
+            <h2 className="text-2xl font-bold mb-4">Something went wrong</h2>
+            <p className="text-gray-400 mb-6">The agent interface encountered an error.</p>
+            <Button onClick={() => window.location.reload()} className="mr-4">
+              Reload Page
+            </Button>
+            <Button variant="outline" onClick={() => window.history.back()}>
+              Go Back
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 export default function AgentFullScreen() {
   const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [operationMode, setOperationMode] = useState<'inbound' | 'outbound'>('outbound');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('AgentFullScreen: Component mounted');
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      console.log('AgentFullScreen: Loading complete');
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   // Handle mode change
   const handleModeChange = (mode: 'inbound' | 'outbound' | 'unified') => {
@@ -68,41 +117,112 @@ export default function AgentFullScreen() {
     }
   ];
 
-  return (
-    <div className="flex-1 bg-gray-900 flex flex-col">
-      {/* Full Screen Chat Interface */}
-      <main className="flex-1 overflow-hidden">
-        <EnhancedConversationalInterface operationMode={operationMode} />
-      </main>
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading SAM AI Agent...</p>
+        </div>
+      </div>
+    );
+  }
 
-      {/* Command Palette */}
-      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          {commands.map((group) => (
-            <CommandGroup key={group.group} heading={group.group}>
-              {group.items.map((item) => (
-                <CommandItem
-                  key={item.name}
-                  onSelect={() => {
-                    item.action();
-                    setCommandOpen(false);
-                  }}
-                  className="flex items-center justify-between"
-                >
-                  <span>{item.name}</span>
-                  {item.shortcut && (
-                    <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                      {item.shortcut}
-                    </kbd>
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          ))}
-        </CommandList>
-      </CommandDialog>
-    </div>
+  return (
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+        {/* Minimal Header with Navigation */}
+        <header className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800/50 backdrop-blur-sm">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="text-gray-400 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <div className="h-4 w-px bg-gray-600" />
+            <h1 className="text-lg font-semibold">SAM AI Agent</h1>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <ModeSwitcher 
+              currentMode={operationMode}
+              onModeChange={handleModeChange}
+              className="scale-90"
+            />
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  <Home className="mr-2 h-4 w-4" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/campaigns')}>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Campaigns
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/contacts')}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Analytics
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setCommandOpen(true)}>
+                  <Command className="mr-2 h-4 w-4" />
+                  Command Palette
+                  <kbd className="ml-auto text-xs bg-muted px-1 rounded">⌘K</kbd>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        {/* Full Screen Chat Interface */}
+        <main className="flex-1 overflow-hidden">
+          <EnhancedConversationalInterface operationMode={operationMode} />
+        </main>
+
+        {/* Command Palette */}
+        <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+          <CommandInput placeholder="Type a command or search..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            {commands.map((group) => (
+              <CommandGroup key={group.group} heading={group.group}>
+                {group.items.map((item) => (
+                  <CommandItem
+                    key={item.name}
+                    onSelect={() => {
+                      item.action();
+                      setCommandOpen(false);
+                    }}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{item.name}</span>
+                    {item.shortcut && (
+                      <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                        {item.shortcut}
+                      </kbd>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </CommandDialog>
+      </div>
+    </ErrorBoundary>
   );
 }
