@@ -174,7 +174,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 
   // Set personalized initial message - only once
   useEffect(() => {
-    if (userProfile && messages.length === 0 && !hasInitialMessage) {
+    if (userProfile && messages.length === 0 && !hasInitialMessage && !needsConfirmation) {
       const firstName = userProfile.full_name?.split(' ')[0];
       let greeting;
       
@@ -192,7 +192,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       }]);
       setHasInitialMessage(true);
     }
-  }, [userProfile, needsNameCollection, hasInitialMessage]);
+  }, [userProfile, needsNameCollection, hasInitialMessage, needsConfirmation]);
 
   // Check if user is new and needs onboarding
   useEffect(() => {
