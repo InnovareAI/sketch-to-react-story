@@ -580,18 +580,55 @@ export default function GlobalInbox() {
 
   const sendReply = async () => {
     try {
-      if (!selectedMessage || !replyContent.trim()) return;
+      if (!selectedMessage || !replyContent.trim()) {
+        toast.error('Please enter a reply message');
+        return;
+      }
       
-      toast.info('Sending reply...');
+      toast.info('Sending reply via LinkedIn...');
+      console.log('🔄 Sending reply via Unipile...');
       
-      // Try to send via Unipile API
+      // Configure and send via Unipile API
       const { unipileRealTimeSync } = await import('@/services/unipile/UnipileRealTimeSync');
-      const accounts = await unipileRealTimeSync.testConnection();
       
-      if (accounts.success && accounts.accounts.length > 0) {
+      // Check if Unipile is configured
+      if (!unipileRealTimeSync.isConfigured()) {
+        console.log('📝 Configuring Unipile for reply...');
+        const { getUserLinkedInAccounts } = await import('@/utils/userDataStorage');
+        const { getUnipileApiKey } = await import('@/config/unipile');
+        
+        const accounts = await getUserLinkedInAccounts();
+        if (accounts.length > 0) {
+          const account = accounts[0];
+          const accountId = account.unipileAccountId || account.id || account.account_id;
+          
+          if (accountId) {
+            unipileRealTimeSync.configure({
+              apiKey: getUnipileApiKey(),
+              accountId: accountId
+            });
+            console.log('✅ Unipile configured for reply');
+          } else {
+            throw new Error('No valid LinkedIn account ID found');
+          }
+        } else {
+          throw new Error('No LinkedIn account connected');
+        }
+      }
+      
+      // Test connection and get accounts
+      const connectionTest = await unipileRealTimeSync.testConnection();
+      
+      if (connectionTest.success && connectionTest.accounts.length > 0) {
         // Get the chat ID from conversation data
         const chatId = selectedMessage.conversationData?.platform_conversation_id;
-        const account = accounts.accounts[0];
+        const account = connectionTest.accounts[0];
+        
+        console.log('📤 Sending reply:', {
+          accountId: account.id,
+          chatId: chatId,
+          messageLength: replyContent.length
+        });
         
         if (chatId && account) {
           // Send the actual message via Unipile
@@ -602,15 +639,22 @@ export default function GlobalInbox() {
           );
           
           if (success) {
-            toast.success('Reply sent successfully!');
+            console.log('✅ Reply sent successfully via Unipile');
+            toast.success('Reply sent via LinkedIn!');
+          } else {
+            throw new Error('Failed to send message via Unipile');
           }
+        } else {
+          throw new Error('Missing chat ID or account information');
         }
+      } else {
+        throw new Error('Unable to connect to LinkedIn via Unipile');
       }
       
-      // Save to our database
-      const { data: { user } } = await supabase.auth.getUser();
+      // Save to our database for record keeping
       if (selectedMessage.conversationData?.id) {
-        await supabase
+        console.log('💾 Saving reply to database...');
+        const { error } = await supabase
           .from('inbox_messages')
           .insert({
             conversation_id: selectedMessage.conversationData.id,
@@ -620,20 +664,33 @@ export default function GlobalInbox() {
               type: 'reply',
               sender_name: 'You',
               direction: 'outbound',
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              sent_via: 'unipile',
+              platform: 'linkedin'
             }
           });
+          
+        if (error) {
+          console.error('Error saving reply to database:', error);
+          // Don't fail the whole operation if DB save fails
+          toast.warning('Reply sent but not saved to history');
+        } else {
+          console.log('✅ Reply saved to database');
+        }
       }
 
       setReplyModalOpen(false);
       setReplyContent("");
       
-      // Refresh messages
-      loadMessages();
+      // Refresh messages to show the new reply
+      setTimeout(() => {
+        loadMessages();
+      }, 1000);
       
     } catch (error) {
-      console.error('Error sending reply:', error);
-      toast.error('Failed to send reply');
+      console.error('❌ Error sending reply:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to send reply: ${errorMessage}`);
     }
   };
 
