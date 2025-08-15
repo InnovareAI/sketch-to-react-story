@@ -1492,20 +1492,7 @@ export default function GlobalInbox() {
                     Reply
                   </Button>
                   
-                  {/* Debug LinkedIn URL - show what we have */}
-                  {selectedMessage && (
-                    <div className="text-xs text-gray-500 mb-2">
-                      Debug: LinkedIn URL = {selectedMessage?.conversationData?.metadata?.linkedin_message_url || 'NOT FOUND'}
-                      <br />
-                      Profile URL = {selectedMessage?.conversationData?.metadata?.participant_linkedin_url || 'NOT FOUND'}
-                      <br />
-                      Has conversationData = {selectedMessage?.conversationData ? 'YES' : 'NO'}
-                      <br />
-                      Has metadata = {selectedMessage?.conversationData?.metadata ? 'YES' : 'NO'}
-                    </div>
-                  )}
-                  
-                  {/* Show LinkedIn button if we have either URL */}
+                  {/* LinkedIn messaging button - appears when LinkedIn URL available */}
                   {(selectedMessage?.conversationData?.metadata?.linkedin_message_url || 
                     selectedMessage?.conversationData?.metadata?.participant_linkedin_url) && (
                     <Button 
@@ -1514,7 +1501,7 @@ export default function GlobalInbox() {
                         const linkedinUrl = selectedMessage.conversationData.metadata.linkedin_message_url || 
                                           selectedMessage.conversationData.metadata.participant_linkedin_url;
                         window.open(linkedinUrl, '_blank');
-                        toast.success('Opening LinkedIn...');
+                        toast.success('Opening LinkedIn messaging...');
                       }}
                       title="Message this contact directly on LinkedIn"
                     >
