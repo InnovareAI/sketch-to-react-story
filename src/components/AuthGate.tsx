@@ -80,20 +80,10 @@ export default function AuthGate({ children }: AuthGateProps) {
   };
   
   const handleAuthSuccess = () => {
-    // After successful auth, check if we have valid credentials now
-    if (checkAuthFromStorage()) {
-      return; // Already authenticated
-    }
-    
-    // Give a moment for auth to complete, then try again
+    // After successful auth, re-run the complete auth check
     setTimeout(() => {
-      if (checkAuthFromStorage()) {
-        return;
-      }
-      
-      // Still not authenticated, recheck auth state
       checkAuth();
-    }, 500);
+    }, 100);
   };
   
   const checkAuthFromStorage = () => {
