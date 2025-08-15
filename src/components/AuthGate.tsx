@@ -41,6 +41,35 @@ export default function AuthGate({ children }: AuthGateProps) {
   }, []);
   
   const checkAuth = () => {
+    // Clear any existing localStorage auth to force proper login
+    localStorage.removeItem('is_authenticated');
+    localStorage.removeItem('user_auth_profile');
+    localStorage.removeItem('demo_workspace_id');
+    localStorage.removeItem('demo_user_id');
+    
+    // Force users to authenticate properly - no localStorage bypass
+    setIsAuthenticated(false);
+    setLoading(false);
+  };
+  
+  const handleAuthSuccess = () => {
+    // After successful auth, check if we have valid credentials now
+    if (checkAuthFromStorage()) {
+      return; // Already authenticated
+    }
+    
+    // Give a moment for auth to complete, then try again
+    setTimeout(() => {
+      if (checkAuthFromStorage()) {
+        return;
+      }
+      
+      // Still not authenticated, clear everything and show login again
+      checkAuth();
+    }, 500);
+  };
+  
+  const checkAuthFromStorage = () => {
     const isAuth = localStorage.getItem('is_authenticated') === 'true';
     const userProfile = localStorage.getItem('user_auth_profile');
     
@@ -51,21 +80,16 @@ export default function AuthGate({ children }: AuthGateProps) {
           setIsAuthenticated(true);
           // Initialize workspace asynchronously
           initializeWorkspace().catch(console.error);
-        } else {
-          setIsAuthenticated(false);
+          return true;
         }
       } catch (e) {
-        setIsAuthenticated(false);
+        // Clear bad data
+        localStorage.removeItem('is_authenticated');
+        localStorage.removeItem('user_auth_profile');
       }
-    } else {
-      setIsAuthenticated(false);
     }
     
-    setLoading(false);
-  };
-  
-  const handleAuthSuccess = () => {
-    checkAuth();
+    return false;
   };
   
   // Allow public routes to bypass authentication entirely

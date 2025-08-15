@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { clearAllBadUUIDs } from '@/utils/clearBadUUIDs';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -32,51 +32,60 @@ export default function SimpleLoginModal({ isOpen, onClose, onSuccess, onSignupC
     setLoading(true);
     
     try {
-      // Clear any bad UUIDs first
-      clearAllBadUUIDs();
-      
-      // Simple delay for UX
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Generate proper UUIDs
-      const generateUUID = () => {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-          const r = Math.random() * 16 | 0;
-          const v = c === 'x' ? r : (r & 0x3 | 0x8);
-          return v.toString(16);
-        });
-      };
-      
-      const userId = generateUUID();
-      const workspaceId = generateUUID();
-      
-      const userData = {
-        id: userId,
+      // Use proper Supabase authentication
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
-        full_name: formData.email.split('@')[0],
-        workspace_id: workspaceId,
-        workspace_name: `${formData.email.split('@')[0]}'s Workspace`,
-        role: 'owner',
-        created_at: new Date().toISOString()
+        password: formData.password,
+      });
+      
+      if (authError) {
+        throw authError;
+      }
+      
+      if (!authData.user) {
+        throw new Error('No user data returned');
+      }
+      
+      // Get user profile from database
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          role,
+          workspace_id,
+          workspaces (
+            name,
+            plan
+          )
+        `)
+        .eq('id', authData.user.id)
+        .single();
+      
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw new Error('Failed to load user profile');
+      }
+      
+      // Set up proper authentication state
+      const userProfile = {
+        id: profileData.id,
+        email: profileData.email,
+        full_name: profileData.full_name || profileData.email.split('@')[0],
+        role: profileData.role,
+        workspace_id: profileData.workspace_id,
+        workspace_name: profileData.workspaces?.name || 'Workspace',
+        workspace_plan: profileData.workspaces?.plan || 'free',
+        status: 'active'
       };
       
-      // Store all necessary keys
-      localStorage.setItem('user_auth_profile', JSON.stringify(userData));
-      localStorage.setItem('user_email', formData.email);
       localStorage.setItem('is_authenticated', 'true');
-      localStorage.setItem('workspace_id', workspaceId);
-      localStorage.setItem('app_workspace_id', workspaceId);
+      localStorage.setItem('user_auth_profile', JSON.stringify(userProfile));
       
-      // Also store user-specific keys
-      localStorage.setItem(`user_${userId}_workspace_id`, workspaceId);
-      localStorage.setItem(`user_${userId}_app_workspace_id`, workspaceId);
-      
-      toast.success('Welcome back!');
-      
-      // Simple reload to apply auth
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      toast.success('Successfully logged in!');
+      onClose();
+      onSuccess?.();
       
     } catch (err: any) {
       console.error('Login error:', err);
