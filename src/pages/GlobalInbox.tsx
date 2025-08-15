@@ -90,6 +90,7 @@ export default function GlobalInbox() {
   const [searchFilter, setSearchFilter] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all');
   const [filterTag, setFilterTag] = useState<string>('all');
+  const [filterMessageType, setFilterMessageType] = useState<'all' | 'linkedin' | 'inmail'>('all');
   const [showTagModal, setShowTagModal] = useState(false);
   const [selectedMessageForTag, setSelectedMessageForTag] = useState<Message | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -744,6 +745,10 @@ export default function GlobalInbox() {
     // Filter by tag
     if (filterTag !== 'all' && !message.customTags?.includes(filterTag)) return false;
     
+    // Filter by message type (LinkedIn vs InMail)
+    if (filterMessageType === 'linkedin' && message.messageType === 'inmail') return false;
+    if (filterMessageType === 'inmail' && message.messageType !== 'inmail') return false;
+    
     // Filter by search term
     if (searchFilter) {
       const searchLower = searchFilter.toLowerCase();
@@ -930,6 +935,45 @@ export default function GlobalInbox() {
                   </Button>
                 </div>
               </div>
+              <DropdownMenuSeparator />
+              <div className="p-2">
+                <div className="text-sm font-medium mb-2">Filter by Message Type</div>
+                <div className="space-y-1">
+                  <Button
+                    variant={filterMessageType === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterMessageType('all');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    All Messages
+                  </Button>
+                  <Button
+                    variant={filterMessageType === 'linkedin' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterMessageType('linkedin');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    LinkedIn Messages
+                  </Button>
+                  <Button
+                    variant={filterMessageType === 'inmail' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterMessageType('inmail');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    InMail Messages
+                  </Button>
+                </div>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button 
@@ -985,6 +1029,15 @@ export default function GlobalInbox() {
               <option key={tag.value} value={tag.value}>{tag.label}</option>
             ))}
           </select>
+          <select 
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            value={filterMessageType}
+            onChange={(e) => setFilterMessageType(e.target.value as 'all' | 'linkedin' | 'inmail')}
+          >
+            <option value="all">All Types</option>
+            <option value="linkedin">LinkedIn Messages</option>
+            <option value="inmail">InMail</option>
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">
@@ -994,7 +1047,7 @@ export default function GlobalInbox() {
               `${filteredMessages.length} of ${messages.length}`
             )}
           </span>
-          {(searchFilter || filterType !== 'all' || filterTag !== 'all') && (
+          {(searchFilter || filterType !== 'all' || filterTag !== 'all' || filterMessageType !== 'all') && (
             <Button
               variant="outline"
               size="sm"
@@ -1002,6 +1055,7 @@ export default function GlobalInbox() {
                 setSearchFilter('');
                 setFilterType('all');
                 setFilterTag('all');
+                setFilterMessageType('all');
               }}
             >
               Clear Filters
@@ -1095,6 +1149,27 @@ export default function GlobalInbox() {
             </div>
             <p className="text-xs text-gray-500 mt-2">
               Conversion success
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Message Type Breakdown */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {messages.filter(m => m.messageType === 'inmail').length.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">InMail Messages</div>
+                <Badge className="mt-1 bg-orange-100 text-orange-800">
+                  {messages.filter(m => m.messageType !== 'inmail').length} LinkedIn
+                </Badge>
+              </div>
+              <Mail className="h-8 w-8 text-orange-600" />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Message breakdown
             </p>
           </CardContent>
         </Card>
@@ -1228,11 +1303,15 @@ export default function GlobalInbox() {
                               <span className={`text-sm font-medium ${!message.read ? "font-semibold" : ""}`}>
                                 {message.from}
                               </span>
-                              {message.messageType === 'inmail' && (
-                                <Badge variant="outline" className="text-xs h-5 px-1.5">
+                              {message.messageType === 'inmail' ? (
+                                <Badge variant="outline" className="text-xs h-5 px-1.5 border-orange-300 text-orange-700 bg-orange-50">
                                   InMail
                                 </Badge>
-                              )}
+                              ) : message.channel === 'linkedin' ? (
+                                <Badge variant="outline" className="text-xs h-5 px-1.5 border-blue-300 text-blue-700 bg-blue-50">
+                                  LinkedIn
+                                </Badge>
+                              ) : null}
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-500">{formatTime(message.time)}</span>
