@@ -178,9 +178,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       let greeting;
       
       if (needsNameCollection) {
-        greeting = `👋 **Welcome to SAM AI!** I'm your sales assistant.\n\n**What should I call you?** Just your first name works!\n\n💡 *You can ask questions anytime if you get stuck.*`;
+        greeting = `Hey there! 👋 I'm SAM, your new sales assistant.\n\nWhat should I call you? Just your first name is perfect!`;
       } else {
-        greeting = `👋 **Hi ${firstName}!** I'm SAM, your sales assistant.\n\n**Would you like me to:**\n• **Explain features first** (2-minute overview)\n• **Jump right into work** (start immediately)\n\nJust type "explain" or "start working" - your choice!\n\n💡 *You can ask questions anytime if you get stuck.*`;
+        greeting = `Hey ${firstName}! 👋 Ready to get some work done?\n\nWant me to **explain what I can do** first, or should we **jump right in**?\n\nJust say "explain" or "let's go" - whatever feels right!`;
       }
       
       setMessages([{
@@ -319,12 +319,12 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         setSamStatus(`${currentOperationMode} mode (basic)`);
       }
       
-      // Update the greeting message based on mode
+      // Simple mode change notification - conversational style
       const greetingMessage: Message = {
         id: "mode-change-" + Date.now(),
         content: currentOperationMode === 'inbound' 
-          ? "🔄 **Switched to Inbound Mode** 📥\n\n**Now focused on Response Management & Customer Service:**\n• 🛡️ **Spam Filter Agent** - Automatically filter unwanted messages\n• 📥 **Inbox Triage Agent** - Prioritize and organize incoming messages\n• 💬 **Auto-Response Agent** - Draft intelligent replies to inquiries\n• 🎯 **Customer Service** - Handle support requests professionally\n\n**Perfect for:** Managing existing customer relationships, handling inquiries, providing support.\n\nWhat inbox challenge can I help you with?"
-          : "🔄 **Switched to Outbound Mode** 🚀\n\n**Now focused on Lead Generation & Sales Campaigns:**\n• 🎯 **Lead Research Agent** - Find and qualify perfect prospects\n• 📊 **Campaign Manager** - Create multi-touch outreach sequences\n• ✍️ **Content Creator** - Write personalized messages that convert\n• 📈 **GTM Strategy** - Develop go-to-market plans\n• 🔄 **Workflow Automation** - Set up intelligent follow-ups\n\n**Perfect for:** Growing your business, finding new customers, scaling outreach.\n\nReady to generate some leads?",
+          ? "🔄 Switched to **inbound mode** - I'll help with customer service and responding to inquiries"
+          : "🔄 Switched to **outbound mode** - Let's focus on finding leads and creating campaigns",
         sender: "sam",
         timestamp: new Date(),
       };
@@ -441,13 +441,11 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         id: (Date.now() + 1).toString(),
         content: `Perfect! Nice to meet you, **${firstName}**! 🎉
 
-**Would you like me to:**
-• **Explain features first** (2-minute overview)
-• **Jump right into work** (start immediately)
+Want me to **explain what I can do** first, or should we **just jump in** and start working?
 
-**Type "yes" or "ok" to continue** - then choose "explain" or "start working"
+**Just say "yes" or "ok"** to continue, then let me know: "explain" or "let's go"
 
-💡 *You can ask questions anytime if you get stuck.*`,
+💡 *Feel free to ask questions anytime!*`,
         sender: "sam",
         timestamp: new Date(),
       };
@@ -480,9 +478,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     if (!isConfirming) {
       const clarificationMessage: Message = {
         id: Date.now().toString(),
-        content: `Please type "yes" or "ok" to continue, or ask me any questions if you need help! 
-
-💡 *You can ask questions anytime if you get stuck.*`,
+        content: `Just say "yes" or "ok" to continue, or ask me anything if you need help!`,
         sender: "sam",
         timestamp: new Date(),
       };
@@ -505,12 +501,12 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     
     const choiceMessage: Message = {
       id: (Date.now() + 1).toString(),
-      content: `Great! **Now choose:**
+      content: `Awesome! **What would you like to do?**
 
-• **Type "explain"** for features overview (2 minutes)
-• **Type "start working"** to jump right in
+• **Type "explain"** and I'll walk you through what I can do (quick overview)
+• **Type "let's go"** and we'll jump right into working
 
-💡 *You can ask questions anytime if you get stuck.*`,
+💡 *Feel free to ask questions anytime!*`,
       sender: "sam",
       timestamp: new Date(),
     };
@@ -660,7 +656,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       // Absolute fallback if response generation fails
       const safeResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: "**6 agents ready!** Try: 'find leads', 'write email', 'create campaign', or 'upload info'. What's your goal?\n\n💡 *Ask questions anytime if you get stuck!*",
+        content: "I'm all set! Want to find some leads, write emails, create campaigns, or upload company info? What sounds good to you?",
         sender: "sam",
         timestamp: new Date(),
       };
@@ -690,7 +686,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       // Only if fallback also fails, show a simple error
       const simpleErrorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: "Something went wrong. Try: 'find leads', 'write email', or 'upload info'. What's your goal?",
+        content: "Hmm, something hiccupped there. Want to try finding leads, writing emails, or uploading company info? What would help you most?",
         sender: "sam",
         timestamp: new Date(),
       };
@@ -709,39 +705,38 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     
     // Handle feature explanation request
     if (contentLower.includes('explain') || contentLower.includes('features') || contentLower.includes('overview')) {
-      return `**SAM AI Quick Overview** (2 minutes)
+      return `Cool! Here's what I can do for you:
 
-**🎯 Core Functions:** Upload knowledge, research prospects, find leads, write messaging, A/B testing, analyze performance
-**🤖 6 AI Agents:** Lead Research, Campaign Manager, Content Creator, Performance Analyst, etc.
-**💬 Features:** Voice input, chat history, training center, conversation saving
-**⚠️ Setup:** Connect LinkedIn/email for full access (preview mode without)
+🎯 **I help with sales stuff** - finding leads, writing messages, managing campaigns, tracking what works
+🤖 **I have 6 specialist agents** working behind the scenes (lead research, campaign management, content creation, etc.)
+💬 **We can chat** with voice, save conversations, and I learn from everything you upload
 
-**Ready to start?** Try:
-• "Upload company info"
-• "Find leads in [industry]" 
-• "Write cold email"
+**Quick heads up:** Connect your LinkedIn/email for the full experience. Without it, you'll get previews but not live data.
 
-💡 *Ask questions anytime if you get stuck!*`;
+**Want to try something?**
+• "Upload my company info"
+• "Find me leads in tech" 
+• "Write a cold email"
+
+What sounds interesting?`;
     }
     
     // Handle LinkedIn connection request
     if (contentLower.includes('connect linkedin') || contentLower.includes('linkedin connect')) {
-      return `🔗 **LinkedIn Connection Setup**
+      return `Sure! Let me walk you through connecting LinkedIn:
 
-**To enable live prospect scraping:**
-
-1. **Go to Settings** (gear icon in sidebar)
+1. **Hit Settings** (that gear icon in the sidebar)
 2. **Click "Connect LinkedIn"** 
-3. **Authorize SAM AI** for prospect research
-4. **Return here** and type "start scraping"
+3. **Give me permission** to help with prospect research
+4. **Come back here** and say "let's start scraping"
 
-**Once connected, I can:**
-• Pull real-time CTO profiles
-• Get company funding data
-• Find verified contact info
-• Track job changes and promotions
+**Once we're connected, I can:**
+• Pull live CTO profiles and contact info
+• Get real company funding data
+• Track when people change jobs or get promoted
+• Find verified emails and phone numbers
 
-**Alternative:** Type "show preview" for sample data without connection.`;
+**Not ready to connect yet?** Just say "show me a preview" and I'll demo with sample data.`;
     }
 
     // Handle preview results request  
@@ -765,26 +760,24 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 5. **David Park** - CTO, CloudSync (Series B, $20M)
    📍 Cambridge, MA • 🏢 85 employees • ☁️ Cloud Infrastructure
 
-**Connect LinkedIn for full list of 50+ prospects with contact details!**
+**Connect LinkedIn and I can get you 50+ more like this with contact details!**
 
-Type "write outreach" to create messages for these CTOs.`;
+Want me to write some outreach messages for these CTOs? Just say "write outreach" and I'll get started.`;
     }
 
     // Handle start working request
-    if (contentLower.includes('start working') || contentLower.includes('jump') || contentLower.includes('begin')) {
-      return `**Let's get to work!** 🚀
+    if (contentLower.includes('start working') || contentLower.includes('jump') || contentLower.includes('begin') || contentLower.includes('let\'s go')) {
+      return `Perfect! Let's do this 🚀
 
-**Quick actions:**
-• "Upload company info"
-• "Research prospects" 
-• "Find leads in [industry]"
-• "Write outreach message"
-• "Test message variations"
-• "Analyze performance"
+**Here's what we can tackle:**
+• Upload your company info
+• Research some prospects 
+• Find leads in whatever industry
+• Write outreach messages
+• Test different message styles
+• Check how your campaigns are doing
 
-**What's your goal today?**
-
-💡 *Ask questions anytime if you get stuck!*`;
+**What's on your mind today?** Just tell me what you want to work on!`;
     }
     
     // Agent Training Overview with real document data
@@ -852,33 +845,23 @@ ${documents.length === 0 ? '• No documents uploaded yet' :
 
     // Agent Performance  
     if (contentLower.includes('agent') && (contentLower.includes('performance') || contentLower.includes('performing'))) {
-      return `📊 **Live Agent Performance Dashboard**
+      return `Hey! All 6 of my specialist agents are online and ready to go 🟢
 
-**🟢 Online Agents (6/6 Active)**
+**The team:**
+• **Lead Research** - hasn't done any searches yet, but ready to find prospects
+• **Campaign Manager** - no active campaigns, waiting for your first one
+• **Content Creator** - hasn't written any messages yet, but excited to start
+• **Performance Analyst** - no data to analyze yet, but standing by
+• **Workflow Automation** - no automations running, but ready to set them up
+• **Knowledge Manager** - no documents uploaded yet, but ready to learn
 
-**🎯 Lead Research Agent** | Status: Ready | Tasks Completed: 0
-- **Next Action:** "Find me leads in [industry]" or "Research prospects at [company type]"
-
-**📊 Campaign Manager** | Status: Ready | Active Campaigns: 0  
-- **Next Action:** "Create a LinkedIn campaign" or "Set up email sequence"
-
-**✍️ Content Creator** | Status: Ready | Messages Written: 0
-- **Next Action:** "Write a cold email" or "Create LinkedIn connection request"
-
-**📈 Performance Analyst** | Status: Ready | Reports Generated: 0
-- **Next Action:** "Show me campaign metrics" or "Analyze my outreach performance"
-
-**🔄 Workflow Automation** | Status: Ready | Automations: 0
-- **Next Action:** "Set up follow-up sequence" or "Create drip campaign"
-
-**🧠 Knowledge Manager** | Status: Ready | Documents: 0
-- **Next Action:** "Upload company info" or "Add successful message examples"
-
-**🚀 Try these commands:**
-• "Find leads in SaaS companies"
-• "Write a cold email for CEOs" 
+**Want to put them to work?**
+• "Find leads in SaaS" 
+• "Write a cold email for CEOs"
 • "Create a LinkedIn campaign"
-• "Upload my company deck"`;
+• "Upload my company info"
+
+What should we tackle first?`;
     }
     
     if (contentLower.includes('lead') || contentLower.includes('prospect') || contentLower.includes('cto') || contentLower.includes('ceo') || contentLower.includes('startup') || contentLower.includes('find')) {
