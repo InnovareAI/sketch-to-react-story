@@ -111,6 +111,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [currentOperationMode, setCurrentOperationMode] = useState<'inbound' | 'outbound'>(operationMode);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [needsNameCollection, setNeedsNameCollection] = useState<boolean>(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Helper functions to check account connection status
@@ -165,9 +166,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       let greeting;
       
       if (needsNameCollection) {
-        greeting = `👋 **Welcome to SAM AI!** I'm your sales assistant.\n\n**What should I call you?** Just your first name works!`;
+        greeting = `👋 **Welcome to SAM AI!** I'm your sales assistant.\n\n**What should I call you?** Just your first name works!\n\n💡 *You can ask questions anytime if you get stuck.*`;
       } else {
-        greeting = `👋 **Hi ${firstName}!** I'm SAM, your sales assistant.\n\n**Would you like me to:**\n• **Explain features first** (2-minute overview)\n• **Jump right into work** (start immediately)\n\nJust type "explain" or "start working" - your choice!`;
+        greeting = `👋 **Hi ${firstName}!** I'm SAM, your sales assistant.\n\n**Would you like me to:**\n• **Explain features first** (2-minute overview)\n• **Jump right into work** (start immediately)\n\nJust type "explain" or "start working" - your choice!\n\n💡 *You can ask questions anytime if you get stuck.*`;
       }
       
       setMessages([{
@@ -337,6 +338,12 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       return;
     }
 
+    // Check if user needs to confirm before continuing
+    if (needsConfirmation && content.trim().length > 0) {
+      await handleUserConfirmation(content.trim());
+      return;
+    }
+
     // Create or use existing session
     let sessionId = currentSessionId;
     if (!sessionId) {
@@ -432,6 +439,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       // Update component state
       setUserProfile(updatedProfile);
       setNeedsNameCollection(false);
+      setNeedsConfirmation(true); // User needs to confirm before continuing
 
       // Send confirmation message
       const confirmationMessage: Message = {
@@ -442,7 +450,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 • **Explain features first** (2-minute overview)
 • **Jump right into work** (start immediately)
 
-Just type "explain" or "start working" - your choice!`,
+**Type "yes" or "ok" to continue** - then choose "explain" or "start working"
+
+💡 *You can ask questions anytime if you get stuck.*`,
         sender: "sam",
         timestamp: new Date(),
       };
@@ -463,6 +473,54 @@ Just type "explain" or "start working" - your choice!`,
       setMessages(prev => [...prev, errorMessage]);
       setNeedsNameCollection(false);
     }
+  };
+
+  const handleUserConfirmation = async (response: string) => {
+    const responseLower = response.toLowerCase().trim();
+    
+    // Check if user is confirming (yes, ok, sure, ready, etc.)
+    const confirmationWords = ['yes', 'ok', 'okay', 'sure', 'ready', 'continue', 'proceed', 'go', 'start'];
+    const isConfirming = confirmationWords.some(word => responseLower.includes(word));
+    
+    if (!isConfirming) {
+      const clarificationMessage: Message = {
+        id: Date.now().toString(),
+        content: `Please type "yes" or "ok" to continue, or ask me any questions if you need help! 
+
+💡 *You can ask questions anytime if you get stuck.*`,
+        sender: "sam",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, clarificationMessage]);
+      return;
+    }
+
+    // Add user's confirmation to chat
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: response,
+      sender: "user",
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+
+    // User confirmed, now offer the choice
+    setNeedsConfirmation(false);
+    
+    const choiceMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      content: `Great! **Now choose:**
+
+• **Type "explain"** for features overview (2 minutes)
+• **Type "start working"** to jump right in
+
+💡 *You can ask questions anytime if you get stuck.*`,
+      sender: "sam",
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, choiceMessage]);
   };
 
   const handleMultiAgentProcessing = async (content: string, sessionId: string) => {
@@ -641,7 +699,9 @@ Just type "explain" or "start working" - your choice!`,
 **Ready to start?** Try:
 • "Find leads in [industry]"
 • "Write cold email"
-• "Create LinkedIn campaign"`;
+• "Create LinkedIn campaign"
+
+💡 *Ask questions anytime if you get stuck!*`;
     }
     
     // Handle start working request
@@ -654,7 +714,9 @@ Just type "explain" or "start working" - your choice!`,
 • "Upload company info"
 • "Create campaign"
 
-**What's your goal today?**`;
+**What's your goal today?**
+
+💡 *Ask questions anytime if you get stuck!*`;
     }
     
     // Agent Training Overview with real document data
@@ -763,7 +825,7 @@ ${documents.length === 0 ? '• No documents uploaded yet' :
       return "✍️ **Content Creator ready!** What type of message and for which audience?";
     }
     
-    return "**6 agents ready!** Try: \"find leads\", \"write email\", \"create campaign\", or \"upload info\". What's your goal?";
+    return "**6 agents ready!** Try: \"find leads\", \"write email\", \"create campaign\", or \"upload info\". What's your goal?\n\n💡 *Ask questions anytime if you get stuck!*";
   };
 
   const handleQuickAction = (action: QuickAction) => {
