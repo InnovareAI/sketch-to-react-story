@@ -34,7 +34,6 @@ const mainNavItems = [
   { title: "Campaigns", url: "/campaigns", icon: Target },
   { title: "Search", url: "/search", icon: Search },
   { title: "Contacts", url: "/contacts", icon: Users },
-  { title: "Inbox", url: "/inbox", icon: Mail },
   { title: "Reply", url: "/reply", icon: MessageSquare },
   { title: "Templates", url: "/templates", icon: FileText },
 ];
@@ -42,7 +41,6 @@ const mainNavItems = [
 // Team Navigation Items  
 const teamNavItems = [
   { title: "Team Accounts", url: "/accounts", icon: Building2 },
-  { title: "Team Inbox", url: "/global-inbox", icon: Inbox },
 ];
 
 // Settings Navigation - Streamlined

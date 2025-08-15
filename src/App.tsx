@@ -18,8 +18,6 @@ import Campaigns from "./pages/Campaigns";
 import Contacts from "./pages/Contacts";
 import ContactsView from "./pages/ContactsView";
 import Search from "./pages/Search";
-import GlobalInbox from "./pages/GlobalInbox";
-import GlobalInboxSimple from "./pages/GlobalInboxSimple";
 import TestInbox from "./pages/TestInbox";
 import InboxDirect from "./pages/InboxDirect";
 import MessageQueue from "./pages/MessageQueue";
@@ -158,13 +156,11 @@ const App: React.FC = () => {
                 <Route path="contacts" element={<ContactsView />} />
                 <Route path="contacts-old" element={<Contacts />} />
                 <Route path="test-sync" element={<ContactSyncTest />} />
-                <Route path="inbox" element={<GlobalInbox />} />
                 <Route path="templates" element={<Templates />} />
                 <Route path="seo-review" element={<SeoReview />} />
                 <Route path="analytics" element={<Dashboard />} /> {/* Analytics redirects to Dashboard */}
                 
                 {/* Team Routes */}
-                <Route path="global-inbox" element={<GlobalInbox />} />
                 
                 {/* Settings Routes - All redirect to unified Settings page */}
                 <Route path="settings" element={<Settings />} />
