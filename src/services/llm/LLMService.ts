@@ -36,19 +36,22 @@ export class LLMService {
   private defaultModels = {
     // Direct API models (preferred)
     fast: 'gpt-3.5-turbo',                  // Fast responses via OpenAI
-    balanced: 'gpt-4-turbo',                // Balanced performance via OpenAI
-    quality: 'claude-3-5-sonnet-20241022',  // PRIMARY: Claude 3.5 Sonnet via Anthropic
+    balanced: 'gpt-5',                      // PRIMARY: GPT-5 via OpenAI (cost optimized)
+    quality: 'gpt-5',                       // PRIMARY: GPT-5 via OpenAI (best value)
+    gpt5: 'gpt-5',                         // GPT-5 via OpenAI
     gpt4: 'gpt-4-turbo',                    // GPT-4 Turbo via OpenAI
-    claude: 'claude-3-5-sonnet-20241022',   // Claude 3.5 Sonnet via Anthropic
+    claude: 'claude-3-5-sonnet-20241022',   // Claude 3.5 Sonnet via Anthropic (fallback)
     
-    // Specialized models
-    code: 'claude-3-5-sonnet-20241022',     // Claude for code tasks
-    creative: 'gpt-4-turbo',                // GPT-4 for creative content
-    analysis: 'claude-3-5-sonnet-20241022', // Claude for analysis
+    // Specialized models - All GPT-5 for consistency and cost
+    code: 'gpt-5',                         // GPT-5 for code tasks
+    creative: 'gpt-5',                     // GPT-5 for creative content  
+    analysis: 'gpt-5',                     // GPT-5 for analysis
+    sales: 'gpt-5',                        // GPT-5 optimized for sales tasks
     
     // OpenRouter fallback models
     or_claude: 'anthropic/claude-3.5-sonnet',
     or_gpt4: 'openai/gpt-4-turbo',
+    or_gpt5: 'openai/gpt-5',
     llama: 'meta-llama/llama-3.1-70b-instruct',
     mixtral: 'mistralai/mixtral-8x7b-instruct'
   };
@@ -89,19 +92,19 @@ export class LLMService {
         throw new Error('❌ SAM AI requires real API keys. Please set VITE_OPENAI_API_KEY, VITE_ANTHROPIC_API_KEY, or VITE_OPENROUTER_API_KEY');
       }
 
-      // Prefer direct APIs for better performance and reliability
-      let provider: 'openai' | 'anthropic' | 'openrouter' = 'anthropic';
-      let apiKey = anthropicKey;
+      // Prefer OpenAI for GPT-5 cost optimization
+      let provider: 'openai' | 'anthropic' | 'openrouter' = 'openai';
+      let apiKey = openaiKey;
       
-      if (!anthropicKey && openaiKey) {
-        provider = 'openai';
-        apiKey = openaiKey;
-      } else if (!anthropicKey && !openaiKey && openrouterKey) {
+      if (!openaiKey && anthropicKey) {
+        provider = 'anthropic';
+        apiKey = anthropicKey;
+      } else if (!openaiKey && !anthropicKey && openrouterKey) {
         provider = 'openrouter';
         apiKey = openrouterKey;
       }
 
-      console.log(`✅ Initializing LLMService with provider: ${provider} (Real AI only - no mocks)`);
+      console.log(`🚀 Initializing LLMService with provider: ${provider} (GPT-5 optimized for cost & performance)`);
 
       LLMService.instance = new LLMService({
         provider,
@@ -333,7 +336,7 @@ export class LLMService {
    */
   public createSystemPrompt(agentType: string, context?: Record<string, unknown>): string {
     const prompts: Record<string, string> = {
-      orchestrator: `You are SAM, an AI Sales Assistant that orchestrates a team of specialist agents. You are helpful, professional, and focused on driving sales success. You coordinate between different specialists to provide comprehensive solutions.
+      orchestrator: `You are SAM, an AI Sales Assistant powered by GPT-5 that orchestrates a team of specialist agents. You are helpful, professional, and focused on driving sales success. You coordinate between different specialists to provide comprehensive, cost-effective solutions.
 
 Current context: ${JSON.stringify(context || {})}
 
@@ -344,7 +347,7 @@ Your capabilities include:
 - Performance analysis and reporting
 - Email and LinkedIn automation
 
-Always be concise, actionable, and results-oriented.`,
+Always be concise, actionable, and results-oriented. Leverage GPT-5's advanced reasoning for complex sales strategies.`,
 
       'lead-research': `You are a Lead Research Specialist. Your role is to find and qualify prospects based on specific criteria. You excel at using LinkedIn Sales Navigator, web scraping, and data enrichment to build targeted prospect lists.`,
 

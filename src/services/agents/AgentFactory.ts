@@ -65,7 +65,7 @@ export class AgentFactory {
       // Register specialists with orchestrator
       this.orchestrator.registerSpecialists(this.agentRegistry);
 
-      console.log('SAM AI Multi-Agent System initialized successfully');
+      console.log('🚀 SAM AI Multi-Agent System initialized with GPT-5 (cost-optimized)');
     } catch (error) {
       console.error('Failed to initialize agent system:', error);
       throw error;
