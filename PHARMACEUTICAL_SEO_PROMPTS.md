@@ -20,11 +20,11 @@ All prompts are dynamically adjusted based on target audience:
 
 ## Development Stages & Content Strategy
 
-### STAGE 1: MARKET SHAPING
-**Goal:** Disease education without brand promotion to create market awareness
-
-### STAGE 2: PHASE III CLINICAL TRIAL  
+### STAGE 1: PHASE III CLINICAL TRIAL  
 **Goal:** Pre-launch clinical focus emphasizing trial data and regulatory pathway
+
+### STAGE 2: MARKET SHAPING
+**Goal:** Disease education without brand promotion to create market awareness
 
 ### STAGE 3: MARKET LAUNCH 1-6 MONTHS
 **Goal:** Early adoption focus highlighting NEW availability and FDA approval
@@ -34,7 +34,63 @@ All prompts are dynamically adjusted based on target audience:
 
 ---
 
-# STAGE 1: MARKET SHAPING PROMPT
+# STAGE 1: PHASE III CLINICAL TRIAL PROMPT
+
+**Content Type:** Pre-Launch Clinical Focus
+**Output Fields:** `clinical_trial_results`, `development_timeline`
+
+```
+Generate prescription pharmaceutical SEO content for ${submission.product_name} (${submission.generic_name}) targeting ${audienceContext}
+
+Product Details:
+- Indication: ${submission.indication}
+- Therapeutic Area: ${submission.therapeutic_area}
+- Target Audience: ${submission.target_audience}
+- Development Stage: PHASE III CLINICAL TRIAL
+
+CRITICAL FORMATTING REQUIREMENTS:
+
+1. SEO Title Format: MUST follow this exact structure:
+   "${submission.indication} | ${submission.product_name}® (${submission.generic_name})"
+   Example: "Metastatic Breast Cancer | KISQALI® (ribociclib)"
+
+2. Meta Description: 
+   - Focus on condition descriptors and clinical development
+   - Mention Phase III trials appropriately for ${isHCP ? 'HCPs' : 'patients'}
+   - Example: "Learn about ${submission.product_name} Phase III clinical trials for ${submission.indication}. See emerging efficacy data and trial enrollment information."
+
+3. H1 Tag:
+   - DO NOT include brand name
+   - Focus on treatment/condition only
+   - Example: "Advancing treatment for ${submission.indication}: Phase III Clinical Development"
+
+PHASE III CLINICAL TRIAL Focus:
+- Emphasize clinical trial data and results
+- Highlight efficacy and safety findings
+- Discuss upcoming regulatory milestones
+- Position as emerging treatment option
+- Include trial enrollment and research participation information
+
+Generate the following content tailored for ${submission.target_audience}:
+
+1. SEO Title - MUST follow format: "${submission.indication} | ${submission.product_name}® (${submission.generic_name})"
+2. Meta Description (150 chars max) - Clinical development focus
+3. H1 Tag - NO brand name, clinical development focus
+4. 5 H2 Tags for page sections
+5. 10 SEO Keywords - Include clinical trial terms
+6. 5 Long-tail Keywords - Research and trial focused
+7. 3 Voice Search Queries
+8. Mechanism of Action (${isHCP ? 'detailed clinical' : 'simplified patient-friendly'})
+9. Clinical Trial Results (${isHCP ? 'efficacy endpoints and statistical significance' : 'trial outcomes in patient-friendly language'})
+10. Safety Information (${isHCP ? 'adverse events from trials' : 'important safety information from clinical studies'})
+11. Development Timeline (${isHCP ? 'regulatory pathway and approval timeline' : 'when this treatment might become available'})
+
+Format as JSON with these exact keys: seo_title, meta_description, h1_tag, h2_tags, seo_keywords, long_tail_keywords, voice_search_queries, mechanism_of_action, clinical_trial_results, safety_information, development_timeline
+```
+
+---
+
+# STAGE 2: MARKET SHAPING PROMPT
 
 **Content Type:** Disease Education (Brand-Free)
 **Output Fields:** `disease_overview`, `signs_symptoms`, `risk_factors`, `early_diagnosis_importance`
@@ -76,10 +132,6 @@ Generate the following DISEASE EDUCATION content for ${submission.indication}:
 
 Format as JSON with these exact keys: seo_title, meta_description, h1_tag, h2_tags, seo_keywords, long_tail_keywords, voice_search_queries, disease_overview, signs_symptoms, risk_factors, early_diagnosis_importance
 ```
-
----
-
-# STAGE 2: PHASE III CLINICAL TRIAL PROMPT
 
 **Content Type:** Pre-Launch Clinical Focus
 **Output Fields:** `clinical_trial_results`, `development_timeline`

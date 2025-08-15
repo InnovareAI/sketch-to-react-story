@@ -27,15 +27,15 @@ Pharmaceutical SEO content automation platform for drug information management:
 - **Deployment**: Netlify (auto-deploy from main branch)
 
 ## Key Features - 4-Stage Pharmaceutical SEO System
-### STAGE 1: Market Shaping
-- **Disease education content** without brand names
-- Builds disease category awareness before product promotion
-- Based on regulatory examples (ntmfacts.com, yourattentionplease.com)
-
-### STAGE 2: Phase III Clinical Trial
+### STAGE 1: Phase III Clinical Trial
 - **Pre-launch clinical focus** with trial data emphasis
 - Regulatory pathway and approval timeline content
 - Clinical efficacy and safety findings
+
+### STAGE 2: Market Shaping
+- **Disease education content** without brand names
+- Builds disease category awareness before product promotion
+- Based on regulatory examples (ntmfacts.com, yourattentionplease.com)
 
 ### STAGE 3: Market Launch 1-6 Months
 - **Early adoption focus** highlighting NEW availability
@@ -81,7 +81,7 @@ git push origin main
 ## Important Notes for Next Assistant
 - **Pharmaceutical focus only** - Complete 4-stage SEO system operational
 - **Real prescription drugs only** - No fake data or test compounds
-- **Stage-specific prompts**: Market Shaping (disease education), Phase III (clinical), Launch 1-6mo (new), Launch 7-12mo (proven)
+- **Stage-specific prompts**: Phase III (clinical), Market Shaping (disease education), Launch 1-6mo (new), Launch 7-12mo (proven)
 - **Target audience feature**: HCP vs Patient content differentiation implemented
 - **AI processing**: `direct-llm-processor` Edge Function with OpenRouter/Claude
 - **Database operational** - 100+ pharmaceutical submissions with auto-processing

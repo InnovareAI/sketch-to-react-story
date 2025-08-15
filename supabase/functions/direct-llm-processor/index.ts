@@ -85,48 +85,7 @@ async function generatePharmaceuticalContent(submission: any) {
     ? "healthcare professionals including doctors, nurses, and pharmacists. Use medical terminology, clinical data, and professional language. Focus on prescribing information and clinical efficacy."
     : "patients and caregivers. Use clear, accessible language avoiding complex medical jargon. Focus on patient benefits and quality of life. Emphasize that this is a prescription medication."
 
-  // STAGE 1: MARKET SHAPING - Disease Education (Brand-Free)
-  if (submission.development_stage === 'Market Shaping') {
-    const diseaseEducationPrompt = `Generate DISEASE EDUCATION SEO content for ${submission.indication} in ${submission.therapeutic_area} targeting ${audienceContext}
-
-CRITICAL: This is MARKET SHAPING stage - DO NOT mention ${submission.product_name} or any specific brand names. Focus on DISEASE EDUCATION ONLY.
-
-MARKET SHAPING Goals:
-- Raise awareness of ${submission.indication} as a condition
-- Highlight treatment gaps and unmet medical needs  
-- Educate about signs, symptoms, and risk factors
-- Drive physician consultation and proper diagnosis
-- Build disease category awareness (not product awareness)
-- Create market need before product promotion
-
-Based on examples like ntmfacts.com, yourattentionplease.com, and learnnpc.com, create content that:
-1. Educates about the disease without mentioning brands
-2. Positions early diagnosis as critical
-3. Highlights current diagnostic challenges or treatment gaps
-4. Encourages healthcare provider consultation
-5. Uses scientific, evidence-based approach
-6. Drives disease awareness to "shape the market"
-
-Generate the following DISEASE EDUCATION content for ${submission.indication}:
-
-1. SEO Title (60 chars max) - Disease-focused, no brand names
-2. Meta Description (150 chars max) - Disease awareness and consultation CTA
-3. H1 Tag - Disease education headline
-4. 5 H2 Tags focusing on: disease overview, signs/symptoms, risk factors, diagnosis importance, talking to your doctor
-5. 10 SEO Keywords - Disease and condition focused, no brand terms
-6. 5 Long-tail Keywords - Disease education queries
-7. 3 Voice Search Queries about the condition
-8. Disease Overview (explain ${submission.indication} without brand mentions)
-9. Signs and Symptoms (what patients/HCPs should watch for)
-10. Risk Factors and Diagnostic Challenges
-11. Importance of Early Diagnosis and Treatment Discussion
-
-Format as JSON with these exact keys: seo_title, meta_description, h1_tag, h2_tags, seo_keywords, long_tail_keywords, voice_search_queries, disease_overview, signs_symptoms, risk_factors, early_diagnosis_importance`
-
-    return await generateAIContent(diseaseEducationPrompt)
-  }
-
-  // STAGE 2: PHASE III CLINICAL TRIAL - Pre-Launch Clinical Focus
+  // STAGE 1: PHASE III CLINICAL TRIAL - Pre-Launch Clinical Focus
   if (submission.development_stage === 'Phase III Clinical Trial') {
     const phaseIIIPrompt = `Generate prescription pharmaceutical SEO content for ${submission.product_name} (${submission.generic_name}) targeting ${audienceContext}
 
@@ -182,6 +141,47 @@ Generate the following content tailored for ${submission.target_audience}:
 Format as JSON with these exact keys: seo_title, meta_description, h1_tag, h2_tags, seo_keywords, long_tail_keywords, voice_search_queries, mechanism_of_action, clinical_trial_results, safety_information, development_timeline`
 
     return await generateAIContent(phaseIIIPrompt)
+  }
+
+  // STAGE 2: MARKET SHAPING - Disease Education (Brand-Free)
+  if (submission.development_stage === 'Market Shaping') {
+    const diseaseEducationPrompt = `Generate DISEASE EDUCATION SEO content for ${submission.indication} in ${submission.therapeutic_area} targeting ${audienceContext}
+
+CRITICAL: This is MARKET SHAPING stage - DO NOT mention ${submission.product_name} or any specific brand names. Focus on DISEASE EDUCATION ONLY.
+
+MARKET SHAPING Goals:
+- Raise awareness of ${submission.indication} as a condition
+- Highlight treatment gaps and unmet medical needs  
+- Educate about signs, symptoms, and risk factors
+- Drive physician consultation and proper diagnosis
+- Build disease category awareness (not product awareness)
+- Create market need before product promotion
+
+Based on examples like ntmfacts.com, yourattentionplease.com, and learnnpc.com, create content that:
+1. Educates about the disease without mentioning brands
+2. Positions early diagnosis as critical
+3. Highlights current diagnostic challenges or treatment gaps
+4. Encourages healthcare provider consultation
+5. Uses scientific, evidence-based approach
+6. Drives disease awareness to "shape the market"
+
+Generate the following DISEASE EDUCATION content for ${submission.indication}:
+
+1. SEO Title (60 chars max) - Disease-focused, no brand names
+2. Meta Description (150 chars max) - Disease awareness and consultation CTA
+3. H1 Tag - Disease education headline
+4. 5 H2 Tags focusing on: disease overview, signs/symptoms, risk factors, diagnosis importance, talking to your doctor
+5. 10 SEO Keywords - Disease and condition focused, no brand terms
+6. 5 Long-tail Keywords - Disease education queries
+7. 3 Voice Search Queries about the condition
+8. Disease Overview (explain ${submission.indication} without brand mentions)
+9. Signs and Symptoms (what patients/HCPs should watch for)
+10. Risk Factors and Diagnostic Challenges
+11. Importance of Early Diagnosis and Treatment Discussion
+
+Format as JSON with these exact keys: seo_title, meta_description, h1_tag, h2_tags, seo_keywords, long_tail_keywords, voice_search_queries, disease_overview, signs_symptoms, risk_factors, early_diagnosis_importance`
+
+    return await generateAIContent(diseaseEducationPrompt)
   }
 
   // STAGE 3: MARKET LAUNCH 1-6 MONTHS - Early Adoption Focus
