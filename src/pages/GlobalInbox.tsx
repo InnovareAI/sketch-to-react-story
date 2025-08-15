@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useLinkedInSync } from '@/hooks/useLinkedInSync';
 import { useBusinessMetrics } from '@/hooks/useBusinessMetrics';
@@ -71,11 +72,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function GlobalInbox() {
+  const location = useLocation();
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("all");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Determine page title based on route
+  const isTeamInbox = location.pathname === '/global-inbox';
+  const pageTitle = isTeamInbox ? 'Team Inbox' : 'Inbox';
   const [showComposer, setShowComposer] = useState(false);
   const [composerMode, setComposerMode] = useState<'reply' | 'new'>('new');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
@@ -774,7 +780,7 @@ export default function GlobalInbox() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Team Inbox</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{pageTitle}</h1>
           <p className="text-gray-600 mt-1">
             Manage all your conversations across channels
           </p>
