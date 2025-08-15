@@ -89,6 +89,7 @@ export default function GlobalInbox() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedMessageForFollowUp, setSelectedMessageForFollowUp] = useState<Message | null>(null);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
   // Predefined tags
   const predefinedTags = [
@@ -137,6 +138,16 @@ export default function GlobalInbox() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Helper function to get workspace
+  const getWorkspace = async () => {
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('id')
+      .limit(1)
+      .single();
+    return workspace;
+  };
 
   // Setup cloud-based background sync
   const setupCloudSync = async () => {
@@ -389,6 +400,60 @@ export default function GlobalInbox() {
       setShowTagModal(false);
       setSelectedMessageForTag(null);
       setSelectedTags([]);
+    }
+  };
+
+  // Archive all read messages
+  const archiveAllRead = async () => {
+    try {
+      const readMessages = messages.filter(m => m.read);
+      if (readMessages.length === 0) {
+        toast.info('No read messages to archive');
+        return;
+      }
+
+      // Update local state first
+      setMessages(prevMessages => prevMessages.filter(msg => !msg.read));
+      
+      // Get workspace ID
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('id')
+        .limit(1)
+        .single();
+        
+      if (!workspace) {
+        toast.error('No workspace found');
+        return;
+      }
+      
+      // Archive read conversations in database
+      const { error } = await supabase
+        .from('inbox_conversations')
+        .update({ 
+          status: 'archived',
+          metadata: supabase.sql`
+            CASE 
+              WHEN metadata IS NULL THEN '{"archived": true, "archived_at": "' || NOW() || '"}'::jsonb
+              ELSE metadata || ('{"archived": true, "archived_at": "' || NOW() || '"}')::jsonb
+            END
+          `
+        })
+        .eq('workspace_id', workspace.id)
+        .eq('status', 'active')
+        .in('metadata->read', [true]);
+      
+      if (error) {
+        console.error('Error archiving messages:', error);
+        toast.error('Failed to archive messages');
+        await loadMessages(); // Reload on error
+      } else {
+        toast.success(`Archived ${readMessages.length} read messages`);
+      }
+    } catch (error) {
+      console.error('Error in archiveAllRead:', error);
+      toast.error('Failed to archive messages');
+      await loadMessages();
     }
   };
 
@@ -870,13 +935,94 @@ export default function GlobalInbox() {
             <CheckCircle className="h-4 w-4 mr-2" />
             Mark All Read
           </Button>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline">
+          <DropdownMenu open={showFilterDropdown} onOpenChange={setShowFilterDropdown}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="p-2">
+                <div className="text-sm font-medium mb-2">Filter by Status</div>
+                <div className="space-y-1">
+                  <Button
+                    variant={filterType === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterType('all');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    All Messages
+                  </Button>
+                  <Button
+                    variant={filterType === 'unread' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterType('unread');
+                      setActiveTab('unread');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Unread Only
+                  </Button>
+                  <Button
+                    variant={filterType === 'read' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterType('read');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Read Only
+                  </Button>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="p-2">
+                <div className="text-sm font-medium mb-2">Filter by Tag</div>
+                <div className="space-y-1">
+                  <Button
+                    variant={filterTag === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterTag('all');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    All Tags
+                  </Button>
+                  {predefinedTags.map(tag => (
+                    <Button
+                      key={tag.value}
+                      variant={filterTag === tag.value ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        setFilterTag(tag.value);
+                        setShowFilterDropdown(false);
+                      }}
+                    >
+                      {tag.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button 
+            variant="outline"
+            onClick={archiveAllRead}
+            disabled={messages.filter(m => m.read).length === 0}
+            title={`Archive ${messages.filter(m => m.read).length} read messages`}
+          >
             <Archive className="h-4 w-4 mr-2" />
-            Archive All Read
+            Archive All Read ({messages.filter(m => m.read).length})
           </Button>
         </div>
       </div>
@@ -1650,7 +1796,7 @@ export default function GlobalInbox() {
                   if (msgError) throw msgError;
 
                   toast.success('Message sent successfully!');
-                  refreshData();
+                  loadMessages();
                 }
                 
                 setShowNewMessageModal(false);
@@ -1749,7 +1895,7 @@ export default function GlobalInbox() {
             console.log('Follow-up created:', followUpData);
             toast('Follow-up scheduled successfully');
             // Refresh messages to show follow-up indicator
-            loadInboxMessages();
+            loadMessages();
           }}
         />
       )}
