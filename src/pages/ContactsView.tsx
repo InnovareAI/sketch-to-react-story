@@ -743,13 +743,7 @@ export default function ContactsView() {
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div>
-                      <div className="font-medium text-gray-900">{contact.title}</div>
-                      <div className="text-sm text-gray-600 flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
-                        {contact.metadata?.company || contact.department}
-                      </div>
-                    </div>
+                    <div className="font-medium text-gray-900">{contact.title || 'No title'}</div>
                   </td>
                   <td className="px-4 py-4">
                     <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium ${getEngagementColor(contact.engagement_score)}`}>
