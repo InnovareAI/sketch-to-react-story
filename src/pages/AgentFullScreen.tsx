@@ -214,25 +214,7 @@ export default function AgentFullScreen() {
               </div>
             </div>
           }>
-            {/* Temporary bypass to test if error is in EnhancedConversationalInterface */}
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center text-white max-w-md">
-                <h2 className="text-2xl font-bold mb-4">SAM AI Agent</h2>
-                <p className="text-gray-400 mb-6">
-                  The conversational interface is being debugged. This is a temporary placeholder.
-                </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Mode: <span className="text-blue-400">{operationMode}</span>
-                </p>
-                <Button 
-                  onClick={() => navigate('/dashboard')}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Return to Dashboard
-                </Button>
-              </div>
-            </div>
-            {/* <EnhancedConversationalInterface operationMode={operationMode} /> */}
+            <EnhancedConversationalInterface operationMode={operationMode} />
           </React.Suspense>
         </main>
 

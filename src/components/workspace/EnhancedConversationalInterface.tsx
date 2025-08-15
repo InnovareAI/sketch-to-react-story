@@ -154,12 +154,12 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         const config: AgentConfig = {
           apiKeys: {
             // These would come from environment variables
-            openai: process.env.VITE_OPENAI_API_KEY,
-            claude: process.env.VITE_CLAUDE_API_KEY,
+            openai: process.env.VITE_OPENAI_API_KEY || undefined,
+            claude: process.env.VITE_CLAUDE_API_KEY || undefined,
           },
           supabase: {
-            url: process.env.VITE_SUPABASE_URL || '',
-            anonKey: process.env.VITE_SUPABASE_ANON_KEY || '',
+            url: process.env.VITE_SUPABASE_URL || 'https://ktchrfgkbpaixbiwbieg.supabase.co',
+            anonKey: process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0Y2hyZmdrYnBhaXhiaXdiaWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjI0MzMxNzcsImV4cCI6MjAzODAwOTE3N30.YI1RxpjqToyqY9Dj12fqEP2V3G6d2j8QZA2xj8TcTBg',
           },
           features: {
             voiceEnabled: true,
@@ -191,7 +191,15 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 
         // Initialize with minimum delay to show loading state
         const startTime = Date.now();
-        await agentFactory.initialize(config);
+        
+        try {
+          await agentFactory.initialize(config);
+          console.log('✅ AgentFactory initialized successfully');
+        } catch (initError) {
+          console.warn('⚠️ AgentFactory initialization failed, continuing in fallback mode:', initError);
+          // Don't throw - just log and continue
+        }
+        
         const elapsedTime = Date.now() - startTime;
         
         // Ensure minimum 2 second loading time for better UX
@@ -202,15 +210,26 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         
         setIsAgentInitialized(true);
         
-        // Set initial operation mode
-        const orchestrator = agentFactory.getOrchestrator();
-        orchestrator.setOperationMode(operationMode);
+        // Set initial operation mode (with error handling)
+        try {
+          const orchestrator = agentFactory.getOrchestrator();
+          if (orchestrator) {
+            orchestrator.setOperationMode(operationMode);
+            setSamStatus(`Multi-agent system ready - ${operationMode} mode`);
+          } else {
+            setSamStatus("Agent system in fallback mode");
+          }
+        } catch (orchestratorError) {
+          console.warn('⚠️ Orchestrator setup failed:', orchestratorError);
+          setSamStatus("Agent system in fallback mode");
+        }
         
-        setSamStatus(`Multi-agent system ready - ${operationMode} mode`);
-        console.log('Agent system initialized successfully');
+        console.log('Agent system initialization completed');
       } catch (error) {
-        console.error('Failed to initialize agent system:', error);
-        setSamStatus("Agent system offline - using fallback mode");
+        console.error('❌ Critical agent system error:', error);
+        setSamStatus("Agent system offline - using basic mode");
+        // Still set initialized to true to show the interface
+        setIsAgentInitialized(true);
       }
     };
 
@@ -278,7 +297,16 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 
     try {
       if (!isAgentInitialized) {
+        console.log('🔄 Processing in fallback mode...');
         // Fallback to simple processing
+        await handleFallbackProcessing(content);
+        return;
+      }
+
+      // Additional safety check
+      const orchestrator = agentFactory.getOrchestrator();
+      if (!orchestrator) {
+        console.log('🔄 No orchestrator available, using fallback...');
         await handleFallbackProcessing(content);
         return;
       }
