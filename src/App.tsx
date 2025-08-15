@@ -58,6 +58,7 @@ import UserSetup from "./pages/UserSetup";
 import FollowUps from "./pages/FollowUps";
 import FollowUpRedirect from "./components/FollowUpRedirect";
 import WorkspaceLayout from "./components/workspace/WorkspaceLayout";
+import Inbox from "./components/inbox/Inbox";
 
 const queryClient = new QueryClient();
 
@@ -158,6 +159,7 @@ const App: React.FC = () => {
                 <Route path="test-sync" element={<ContactSyncTest />} />
                 <Route path="templates" element={<Templates />} />
                 <Route path="seo-review" element={<SeoReview />} />
+                <Route path="inbox" element={<Inbox />} />
                 <Route path="analytics" element={<Dashboard />} /> {/* Analytics redirects to Dashboard */}
                 
                 {/* Team Routes */}
