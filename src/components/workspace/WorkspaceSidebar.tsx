@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   BarChart3,
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { SAMBranding } from '@/components/branding/SAMBranding';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import WorkspaceSelector from './WorkspaceSelector';
+import ReplyModal from '@/components/ReplyModal';
 
 // Main Navigation Items
 const mainNavItems = [
@@ -33,7 +35,7 @@ const mainNavItems = [
   { title: "Search", url: "/search", icon: Search },
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Inbox", url: "/inbox", icon: Mail },
-  { title: "Follow-ups", url: "/follow-ups.html", icon: Calendar },
+  { title: "Reply", url: "/reply", icon: MessageSquare },
   { title: "Templates", url: "/templates", icon: FileText },
 ];
 
@@ -80,33 +82,30 @@ export function WorkspaceSidebar({
   const location = useLocation();
   const currentPath = location.pathname;
   const isTeamMember = true;
+  const [showReplyModal, setShowReplyModal] = useState(false);
   
   // Determine if we're in agent mode based on current path
   const isAgentMode = currentPath.startsWith('/agent');
 
   // Simple navigation item component with no complex interactions
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => {
-    // Special handling for follow-ups to force navigation
-    if (item.title === "Follow-ups") {
+    // Special handling for reply to open modal
+    if (item.title === "Reply") {
       return (
-        <a
-          href={item.url}
+        <button
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
-            isActive
-              ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1"
-              : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
+            "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
           )}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            // Force navigation to follow-ups page
-            window.location.href = '/follow-ups.html';
+            setShowReplyModal(true);
           }}
         >
-          <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-blue-500" : "")} />
+          <item.icon className="h-4 w-4 flex-shrink-0" />
           <span className="truncate">{item.title}</span>
-        </a>
+        </button>
       );
     }
     
@@ -262,6 +261,12 @@ export function WorkspaceSidebar({
           </nav>
         </div>
       </div>
+      
+      {/* Reply Modal */}
+      <ReplyModal 
+        isOpen={showReplyModal} 
+        onClose={() => setShowReplyModal(false)} 
+      />
     </aside>
   );
 }
