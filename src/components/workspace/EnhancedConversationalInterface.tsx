@@ -375,38 +375,21 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     }
     setInput("");
     
-    // Activate Sam and show processing
+    // Show SAM activity in status bar
     setSamIsActive(true);
-    setIsLoading(true);
-    setProcessingProgress(0);
-    setSamStatus("Initializing multi-agent processing...");
-    setAgentTrace([]);
-    setThinkingSteps([]);
+    setSamStatus("SAM is thinking...");
 
     try {
-      if (!isAgentInitialized) {
-        console.log('🔄 Processing in fallback mode...');
-        await handleFallbackProcessing(content);
-        return;
-      }
-
-      // Try multi-agent processing with fallback
-      try {
-        const orchestrator = agentFactory.getOrchestrator();
-        if (orchestrator) {
-          await handleMultiAgentProcessing(content, sessionId);
-        } else {
-          console.log('🔄 No orchestrator available, using fallback...');
-          await handleFallbackProcessing(content);
-        }
-      } catch (agentError) {
-        console.warn('🔄 Multi-agent processing failed, falling back:', agentError);
-        await handleFallbackProcessing(content);
-      }
+      // SAM response with status updates
+      console.log('✅ SAM responding...');
+      await handleFallbackProcessing(content);
 
     } catch (error) {
       console.error('Message processing error:', error);
       await handleErrorResponse(error as Error);
+    } finally {
+      setSamIsActive(false);
+      setSamStatus("Ready to help");
     }
   };
 
@@ -652,48 +635,73 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   };
 
   const handleFallbackProcessing = async (content: string) => {
-    // Fallback processing when agent system is unavailable
-    const fallbackSteps = [
-      "Processing your request...",
-      "Analyzing context...", 
-      "Preparing response..."
-    ];
+    // Brief status update then instant response
+    setSamStatus("Processing...");
+    await new Promise(resolve => setTimeout(resolve, 500)); // Brief activity indication
+    
+    try {
+      const fallbackResponse = await generateFallbackResponse(content);
+      
+      const samResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: fallbackResponse,
+        sender: "sam",
+        timestamp: new Date(),
+      };
 
-    for (const step of fallbackSteps) {
-      setSamStatus(step);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      setMessages(prev => [...prev, samResponse]);
+      
+      // Save to session
+      if (currentSessionId) {
+        addMessageToSession(currentSessionId, samResponse as any);
+      }
+      
+    } catch (responseError) {
+      // Absolute fallback if response generation fails
+      const safeResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "**6 agents ready!** Try: 'find leads', 'write email', 'create campaign', or 'upload info'. What's your goal?\n\n💡 *Ask questions anytime if you get stuck!*",
+        sender: "sam",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, safeResponse]);
     }
-
-    const fallbackResponse = await generateFallbackResponse(content);
-    
-    const samResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      content: fallbackResponse,
-      sender: "sam",
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, samResponse]);
-    
-    setSamIsActive(false);
-    setIsLoading(false);
-    setSamStatus("Agent system initializing - using simplified mode");
   };
 
   const handleErrorResponse = async (error: Error) => {
-    const errorResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      content: "I apologize, but I encountered an issue processing your request. This might be due to high demand or a temporary service issue. Please try rephrasing your question, and I'll do my best to help you.",
-      sender: "sam",
-      timestamp: new Date(),
-    };
+    console.error('Agent system error:', error);
+    
+    // Try to generate a helpful fallback response instead of showing error
+    try {
+      const lastUserMessage = messages[messages.length - 1];
+      const userContent = lastUserMessage?.content || "help";
+      const fallbackResponse = await generateFallbackResponse(userContent);
+      
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: fallbackResponse,
+        sender: "sam",
+        timestamp: new Date(),
+      };
 
-    setMessages(prev => [...prev, errorResponse]);
+      setMessages(prev => [...prev, errorResponse]);
+    } catch (fallbackError) {
+      // Only if fallback also fails, show a simple error
+      const simpleErrorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Something went wrong. Try: 'find leads', 'write email', or 'upload info'. What's your goal?",
+        sender: "sam",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, simpleErrorResponse]);
+    }
     
     setSamIsActive(false);
     setIsLoading(false);
     setProcessingProgress(0);
-    setSamStatus("Error occurred - ready to try again");
+    setSamStatus("Ready to help");
   };
 
   const generateFallbackResponse = async (content: string): Promise<string> => {
@@ -1036,17 +1044,7 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
           </div>
         )}
 
-        {/* SAM Thinking Display - Devin.ai Style */}
-        {(isLoading || thinkingSteps.length > 0) && (
-          <div className="mb-6">
-            <SamThinkingDisplay
-              isVisible={showThinking}
-              currentSteps={thinkingSteps}
-              isProcessing={isLoading}
-              className="max-w-4xl mx-auto"
-            />
-          </div>
-        )}
+        {/* Removed thinking display - clean instant responses */}
 
         {/* Conversation Starters */}
         {messages.filter(m => m.sender === 'user').length === 0 && (
@@ -1150,14 +1148,9 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Processing Progress */}
-              {isLoading && processingProgress > 0 && (
-                <div className="px-6 pb-2">
-                  <Progress value={processingProgress} className="h-1" />
-                </div>
-              )}
+              {/* Removed processing progress - instant responses */}
 
-              {/* Sam Status Indicator */}
+              {/* Sam Status Indicator - Keep this, it's helpful */}
               <SamStatusIndicator isActive={samIsActive} currentStatus={samStatus} />
               
               {/* Input Area */}
