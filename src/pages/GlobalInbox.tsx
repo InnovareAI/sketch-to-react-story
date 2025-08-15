@@ -788,9 +788,6 @@ export default function GlobalInbox() {
               </span>
             )}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Syncing up to 500 most recent conversations with 20 messages each
-          </p>
         </div>
         <div className="flex gap-2">
           {/* Manual Sync Button */}
