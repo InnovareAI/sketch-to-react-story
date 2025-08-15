@@ -100,7 +100,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "👋 **Hey there!** I'm SAM, your AI sales assistant.\n\n**Quick question:** Are you looking to **generate new leads** or **manage incoming messages** today?\n\nI've got specialist agents ready for both! 🚀",
+      content: "👋 **Welcome to SAM AI!** I'm your intelligent sales assistant with 6 specialist agents ready to help.\n\n**🔄 Mode Switcher (Top Right):**\n• **📤 Outbound:** Lead generation, campaigns, prospecting\n• **📥 Inbound:** Response handling, customer service, inbox triage\n• **⚡ Unified:** Full automation across all channels\n\n**💬 Chat Features:**\n• **Chat History:** Access all saved conversations (top right)\n• **🎤 Voice Input:** Click microphone to speak instead of typing\n• **Conversation Starters:** Quick actions to get started below\n\n**What would you like to work on first?** Try the conversation starters below or ask me anything!",
       sender: "sam",
       timestamp: new Date(),
     },
@@ -249,8 +249,8 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       const greetingMessage: Message = {
         id: "mode-change-" + Date.now(),
         content: currentOperationMode === 'inbound' 
-          ? "🔄 **Switched to Inbound Mode** 📥\n\nPerfect! I'm now your **inbox manager**. I can help you:\n• Filter spam and organize messages\n• Draft smart auto-replies\n• Prioritize important conversations\n\nWhat's your biggest inbox challenge?"
-          : "🔄 **Switched to Outbound Mode** 🚀\n\nAwesome! I'm now your **lead generation engine**. I can help you:\n• Find qualified prospects\n• Create killer campaigns\n• Write personalized outreach\n\nReady to get some leads?",
+          ? "🔄 **Switched to Inbound Mode** 📥\n\n**Now focused on Response Management & Customer Service:**\n• 🛡️ **Spam Filter Agent** - Automatically filter unwanted messages\n• 📥 **Inbox Triage Agent** - Prioritize and organize incoming messages\n• 💬 **Auto-Response Agent** - Draft intelligent replies to inquiries\n• 🎯 **Customer Service** - Handle support requests professionally\n\n**Perfect for:** Managing existing customer relationships, handling inquiries, providing support.\n\nWhat inbox challenge can I help you with?"
+          : "🔄 **Switched to Outbound Mode** 🚀\n\n**Now focused on Lead Generation & Sales Campaigns:**\n• 🎯 **Lead Research Agent** - Find and qualify perfect prospects\n• 📊 **Campaign Manager** - Create multi-touch outreach sequences\n• ✍️ **Content Creator** - Write personalized messages that convert\n• 📈 **GTM Strategy** - Develop go-to-market plans\n• 🔄 **Workflow Automation** - Set up intelligent follow-ups\n\n**Perfect for:** Growing your business, finding new customers, scaling outreach.\n\nReady to generate some leads?",
         sender: "sam",
         timestamp: new Date(),
       };
@@ -679,7 +679,7 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
     setMessages([
       {
         id: "1",
-        content: "👋 **Hey there!** I'm SAM, your AI sales assistant.\n\n**Quick question:** Are you looking to **generate new leads** or **manage incoming messages** today?\n\nI've got specialist agents ready for both! 🚀",
+        content: "👋 **Welcome to SAM AI!** I'm your intelligent sales assistant with 6 specialist agents ready to help.\n\n**🔄 Mode Switcher (Top Right):**\n• **📤 Outbound:** Lead generation, campaigns, prospecting\n• **📥 Inbound:** Response handling, customer service, inbox triage\n• **⚡ Unified:** Full automation across all channels\n\n**💬 Chat Features:**\n• **Chat History:** Access all saved conversations (top right)\n• **🎤 Voice Input:** Click microphone to speak instead of typing\n• **Conversation Starters:** Quick actions to get started below\n\n**What would you like to work on first?** Try the conversation starters below or ask me anything!",
         sender: "sam",
         timestamp: new Date(),
       }

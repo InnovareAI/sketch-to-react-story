@@ -103,12 +103,12 @@ export function ContextMemory({ className = "" }: ContextMemoryProps) {
   };
 
   const getProgressStage = (progress: number): string => {
-    if (progress === 0) return "Getting to know you...";
-    if (progress < 25) return "Building your profile...";
-    if (progress < 50) return "Understanding your business...";
-    if (progress < 75) return "Learning your voice...";
-    if (progress < 90) return "Optimizing strategies...";
-    return "Mastering your approach...";
+    if (progress === 0) return "Awaiting training data...";
+    if (progress < 25) return "Basic training started...";
+    if (progress < 50) return "Learning your business...";
+    if (progress < 75) return "Mastering your voice...";
+    if (progress < 90) return "Advanced specialization...";
+    return "Expert-level trained!";
   };
 
   const getTypeIcon = (type: ContextItem['type']) => {
@@ -154,17 +154,17 @@ export function ContextMemory({ className = "" }: ContextMemoryProps) {
     <Card className={`bg-gray-800 border-gray-700 ${className}`}>
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center gap-2 mb-3">
-          <Brain className="h-5 w-5 text-blue-400" />
-          <h3 className="font-semibold text-white">SAM's Memory</h3>
-          <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
-            {contextItems.length} items
+          <Brain className="h-5 w-5 text-purple-400" />
+          <h3 className="font-semibold text-white">Training Center</h3>
+          <Badge variant="outline" className="text-xs border-purple-600 text-purple-400">
+            {contextItems.length} docs
           </Badge>
         </div>
         
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-400">
-              {contextItems.length === 0 ? "I'm learning about you and your business..." : progressStage}
+              {contextItems.length === 0 ? "Upload documents to train your agents..." : `Training Status: ${progressStage}`}
             </p>
             <span className="text-xs text-gray-500">{knowledgeProgress}%</span>
           </div>
@@ -187,14 +187,14 @@ export function ContextMemory({ className = "" }: ContextMemoryProps) {
         <div className="p-4 space-y-3">
           {contextItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-              <Upload className="h-12 w-12 mb-3 text-gray-500" />
-              <p className="text-sm text-center mb-2">No knowledge yet</p>
+              <Brain className="h-12 w-12 mb-3 text-purple-500" />
+              <p className="text-sm text-center mb-2">Agents Ready for Training</p>
               <p className="text-xs text-center text-gray-500 leading-relaxed">
-                Upload documents, share your website, or start chatting to help SAM learn about your business
+                Ask me "show me agent training" to upload documents and train your AI specialists
               </p>
-              <div className="mt-4 flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 rounded-lg">
-                <Zap className="h-3 w-3 text-blue-400" />
-                <span className="text-xs text-blue-400">Ready to learn</span>
+              <div className="mt-4 flex items-center gap-2 px-3 py-1.5 bg-purple-700/20 rounded-lg border border-purple-600/30">
+                <Zap className="h-3 w-3 text-purple-400" />
+                <span className="text-xs text-purple-400">Ready to train</span>
               </div>
             </div>
           ) : (
