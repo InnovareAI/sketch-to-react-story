@@ -95,7 +95,9 @@ export function WorkspaceSidebar({
         <button
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
-            "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
+            isAgentMode
+              ? "text-gray-300 font-normal hover:bg-gray-800 hover:text-white ml-1"
+              : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
           )}
           onClick={(e) => {
             e.preventDefault();
@@ -103,7 +105,7 @@ export function WorkspaceSidebar({
             setShowReplyModal(true);
           }}
         >
-          <item.icon className="h-4 w-4 flex-shrink-0" />
+          <item.icon className={cn("h-4 w-4 flex-shrink-0", isAgentMode ? "text-gray-300" : "")} />
           <span className="truncate">{item.title}</span>
         </button>
       );
@@ -115,14 +117,18 @@ export function WorkspaceSidebar({
         className={() => cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 w-full",
           isActive
-            ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1"
-            : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1"
+            ? (isAgentMode 
+               ? "bg-gradient-to-r from-purple-900/50 to-blue-900/50 text-white font-medium border-l-3 border-purple-400 ml-1"
+               : "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-medium border-l-3 border-blue-400 ml-1")
+            : (isAgentMode
+               ? "text-gray-300 font-normal hover:bg-gray-800 hover:text-white ml-1"
+               : "text-gray-600 font-normal hover:bg-gray-50 hover:text-blue-600 ml-1")
         )}
         onClick={(e) => {
           e.stopPropagation();
         }}
       >
-        <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-blue-500" : "")} />
+        <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? (isAgentMode ? "text-white" : "text-blue-500") : (isAgentMode ? "text-gray-300" : ""))} />
         <span className="truncate">{item.title}</span>
       </NavLink>
     );
@@ -203,7 +209,7 @@ export function WorkspaceSidebar({
               <div className="mb-6">
                 <h3 className={cn(
                   "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
-                  "text-gray-400 font-normal"
+                  isAgentMode ? "text-gray-300 font-normal" : "text-gray-400 font-normal"
                 )}>
                   Team
                 </h3>
@@ -224,7 +230,7 @@ export function WorkspaceSidebar({
               <div className="mb-6">
                 <h3 className={cn(
                   "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
-                  "text-gray-400 font-normal"
+                  isAgentMode ? "text-gray-300 font-normal" : "text-gray-400 font-normal"
                 )}>
                   Documents
                 </h3>
@@ -243,10 +249,15 @@ export function WorkspaceSidebar({
         </div>
 
         {/* Settings Section */}
-        <div className="border-t border-gray-100 p-4 bg-gray-50">
+        <div className={cn(
+          "border-t p-4",
+          isAgentMode 
+            ? "border-gray-700 bg-gray-800" 
+            : "border-gray-100 bg-gray-50"
+        )}>
           <h3 className={cn(
             "text-xs px-3 py-2 mb-2 uppercase tracking-wider",
-            "text-gray-400 font-normal"
+            isAgentMode ? "text-gray-300 font-normal" : "text-gray-400 font-normal"
           )}>
             Settings
           </h3>

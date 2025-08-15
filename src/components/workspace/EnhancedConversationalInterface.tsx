@@ -507,7 +507,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
               onClick={startNewChat}
               variant="outline"
               size="sm"
-              className="text-white hover:text-white hover:bg-gray-900 bg-black border-gray-600"
+              className="!bg-black !text-white hover:!bg-gray-900 !border-gray-600 hover:!text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Chat
@@ -577,7 +577,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
                       <button
                         key={index}
                         onClick={() => handleSendMessage(action.prompt)}
-                        className="group relative p-4 text-left rounded-lg border border-gray-600 bg-black hover:bg-gray-900 hover:border-gray-500 transition-all duration-200 hover:scale-[1.02]"
+                        className="group relative p-4 text-left rounded-lg border border-gray-600 !bg-black hover:!bg-gray-900 hover:border-gray-500 transition-all duration-200 hover:scale-[1.02]"
                       >
                         <div className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg bg-gradient-to-r ${action.color} opacity-80 group-hover:opacity-100 transition-opacity`}>
@@ -689,7 +689,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
                   <Button
                     onClick={() => handleSendMessage()}
                     disabled={!input.trim() || isLoading}
-                    className="h-12 px-8 bg-black hover:bg-gray-900 border border-gray-600 text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    className="h-12 px-8 !bg-black hover:!bg-gray-900 !border !border-gray-600 !text-white font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     <Send className="h-5 w-5 mr-2" />
                     Send
