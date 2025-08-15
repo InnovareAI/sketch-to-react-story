@@ -16,12 +16,14 @@ import { VoiceInterface } from "./VoiceInterface";
 import { ChatHistory } from "./ChatHistory";
 import { ContextMemory } from "./ContextMemory";
 import { SamThinkingDisplay, ThinkingStep } from "./SamThinkingDisplay";
+import { ModeSwitcher } from "./ModeSwitcher";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { useVoice } from "@/hooks/useVoice";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { ChatSkeleton } from "@/components/ui/skeleton";
 import { AgentFactory } from "@/services/agents/AgentFactory";
 import { AgentConfig, Message, AgentTrace } from "@/services/agents/types/AgentTypes";
+import { MemoryService } from "@/services/memory/MemoryService";
 
 interface QuickAction {
   title: string;
@@ -113,6 +115,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [showThinking, setShowThinking] = useState(true);
   const [isNewUser, setIsNewUser] = useState<boolean>(false);
   const [hasStartedOnboarding, setHasStartedOnboarding] = useState<boolean>(false);
+  const [currentOperationMode, setCurrentOperationMode] = useState<'inbound' | 'outbound'>(operationMode);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Check if user is new and needs onboarding
@@ -219,27 +222,33 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       isMounted = false;
     };
   }, [agentFactory, operationMode]);
+
+  // Handle mode change
+  const handleModeChange = (mode: 'inbound' | 'outbound' | 'unified') => {
+    const mapped = mode === 'unified' ? 'outbound' : mode as 'inbound' | 'outbound';
+    setCurrentOperationMode(mapped);
+  };
   
-  // Update operation mode when prop changes
+  // Update operation mode when it changes
   useEffect(() => {
     if (isAgentInitialized) {
       try {
         const orchestrator = agentFactory.getOrchestrator();
         if (orchestrator) {
-          orchestrator.setOperationMode(operationMode);
-          setSamStatus(`Switched to ${operationMode} mode`);
+          orchestrator.setOperationMode(currentOperationMode);
+          setSamStatus(`Switched to ${currentOperationMode} mode`);
         } else {
-          setSamStatus(`${operationMode} mode (simplified)`);
+          setSamStatus(`${currentOperationMode} mode (simplified)`);
         }
       } catch (error) {
         console.warn('Mode change failed:', error);
-        setSamStatus(`${operationMode} mode (basic)`);
+        setSamStatus(`${currentOperationMode} mode (basic)`);
       }
       
       // Update the greeting message based on mode
       const greetingMessage: Message = {
         id: "mode-change-" + Date.now(),
-        content: operationMode === 'inbound' 
+        content: currentOperationMode === 'inbound' 
           ? "🔄 **Switched to Inbound Mode** 📥\n\nPerfect! I'm now your **inbox manager**. I can help you:\n• Filter spam and organize messages\n• Draft smart auto-replies\n• Prioritize important conversations\n\nWhat's your biggest inbox challenge?"
           : "🔄 **Switched to Outbound Mode** 🚀\n\nAwesome! I'm now your **lead generation engine**. I can help you:\n• Find qualified prospects\n• Create killer campaigns\n• Write personalized outreach\n\nReady to get some leads?",
         sender: "sam",
@@ -247,7 +256,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       };
       setMessages(prev => [...prev, greetingMessage]);
     }
-  }, [operationMode, isAgentInitialized, agentFactory]);
+  }, [currentOperationMode, isAgentInitialized, agentFactory]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -444,7 +453,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
-    const fallbackResponse = generateFallbackResponse(content);
+    const fallbackResponse = await generateFallbackResponse(content);
     
     const samResponse: Message = {
       id: (Date.now() + 1).toString(),
@@ -476,47 +485,101 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     setSamStatus("Error occurred - ready to try again");
   };
 
-  const generateFallbackResponse = (content: string): string => {
+  const generateFallbackResponse = async (content: string): Promise<string> => {
     const contentLower = content.toLowerCase();
     
-    // Agent Training Overview
+    // Agent Training Overview with real document data
     if (contentLower.includes('agent') && (contentLower.includes('training') || contentLower.includes('learned') || contentLower.includes('overview'))) {
-      return `🎓 **Agent Training Status:**
+      try {
+        // Get actual document data from memory service
+        const memoryService = MemoryService.getInstance();
+        const documents = await memoryService.getAllDocuments();
+        
+        const documentCount = documents.length;
+        const documentTypes = documents.reduce((acc: any, doc: any) => {
+          const type = doc.metadata?.type || 'document';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {});
 
-**🧠 Knowledge Base Agent:** Currently has access to your uploaded documents and can perform semantic search. Ready for more training data!
+        return `🎓 **Your AI Agent Training Center & Knowledge Base**
 
-**🎯 Lead Research Agent:** Knows basic prospecting techniques. Needs your ICP and target market info to be more effective.
+**📊 Current Knowledge Status:**
+• 📁 **Documents Uploaded:** ${documentCount} files
+• 🏢 **Company Info:** ${documentTypes.company || 0} docs
+• 🎯 **Product/Service:** ${documentTypes.product || 0} docs  
+• 👥 **Audience/ICP:** ${documentTypes.audience || 0} docs
+• 📢 **Campaign Examples:** ${documentTypes.campaign || 0} docs
+• 💬 **Conversation Data:** ${documentTypes.conversation || 0} records
 
-**📊 Campaign Manager:** Has template frameworks loaded. Could use your successful campaign examples for better personalization.
+**📈 Training Progress:**
+${documentCount === 0 ? '🔴 **Getting Started** - No knowledge uploaded yet' : 
+  documentCount < 3 ? '🟡 **Basic Training** - Need more comprehensive data' : 
+  documentCount < 6 ? '🟠 **Good Foundation** - Adding specialized knowledge' : 
+  '🟢 **Well Trained** - Rich knowledge base for personalization'}
 
-**✍️ Content Creator:** Ready with proven templates. Will improve with your voice and successful message examples.
+**🎯 Recent Documents:**
+${documents.length === 0 ? '• No documents uploaded yet' : 
+  documents.slice(0, 3).map((doc: any) => 
+    `• ${doc.title || 'Untitled Document'} (${doc.metadata?.type || 'document'})`
+  ).join('\\n')}
 
-**📈 Performance Analyst:** Set up to track metrics. Needs historical data and KPI definitions to provide insights.
+**🚀 Quick Training Actions:**
+1. **"Upload company deck"** - Add your pitch deck or company overview
+2. **"Define ideal customer profile"** - Tell me about your target audience  
+3. **"Share successful campaigns"** - Upload examples of what works
+4. **"Add competitor analysis"** - Help me understand your market position
 
-**🔄 Workflow Agent:** Basic automation ready. Needs your specific workflows and approval processes.
+**Ready to expand my knowledge?** The more context I have, the better I can help with lead generation and personalized outreach.`;
+      } catch (error) {
+        // Fallback if memory service fails
+        return `🎓 **Your AI Agent Training Center**
 
-**What would you like to train first?** I recommend starting with uploading some company information or successful campaign examples.`;
+**Current Knowledge Status:**
+• 📁 **Documents Uploaded:** 0 files (Upload company info, pitch decks, case studies)
+• 🎯 **ICP Defined:** Not set (Tell me about your ideal customers)  
+• ✍️ **Voice Samples:** None (Share successful messages/emails)
+• 🏢 **Company Profile:** Basic (Need your value proposition, services, USP)
+
+**Quick Training Options:**
+1. **"Upload my company information"** - I'll help you add documents
+2. **"Define my ideal customer"** - Let's create your ICP profile  
+3. **"Here are some successful messages"** - Share examples for me to learn your voice
+4. **"My company does [X] for [Y]"** - Quick company profile setup
+
+**What would you like to train me on first?** The more I know about your business and successful approaches, the better I can help you generate leads and create personalized outreach.`;
+      }
     }
 
     // Agent Performance  
     if (contentLower.includes('agent') && (contentLower.includes('performance') || contentLower.includes('performing'))) {
-      return `📊 **Agent Performance Dashboard:**
+      return `📊 **Live Agent Performance Dashboard**
 
-**Current Status:** All 6 specialist agents are online and ready!
+**🟢 Online Agents (6/6 Active)**
 
-**🎯 Lead Research:** Ready to find prospects (needs ICP training)
-**📊 Campaign Manager:** Template-based campaigns ready  
-**✍️ Content Creator:** 50+ proven templates loaded
-**📈 Performance Analyst:** Tracking systems active
-**🔄 Workflow Automation:** Basic sequences configured  
-**🧠 Knowledge Manager:** Document processing active
+**🎯 Lead Research Agent** | Status: Ready | Tasks Completed: 0
+- **Next Action:** "Find me leads in [industry]" or "Research prospects at [company type]"
 
-**Recommendations:**
-• Upload company info to improve personalization
-• Share successful message examples for better content
-• Define your ICP for better lead targeting
+**📊 Campaign Manager** | Status: Ready | Active Campaigns: 0  
+- **Next Action:** "Create a LinkedIn campaign" or "Set up email sequence"
 
-**Ready to put an agent to work?** Try asking me to find leads or write a campaign!`;
+**✍️ Content Creator** | Status: Ready | Messages Written: 0
+- **Next Action:** "Write a cold email" or "Create LinkedIn connection request"
+
+**📈 Performance Analyst** | Status: Ready | Reports Generated: 0
+- **Next Action:** "Show me campaign metrics" or "Analyze my outreach performance"
+
+**🔄 Workflow Automation** | Status: Ready | Automations: 0
+- **Next Action:** "Set up follow-up sequence" or "Create drip campaign"
+
+**🧠 Knowledge Manager** | Status: Ready | Documents: 0
+- **Next Action:** "Upload company info" or "Add successful message examples"
+
+**🚀 Try these commands:**
+• "Find leads in SaaS companies"
+• "Write a cold email for CEOs" 
+• "Create a LinkedIn campaign"
+• "Upload my company deck"`;
     }
     
     if (contentLower.includes('lead') || contentLower.includes('prospect')) {
@@ -661,19 +724,15 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
           </div>
           
           <div className="flex items-center gap-3">
+            <ModeSwitcher 
+              currentMode={currentOperationMode}
+              onModeChange={handleModeChange}
+              className="scale-90"
+            />
             <ChatHistory 
               onLoadSession={handleLoadSession}
               currentSessionId={currentSessionId}
             />
-            <Button
-              onClick={startNewChat}
-              variant="outline"
-              size="sm"
-              className="!bg-black !text-white hover:!bg-gray-900 !border-gray-600 hover:!text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Chat
-            </Button>
           </div>
         </div>
 
