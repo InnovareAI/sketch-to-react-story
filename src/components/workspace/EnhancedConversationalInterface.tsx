@@ -382,12 +382,12 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     setSamStatus("SAM is thinking...");
 
     try {
-      // SAM response with status updates
-      console.log('✅ SAM responding...');
-      await handleFallbackProcessing(content);
+      // Use real agent system with APIs
+      console.log('✅ SAM processing with agent system...');
+      await handleMultiAgentProcessing(content, sessionId);
 
     } catch (error) {
-      console.error('Message processing error:', error);
+      console.error('Agent processing error:', error);
       await handleErrorResponse(error as Error);
     } finally {
       setSamIsActive(false);
