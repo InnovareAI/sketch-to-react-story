@@ -1073,34 +1073,8 @@ Without LinkedIn connected, I can't show you actual prospects. Want to connect y
   const startOnboardingFlow = () => {
     setHasStartedOnboarding(true);
     
-    // Clear existing messages and start fresh onboarding
-    const onboardingMessage: Message = {
-      id: `onboarding_${Date.now()}`,
-      content: `🎉 **Welcome to SAM AI!** Let me give you a quick overview of your new workspace.
-
-**📍 Your Interface Layout:**
-
-**Left Side** - Work Mode Switcher:
-• **🤖 Agent Mode** (where you are now) - Chat with AI specialists for complex tasks
-• **📧 Workspace Mode** - Traditional inbox-style communications hub
-
-You can use both modes concurrently, but you'll spend most of your productive time here in **Agent Mode** where I can actively help you.
-
-**🤖 Meet Your AI Specialist Team:**
-
-🎯 **Lead Research** - Find and qualify perfect prospects  
-📊 **Campaign Manager** - Create and optimize outreach sequences
-✍️ **Content Creator** - Write personalized messages that convert  
-📈 **Performance Analyst** - Track results and suggest improvements
-🔄 **Workflow Automation** - Set up intelligent follow-ups
-🧠 **Knowledge Manager** - Learn your business for better recommendations
-
-**Ready to train your agents?** Let's start by letting them learn about your business and ideal customers!`,
-      sender: "sam",
-      timestamp: new Date(),
-    };
-
-    setMessages([onboardingMessage]);
+    // Skip the long welcome message - user goes directly to conversation
+    setMessages([]);
     localStorage.setItem('sam_onboarding_started', 'true');
   };
 
