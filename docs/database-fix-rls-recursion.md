@@ -1,0 +1,5 @@
+-- Fixed RLS infinite recursion on profiles table
+-- Dropped problematic profiles_workspace_access policy  
+-- Created new non-recursive profiles_select_own_workspace policy
+-- Date: Fri Aug 15 18:14:45 CEST 2025
+-- Status: FIXED
