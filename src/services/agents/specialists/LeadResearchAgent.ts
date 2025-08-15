@@ -11,6 +11,7 @@ import {
   AgentConfig,
   AgentCapability 
 } from '../types/AgentTypes';
+import { LLMService } from '../../llm/LLMService';
 
 interface LeadProfile {
   id: string;
@@ -356,6 +357,10 @@ export class LeadResearchAgent extends BaseAgent {
     });
   }
 
+  private getLLMService(): LLMService {
+    return LLMService.getInstance();
+  }
+
   async processTask(task: TaskRequest, context: ConversationContext): Promise<TaskResponse> {
     const startTime = Date.now();
 
@@ -599,35 +604,58 @@ Ready to create personalized outreach messages using this enriched data?`;
   }
 
   private async performGeneralLeadResearch(task: TaskRequest, context: ConversationContext): Promise<string> {
-    return `**🔍 Lead Research & Intelligence**
+    // Use LLM to actually process the specific request
+    const llmService = this.getLLMService();
+    
+    const systemPrompt = `You are a Lead Research Agent specializing in finding prospects and conducting market research. 
 
-I can help you research and qualify prospects using advanced techniques:
+Process the user's specific request and provide actionable results. If they're asking for specific leads (like "50 CMOs in New York"), analyze their request and:
 
-**Research Capabilities:**
-• **LinkedIn Sales Navigator**: Profile analysis, network mapping, activity tracking
-• **Company Intelligence**: Financial data, news, technology stack, buying signals
-• **Contact Enrichment**: Email/phone finding, social profiles, behavioral data
-• **Competitive Analysis**: Positioning, messaging, win/loss factors
+1. Parse the criteria (role, location, industry, company type)
+2. Explain what data you would gather
+3. Provide the specific research plan
+4. If they need LinkedIn connection, explain that clearly
 
-**Lead Qualification:**
-• **MEDDIC Scoring**: Comprehensive qualification assessment
-• **ICP Matching**: Ideal customer profile alignment scoring  
-• **Buying Intent**: Signal detection and urgency analysis
-• **Personalization Research**: Custom messaging angles and approaches
+Be specific and actionable, not generic.
 
-**Data Sources:**
-• Sales Navigator, ZoomInfo, Apollo, Clearbit
-• Company websites, news feeds, social media
-• Technology databases, funding databases
-• Review sites, job boards, press releases
+Current request: "${task.description}"
+Parameters: ${JSON.stringify(task.parameters || {})}`;
 
-**What type of research would you like me to perform?**
-1. **Individual Prospect Research** - Deep dive on specific contacts
-2. **Company Intelligence Gathering** - Complete account analysis
-3. **List Building & Qualification** - Find and score prospects matching your ICP
-4. **Competitive Research** - Analyze competitors and positioning opportunities
+    const userPrompt = `User request: "${task.description}"
 
-Share the details and I'll provide comprehensive intelligence for your outreach strategy!`;
+Please analyze this specific lead research request and provide a detailed response about how to fulfill it. If this is a request for specific prospects (like CMOs, CTOs, etc.), break down the search criteria and explain the research approach.`;
+
+    try {
+      const response = await llmService.chat([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ], {
+        model: 'gpt-5',
+        temperature: 0.7,
+        maxTokens: 800
+      });
+
+      return response.content;
+    } catch (error) {
+      console.error('LLM processing failed:', error);
+      // Fallback - show the specific request being processed
+      return `🎯 **Processing your lead research request:** "${task.description}"
+
+I understand you're looking for specific prospects. To provide live data, I need your LinkedIn account connected.
+
+**What I would search for based on your request:**
+• Target profiles matching your criteria
+• Companies in the specified location/industry  
+• Contact information and enrichment data
+• Qualification and scoring
+
+**Next steps:**
+1. Connect LinkedIn in Settings
+2. I'll search live databases 
+3. Return qualified prospect list with contact details
+
+Would you like me to guide you through the LinkedIn connection process?`;
+    }
   }
 
   private generateMockLinkedInResearch(profileUrl: string, depth: string): LinkedInResearchResult {

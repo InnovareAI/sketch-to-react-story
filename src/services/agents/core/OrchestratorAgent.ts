@@ -209,7 +209,7 @@ export class OrchestratorAgent extends BaseAgent {
     // Enhanced intent classification using patterns and keywords
     const intentPatterns: Record<MessageIntent, { keywords: string[], complexity: TaskComplexity }> = {
       'lead-generation': {
-        keywords: ['find leads', 'scrape', 'prospects', 'sales navigator', 'linkedin', 'contacts'],
+        keywords: ['find', 'leads', 'scrape', 'prospects', 'cmo', 'cto', 'ceo', 'vp', 'director', 'founder', 'startups', 'companies', 'new york', 'boston', 'san francisco', 'marketing', 'tech', 'sales navigator', 'linkedin', 'contacts', 'search'],
         complexity: 'moderate'
       },
       'campaign-optimization': {
