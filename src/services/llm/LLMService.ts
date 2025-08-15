@@ -84,6 +84,11 @@ export class LLMService {
       const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
       const openrouterKey = import.meta.env.VITE_OPENROUTER_API_KEY || '';
       
+      // Require at least one API key - NO MOCK RESPONSES
+      if (!anthropicKey && !openaiKey && !openrouterKey) {
+        throw new Error('❌ SAM AI requires real API keys. Please set VITE_OPENAI_API_KEY, VITE_ANTHROPIC_API_KEY, or VITE_OPENROUTER_API_KEY');
+      }
+
       // Prefer direct APIs for better performance and reliability
       let provider: 'openai' | 'anthropic' | 'openrouter' = 'anthropic';
       let apiKey = anthropicKey;
@@ -94,12 +99,9 @@ export class LLMService {
       } else if (!anthropicKey && !openaiKey && openrouterKey) {
         provider = 'openrouter';
         apiKey = openrouterKey;
-      } else if (!anthropicKey && !openaiKey && !openrouterKey) {
-        console.warn('No API keys found. Using mock responses.');
-        apiKey = '';
       }
 
-      console.log(`Initializing LLMService with provider: ${provider}`);
+      console.log(`✅ Initializing LLMService with provider: ${provider} (Real AI only - no mocks)`);
 
       LLMService.instance = new LLMService({
         provider,
@@ -123,9 +125,9 @@ export class LLMService {
       stream?: boolean;
     }
   ): Promise<LLMResponse> {
-    // If no API key, return mock response
+    // Require API key - NO MOCK RESPONSES
     if (!this.config.apiKey) {
-      return this.getMockResponse(messages);
+      throw new Error('❌ No API key configured. SAM AI requires real API keys to function.');
     }
 
     try {
@@ -213,8 +215,8 @@ export class LLMService {
       };
     } catch (error) {
       console.error('LLM request failed:', error);
-      // Fallback to mock response on error
-      return this.getMockResponse(messages);
+      // NO MOCK FALLBACK - throw the actual error
+      throw new Error(`❌ AI request failed: ${error.message}. Please check your API key and network connection.`);
     }
   }
 
@@ -230,14 +232,7 @@ export class LLMService {
     }
   ): AsyncGenerator<string, void, unknown> {
     if (!this.config.apiKey) {
-      // Mock streaming response
-      const response = await this.getMockResponse(messages);
-      const words = response.content.split(' ');
-      for (const word of words) {
-        yield word + ' ';
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-      return;
+      throw new Error('❌ No API key configured. SAM AI requires real API keys for streaming.');
     }
 
     try {
@@ -295,13 +290,8 @@ export class LLMService {
       }
     } catch (error) {
       console.error('LLM stream failed:', error);
-      // Fallback to mock streaming
-      const response = await this.getMockResponse(messages);
-      const words = response.content.split(' ');
-      for (const word of words) {
-        yield word + ' ';
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
+      // NO MOCK FALLBACK - throw the actual error
+      throw new Error(`❌ AI streaming failed: ${error.message}. Please check your API key and network connection.`);
     }
   }
 
@@ -324,45 +314,18 @@ export class LLMService {
   }
 
   /**
-   * Generate a mock response for testing
+   * Validate API connection
    */
-  private getMockResponse(messages: LLMMessage[]): LLMResponse {
-    const lastMessage = messages[messages.length - 1].content.toLowerCase();
-    
-    // Context-aware mock responses
-    if (lastMessage.includes('lead') || lastMessage.includes('prospect')) {
-      return {
-        content: "I'll help you find qualified leads. Based on your requirements, I can search LinkedIn Sales Navigator, enrich contact data, and build targeted prospect lists. What specific criteria should I use for your ideal customer profile?",
-        model: 'mock',
-      };
+  public async validateConnection(): Promise<boolean> {
+    try {
+      const testResponse = await this.chat([
+        { role: 'user', content: 'Hello, please respond with: Connection verified' }
+      ], { maxTokens: 10, temperature: 0 });
+      return testResponse.content.includes('verified') || testResponse.content.includes('Connection');
+    } catch (error) {
+      console.error('API connection validation failed:', error);
+      return false;
     }
-    
-    if (lastMessage.includes('campaign')) {
-      return {
-        content: "I'll create a multi-channel outreach campaign for you. This will include personalized email sequences, LinkedIn connection requests, and follow-up strategies. Let me analyze your target audience and craft compelling messages that resonate with their pain points.",
-        model: 'mock',
-      };
-    }
-    
-    if (lastMessage.includes('email') || lastMessage.includes('message')) {
-      return {
-        content: "I'll write personalized outreach messages for you. Here's a template that focuses on value proposition and includes personalization elements based on the prospect's background. Would you like me to create variations for A/B testing?",
-        model: 'mock',
-      };
-    }
-
-    if (lastMessage.includes('analyze') || lastMessage.includes('performance')) {
-      return {
-        content: "Let me analyze your campaign performance. I'm reviewing open rates, response rates, and conversion metrics. Based on the data, I can identify optimization opportunities and suggest improvements to boost your results.",
-        model: 'mock',
-      };
-    }
-
-    // Default response
-    return {
-      content: "I'm SAM, your AI sales assistant. I can help you with lead generation, campaign creation, content writing, and performance analysis. What would you like to work on today?",
-      model: 'mock',
-    };
   }
 
   /**

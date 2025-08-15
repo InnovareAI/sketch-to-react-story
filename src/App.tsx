@@ -51,6 +51,9 @@ import LinkedInDiagnostic from "./pages/LinkedInDiagnostic";
 import LinkedInOnboarding from "./pages/LinkedInOnboarding";
 import ContactSyncTest from "./pages/ContactSyncTest";
 import Onboarding from "./pages/Onboarding";
+import OnboardingPage from "./pages/OnboardingPage";
+import ResearchPage from "./pages/ResearchPage";
+import KnowledgePage from "./pages/KnowledgePage";
 import OnboardingCallback from "./pages/OnboardingCallback";
 import UserSetup from "./pages/UserSetup";
 import FollowUps from "./pages/FollowUps";
@@ -135,6 +138,7 @@ const App: React.FC = () => {
                 <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
                 <Route path="/linkedin-onboarding" element={<LinkedInOnboarding />} />
                 <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding-sam" element={<OnboardingPage />} />
                 <Route path="/onboarding/callback" element={<OnboardingCallback />} />
                 <Route path="/setup/:token" element={<UserSetup />} />
                 
@@ -168,6 +172,8 @@ const App: React.FC = () => {
                 {/* Campaign & Setup Routes */}
                 <Route path="campaign-setup" element={<CampaignSetup />} />
                 <Route path="prospect-search" element={<ProspectSearch />} />
+                <Route path="research" element={<ResearchPage />} />
+                <Route path="knowledge" element={<KnowledgePage />} />
                 <Route path="search" element={<Search />} />
                 <Route path="search-results" element={<SearchResults />} />
                 <Route path="message-queue" element={<MessageQueue />} />
