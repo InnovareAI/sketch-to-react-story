@@ -33,7 +33,7 @@ const mainNavItems = [
   { title: "Search", url: "/search", icon: Search },
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Inbox", url: "/inbox", icon: Mail },
-  { title: "Follow-ups", url: "/follow-ups-public", icon: Calendar },
+  { title: "Follow-ups", url: "/follow-ups.html", icon: Calendar },
   { title: "Templates", url: "/templates", icon: FileText },
 ];
 
@@ -101,7 +101,7 @@ export function WorkspaceSidebar({
             e.preventDefault();
             e.stopPropagation();
             // Force navigation to follow-ups page
-            window.location.href = '/follow-ups-public';
+            window.location.href = '/follow-ups.html';
           }}
         >
           <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-blue-500" : "")} />
