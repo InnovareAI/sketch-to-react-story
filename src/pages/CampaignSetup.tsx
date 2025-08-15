@@ -355,7 +355,8 @@ export default function CampaignSetup() {
   };
 
   const handleSaveCampaign = async (isAutoSave = false) => {
-    console.log('Attempting to save campaign, workspaceId:', workspaceId);
+    console.log('Attempting to save campaign, workspaceId:', workspaceId, 'user:', user?.id);
+    
     if (!workspaceId) {
       if (!isAutoSave) toast.error('No workspace found. Please try refreshing the page.');
       console.error('workspaceId is missing:', { workspace, workspaceId });
@@ -404,6 +405,13 @@ export default function CampaignSetup() {
         }
       };
 
+      console.log('Saving campaign with data:', {
+        workspace_id: campaignData.workspace_id,
+        user_id: campaignData.user_id,
+        name: campaignData.name,
+        status: campaignData.status
+      });
+
       if (campaignId) {
         // Update existing campaign
         const { error } = await supabase
@@ -413,7 +421,7 @@ export default function CampaignSetup() {
         
         if (error) throw error;
         
-        if (!isAutoSave) toast.success('Campaign updated successfully');
+        if (!isAutoSave) toast.success('Campaign draft saved successfully');
       } else {
         // Create new campaign
         const { data, error } = await supabase
@@ -432,7 +440,7 @@ export default function CampaignSetup() {
           window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
         }
         
-        if (!isAutoSave) toast.success('Campaign created successfully');
+        if (!isAutoSave) toast.success('Campaign draft created successfully');
       }
       
       setLastSaved(new Date());
