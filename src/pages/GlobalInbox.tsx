@@ -777,103 +777,9 @@ export default function GlobalInbox() {
           <h1 className="text-3xl font-bold text-gray-900">Team Inbox</h1>
           <p className="text-gray-600 mt-1">
             Manage all your conversations across channels
-            {syncState.lastSyncTime && (
-              <span className="text-sm ml-2">
-                • Last sync: {syncState.lastSyncTime.toLocaleTimeString()}
-              </span>
-            )}
-            {syncState.autoSyncEnabled && syncState.nextSyncTime && (
-              <span className="text-sm ml-2">
-                • Next auto-sync: {syncState.nextSyncTime.toLocaleTimeString()}
-              </span>
-            )}
           </p>
         </div>
         <div className="flex gap-2">
-          {/* Manual Sync Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                setIsManualSyncing(true);
-                console.log('🔄 Starting manual sync...');
-                toast.info('Starting LinkedIn sync...');
-                
-                // Import and run syncAll
-                const { unipileRealTimeSync } = await import('@/services/unipile/UnipileRealTimeSync');
-                
-                // Check if configured
-                if (!unipileRealTimeSync.isConfigured()) {
-                  console.log('📝 Configuring Unipile...');
-                  const accounts = await getUserLinkedInAccounts();
-                  if (accounts.length > 0) {
-                    const account = accounts[0];
-                    const accountId = account.unipileAccountId || account.id || account.account_id;
-                    console.log('Using account ID:', accountId);
-                    if (accountId) {
-                      unipileRealTimeSync.configure({
-                        apiKey: 'TE3VJJ3-N3E63ND-MWXM462-RBPCWYQ',
-                        accountId: accountId
-                      });
-                    } else {
-                      throw new Error('No valid account ID found');
-                    }
-                  } else {
-                    throw new Error('No LinkedIn account connected');
-                  }
-                }
-                
-                // Run the sync
-                console.log('Running syncAll...');
-                await unipileRealTimeSync.syncAll();
-                
-                // Save sync status to localStorage (the hook will pick this up)
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                  const syncStatus = {
-                    lastSyncTime: new Date().toISOString(),
-                    initialSyncComplete: true,
-                    messageCount: 0,
-                    contactCount: 0
-                  };
-                  // Store sync status with user-specific key
-                  localStorage.setItem(`user_${user.id}_linkedin_sync`, JSON.stringify(syncStatus));
-                  console.log('Sync status saved:', syncStatus);
-                }
-                
-                toast.success('Sync completed! Refreshing inbox...');
-                
-                // Refresh the inbox data and business metrics after a short delay
-                setTimeout(() => {
-                  loadMessages();
-                  businessMetrics.refetch();
-                }, 1500);
-                
-              } catch (error: any) {
-                console.error('Manual sync error:', error);
-                toast.error(`Sync failed: ${error.message || 'Unknown error'}`);
-              } finally {
-                setIsManualSyncing(false);
-              }
-            }}
-            disabled={isManualSyncing}
-            className={isManualSyncing ? "bg-yellow-50 border-yellow-200" : "bg-blue-50 hover:bg-blue-100 border-blue-200"}
-            title="Manually sync LinkedIn messages and contacts"
-          >
-            {isManualSyncing ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Syncing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Sync Now
-              </>
-            )}
-          </Button>
-          
           <Button
             onClick={() => setShowNewMessageModal(true)}
           >
@@ -881,24 +787,6 @@ export default function GlobalInbox() {
             New Message
           </Button>
           
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => toggleAutoSync(!syncState.autoSyncEnabled)}
-            title={syncState.autoSyncEnabled ? 'Disable auto-sync' : 'Enable hourly auto-sync'}
-          >
-            {syncState.autoSyncEnabled ? (
-              <>
-                <Clock className="h-4 w-4 mr-2" />
-                Auto-sync ON
-              </>
-            ) : (
-              <>
-                <Clock className="h-4 w-4 mr-2 opacity-50" />
-                Auto-sync OFF
-              </>
-            )}
-          </Button>
           <Button 
             variant="outline"
             onClick={markAllAsRead}
@@ -907,23 +795,6 @@ export default function GlobalInbox() {
           >
             <CheckCircle className="h-4 w-4 mr-2" />
             Mark All Read
-          </Button>
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              businessMetrics.refetch();
-              toast.info('Refreshing business metrics...');
-            }}
-            disabled={businessMetrics.loading}
-            title="Refresh business metrics from database"
-          >
-            {businessMetrics.loading ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Refresh Stats
           </Button>
           <DropdownMenu open={showFilterDropdown} onOpenChange={setShowFilterDropdown}>
             <DropdownMenuTrigger asChild>
