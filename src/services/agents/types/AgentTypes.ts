@@ -74,6 +74,7 @@ export type AgentType =
   | 'gtm-strategy'
   | 'meddic-qualification'
   | 'workflow-automation'
+  | 'prompt-engineer'
   | 'inbox-triage'
   | 'spam-filter'
   | 'auto-response';
@@ -86,6 +87,7 @@ export type MessageIntent =
   | 'content-creation'
   | 'performance-analysis'
   | 'automation-setup'
+  | 'prompt-optimization'
   | 'knowledge-query'
   | 'general-question';
 

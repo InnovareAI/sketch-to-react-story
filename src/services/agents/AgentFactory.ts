@@ -15,6 +15,7 @@ import { WorkflowAutomationAgent } from './specialists/WorkflowAutomationAgent';
 import { InboxTriageAgent } from './specialists/InboxTriageAgent';
 import { SpamFilterAgent } from './specialists/SpamFilterAgent';
 import { AutoResponseAgent } from './specialists/AutoResponseAgent';
+import { PromptEngineerAgent } from './specialists/PromptEngineerAgent';
 
 export class AgentFactory {
   private static instance: AgentFactory;
@@ -51,6 +52,8 @@ export class AgentFactory {
         { type: 'inbox-triage' as AgentType, class: InboxTriageAgent },
         { type: 'spam-filter' as AgentType, class: SpamFilterAgent },
         { type: 'auto-response' as AgentType, class: AutoResponseAgent },
+        // System specialists
+        { type: 'prompt-engineer' as AgentType, class: PromptEngineerAgent },
         // Shared specialists
         { type: 'onboarding' as AgentType, class: OnboardingAgent },
         { type: 'knowledge-base' as AgentType, class: KnowledgeBaseAgent }

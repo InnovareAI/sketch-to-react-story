@@ -228,6 +228,10 @@ export class OrchestratorAgent extends BaseAgent {
         keywords: ['automate', 'sequence', 'workflow', 'campaign', 'setup', 'configure'],
         complexity: 'expert'
       },
+      'prompt-optimization': {
+        keywords: ['optimize prompt', 'improve behavior', 'better responses', 'prompt engineering', 'LLM behavior', 'system prompt', 'AI tuning'],
+        complexity: 'expert'
+      },
       'knowledge-query': {
         keywords: ['what is', 'how to', 'explain', 'help', 'question', 'information'],
         complexity: 'simple'
@@ -304,6 +308,7 @@ export class OrchestratorAgent extends BaseAgent {
       'content-creation': ['content-creation', 'knowledge-base'],
       'performance-analysis': ['analytics', 'campaign-management'],
       'automation-setup': ['outreach-automation', 'campaign-management'],
+      'prompt-optimization': ['prompt-engineer'],
       'knowledge-query': ['knowledge-base'],
       'general-question': ['knowledge-base']
     };
