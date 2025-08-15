@@ -181,7 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
-      console.log('Loading user profile for userId:', userId);
+      console.log('🔍 AuthContext: Loading user profile for userId:', userId);
       
       const { data: userRecord, error: userError } = await supabase
         .from('profiles')
@@ -200,6 +200,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         `)
         .eq('id', userId)
         .single();
+        
+      console.log('📊 Profile query result:', { userRecord, userError });
 
       if (userError) {
         console.error('Error loading user profile:', userError);
@@ -242,6 +244,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         avatar_url: userRecord.avatar_url
       };
 
+      console.log('✅ AuthContext: Created user profile:', userProfile);
       return userProfile;
     } catch (error) {
       console.error('Error in loadUserProfile:', error);

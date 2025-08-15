@@ -30,6 +30,14 @@ export function useWorkspace() {
       setLoading(true);
       setError(null);
       
+      console.log('🔍 useWorkspace: Loading workspace, workspaceId:', workspaceId, 'authUser:', authUser?.email);
+      
+      if (!workspaceId) {
+        console.error('❌ useWorkspace: No workspaceId available');
+        setError('No workspace ID found. Please check your profile configuration.');
+        return;
+      }
+      
       // Handle bypass user workspace
       if (workspaceId === 'bypass-workspace-id') {
         console.log('🚀 Loading workspace for bypass user');

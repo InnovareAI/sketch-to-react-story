@@ -34,6 +34,7 @@ const mainNavItems = [
   { title: "Campaigns", url: "/campaigns", icon: Target },
   { title: "Search", url: "/search", icon: Search },
   { title: "Contacts", url: "/contacts", icon: Users },
+  { title: "Inbox", url: "/inbox", icon: Inbox },
   { title: "Reply", url: "/reply", icon: MessageSquare },
   { title: "Templates", url: "/templates", icon: FileText },
 ];
