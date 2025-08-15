@@ -129,6 +129,7 @@ const App: React.FC = () => {
                 <Route path="/inbox-direct" element={<InboxDirect />} />
                 <Route path="/simple-inbox" element={<TestInbox />} />
                 <Route path="/follow-ups-public" element={<FollowUps />} />
+                <Route path="/follow-ups" element={<FollowUpRedirect />} />
                 <Route path="/linkedin-setup" element={<LinkedInAccountSetup />} />
                 <Route path="/linkedin-manager" element={<LinkedInAccountManager />} />
                 <Route path="/linkedin-diagnostic" element={<LinkedInDiagnostic />} />
@@ -152,7 +153,6 @@ const App: React.FC = () => {
                 <Route path="contacts-old" element={<Contacts />} />
                 <Route path="test-sync" element={<ContactSyncTest />} />
                 <Route path="inbox" element={<GlobalInbox />} />
-                <Route path="follow-ups" element={<FollowUpRedirect />} />
                 <Route path="templates" element={<TemplatesEnhanced />} />
                 <Route path="analytics" element={<Dashboard />} /> {/* Analytics redirects to Dashboard */}
                 

@@ -19,6 +19,7 @@ export default function AuthGate({ children }: AuthGateProps) {
   // Define public routes that don't require authentication
   const publicRoutes = [
     '/follow-ups-public',
+    '/follow-ups',
     '/test-inbox',
     '/inbox-direct',
     '/simple-inbox',
