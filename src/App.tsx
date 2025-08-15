@@ -73,10 +73,11 @@ const App: React.FC = () => {
         localStorage.setItem('demo_workspace_id', 'df5d730f-1915-4269-bd5a-9534478b17af');
         localStorage.setItem('demo_user_id', 'cc000000-0000-0000-0000-000000000001');
         
+        // Test name collection flow with email-only user
         const demoProfile = {
           id: 'cc000000-0000-0000-0000-000000000001',
           email: 'demo@sameaisalesassistant.com',
-          full_name: 'Demo User',
+          full_name: '', // Empty name to trigger name collection
           role: 'admin',
           workspace_id: 'df5d730f-1915-4269-bd5a-9534478b17af',
           workspace_name: 'SAM AI Demo',

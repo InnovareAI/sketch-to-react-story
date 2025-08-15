@@ -97,14 +97,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [isAgentInitialized, setIsAgentInitialized] = useState(false);
   
   // UI state
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "👋 **Welcome to SAM AI!** I'm your intelligent sales assistant with 6 specialist agents ready to help.\n\n**🔄 Mode Switcher (Top Right):**\n• **📤 Outbound:** Lead generation, campaigns, prospecting\n• **📥 Inbound:** Response handling, customer service, inbox triage\n• **⚡ Unified:** Full automation across all channels\n\n**💬 Chat Features:**\n• **Chat History:** Access all saved conversations (top right)\n• **🎤 Voice Input:** Click microphone to speak instead of typing\n• **Conversation Starters:** Quick actions to get started below\n\n**What would you like to work on first?** Try the conversation starters below or ask me anything!",
-      sender: "sam",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [samIsActive, setSamIsActive] = useState(false);
   const [samStatus, setSamStatus] = useState("Ready to help you");
@@ -116,7 +109,75 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [isNewUser, setIsNewUser] = useState<boolean>(false);
   const [hasStartedOnboarding, setHasStartedOnboarding] = useState<boolean>(false);
   const [currentOperationMode, setCurrentOperationMode] = useState<'inbound' | 'outbound'>(operationMode);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [needsNameCollection, setNeedsNameCollection] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Helper functions to check account connection status
+  const checkLinkedInConnection = (): boolean => {
+    // Check if LinkedIn account is connected (this would come from your auth/integration system)
+    const linkedinData = localStorage.getItem('linkedin_connection');
+    return linkedinData ? JSON.parse(linkedinData).connected : false;
+  };
+
+  const checkEmailConnection = (): boolean => {
+    // Check if email account is connected (this would come from your auth/integration system)
+    const emailData = localStorage.getItem('email_connection');
+    return emailData ? JSON.parse(emailData).connected : false;
+  };
+
+  const checkActiveCampaigns = (): boolean => {
+    // Check if there are active campaigns running
+    const campaignsData = localStorage.getItem('active_campaigns');
+    return campaignsData ? JSON.parse(campaignsData).length > 0 : false;
+  };
+
+  // Load user profile and customize greeting
+  useEffect(() => {
+    const loadUserProfile = () => {
+      try {
+        const profileData = localStorage.getItem('user_auth_profile');
+        if (profileData) {
+          const profile = JSON.parse(profileData);
+          setUserProfile(profile);
+          
+          // Check if we have a proper first name (not "Demo User" or empty)
+          const firstName = profile.full_name?.split(' ')[0];
+          if (!firstName || firstName === 'Demo' || profile.full_name === 'Demo User' || profile.full_name.trim() === '') {
+            setNeedsNameCollection(true);
+          }
+        } else {
+          setNeedsNameCollection(true);
+        }
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+        setNeedsNameCollection(true);
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
+  // Set personalized initial message
+  useEffect(() => {
+    if (userProfile && messages.length === 0) {
+      const firstName = userProfile.full_name?.split(' ')[0];
+      let greeting;
+      
+      if (needsNameCollection) {
+        greeting = `👋 **Welcome to SAM AI!** I'm your intelligent sales assistant with 6 specialist agents ready to help.\n\n**Before we start, I'd love to know - what should I call you?** Just your first name is perfect!\n\n**🔄 SAM AI Operation Modes:**\n• **📤 Outbound Mode:** Lead generation, prospecting, cold outreach campaigns\n• **📥 Inbound Mode:** Response handling, customer service, inbox triage\n• **⚡ Unified Mode:** Full automation across all channels simultaneously\n\n**⚠️ Important Setup Notes:**\n• You'll get **preview data** during onboarding, but **full data scraping** requires connected accounts\n• **SAM is most productive** when you have **active running campaigns**\n• To get started effectively, you'll need to **connect LinkedIn** and/or **email accounts**\n\n**💬 Chat Features:**\n• **Chat History:** Access all saved conversations (top right)\n• **🎤 Voice Input:** Click microphone to speak instead of typing`;
+      } else {
+        greeting = `👋 **Welcome back, ${firstName}!** I'm SAM, your intelligent sales assistant with 6 specialist agents ready to help.\n\n**🔄 SAM AI Operation Modes:**\n• **📤 Outbound Mode:** Lead generation, prospecting, automated cold outreach campaigns\n• **📥 Inbound Mode:** Response handling, customer service, inbox management\n• **⚡ Unified Mode:** Full automation across all channels with intelligent routing\n\n**🚀 Account Status Check:**\n• **LinkedIn Connected:** ${checkLinkedInConnection() ? '✅ Ready for prospecting' : '❌ Connect for full lead generation'}\n• **Email Connected:** ${checkEmailConnection() ? '✅ Ready for campaigns' : '❌ Connect for email automation'}\n• **Active Campaigns:** ${checkActiveCampaigns() ? '✅ SAM is fully productive' : '⚠️ No active campaigns - limited productivity'}\n\n**💡 Pro Tip:** SAM is most effective when you have active campaigns running. Without connected accounts, you'll only see preview data during prospecting.\n\n**💬 Chat Features:**\n• **Chat History:** Access all saved conversations (top right)\n• **🎤 Voice Input:** Click microphone to speak instead of typing\n• **Conversation Starters:** Quick actions to get started below\n\n**What would you like to work on first, ${firstName}?** Try the conversation starters below or ask me anything!`;
+      }
+      
+      setMessages([{
+        id: "1",
+        content: greeting,
+        sender: "sam",
+        timestamp: new Date(),
+      }]);
+    }
+  }, [userProfile, needsNameCollection, messages.length]);
 
   // Check if user is new and needs onboarding
   useEffect(() => {
@@ -270,6 +331,12 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     const content = messageContent || input;
     if (!content.trim()) return;
 
+    // Check if user is providing their first name in response to name collection
+    if (needsNameCollection && content.trim().length > 0) {
+      await handleNameCollection(content.trim());
+      return;
+    }
+
     // Create or use existing session
     let sessionId = currentSessionId;
     if (!sessionId) {
@@ -321,6 +388,88 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     } catch (error) {
       console.error('Message processing error:', error);
       await handleErrorResponse(error as Error);
+    }
+  };
+
+  const handleNameCollection = async (providedName: string) => {
+    // Extract first name from user input (handle cases like "My name is John" or just "John")
+    const namePattern = /(?:my name is|i'm|im|call me|name is|i am)\s+([a-zA-Z]+)/i;
+    const match = providedName.match(namePattern);
+    const firstName = match ? match[1] : providedName.split(' ')[0];
+    
+    // Validate the name (basic check for reasonable first name)
+    if (firstName.length < 2 || firstName.length > 20 || !/^[a-zA-Z]+$/.test(firstName)) {
+      const clarificationMessage: Message = {
+        id: Date.now().toString(),
+        content: "I didn't quite catch that. Could you just tell me your first name? For example, just type \"Sarah\" or \"Mike\".",
+        sender: "sam",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, clarificationMessage]);
+      return;
+    }
+
+    // Add user's response to chat
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: providedName,
+      sender: "user",
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+
+    try {
+      // Update profile with the new name
+      const updatedProfile = {
+        ...userProfile,
+        full_name: firstName // We only store first name for now
+      };
+
+      // Save to localStorage
+      localStorage.setItem('user_auth_profile', JSON.stringify(updatedProfile));
+      
+      // Update component state
+      setUserProfile(updatedProfile);
+      setNeedsNameCollection(false);
+
+      // Send confirmation message
+      const confirmationMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Perfect! Nice to meet you, **${firstName}**! 🎉
+
+I'm SAM, your intelligent sales assistant with 6 specialist agents ready to help you grow your business.
+
+**🔄 Mode Switcher (Top Right):**
+• **📤 Outbound:** Lead generation, campaigns, prospecting
+• **📥 Inbound:** Response handling, customer service, inbox triage
+• **⚡ Unified:** Full automation across all channels
+
+**💬 Chat Features:**
+• **Chat History:** Access all saved conversations (top right)
+• **🎤 Voice Input:** Click microphone to speak instead of typing
+• **Conversation Starters:** Quick actions to get started below
+
+**What would you like to work on first, ${firstName}?** Try the conversation starters below or ask me anything!`,
+        sender: "sam",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, confirmationMessage]);
+
+      console.log(`✅ User profile updated with name: ${firstName}`);
+    } catch (error) {
+      console.error('Failed to save user name:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Nice to meet you, ${firstName}! I had a small issue saving your name, but I'll remember it for this session. What would you like to work on first?`,
+        sender: "sam",
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      setNeedsNameCollection(false);
     }
   };
 
