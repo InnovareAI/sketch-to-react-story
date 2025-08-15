@@ -261,9 +261,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       let greeting;
       
       if (needsNameCollection) {
-        greeting = `Hey there! 👋 I'm SAM, your new sales assistant.\n\nWhat should I call you? Just your first name is perfect!`;
+        greeting = `Hello! Welcome and how are you today? I am Sam your in and outbound marketing orchestration agent. What should I call you? Just your first name is perfect!`;
       } else {
-        greeting = `Hey ${firstName}! 👋 Ready to get some work done?\n\nWant me to **explain what I can do** first, or should we **jump right in**?\n\nJust say "explain" or "let's go" - whatever feels right!`;
+        greeting = `Hello ${firstName}, welcome and how are you today. I am Sam your in and outbound marketing orchestration agent. What brings you here today?`;
       }
       
       setMessages([{
