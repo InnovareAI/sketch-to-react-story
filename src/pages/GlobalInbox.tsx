@@ -1491,13 +1491,30 @@ export default function GlobalInbox() {
                     <Reply className="h-4 w-4 mr-2" />
                     Reply
                   </Button>
-                  {selectedMessage?.conversationData?.metadata?.linkedin_message_url && (
+                  
+                  {/* Debug LinkedIn URL - show what we have */}
+                  {selectedMessage && (
+                    <div className="text-xs text-gray-500 mb-2">
+                      Debug: LinkedIn URL = {selectedMessage?.conversationData?.metadata?.linkedin_message_url || 'NOT FOUND'}
+                      <br />
+                      Profile URL = {selectedMessage?.conversationData?.metadata?.participant_linkedin_url || 'NOT FOUND'}
+                      <br />
+                      Has conversationData = {selectedMessage?.conversationData ? 'YES' : 'NO'}
+                      <br />
+                      Has metadata = {selectedMessage?.conversationData?.metadata ? 'YES' : 'NO'}
+                    </div>
+                  )}
+                  
+                  {/* Show LinkedIn button if we have either URL */}
+                  {(selectedMessage?.conversationData?.metadata?.linkedin_message_url || 
+                    selectedMessage?.conversationData?.metadata?.participant_linkedin_url) && (
                     <Button 
                       variant="outline"
                       onClick={() => {
-                        const linkedinUrl = selectedMessage.conversationData.metadata.linkedin_message_url;
+                        const linkedinUrl = selectedMessage.conversationData.metadata.linkedin_message_url || 
+                                          selectedMessage.conversationData.metadata.participant_linkedin_url;
                         window.open(linkedinUrl, '_blank');
-                        toast.success('Opening LinkedIn messages...');
+                        toast.success('Opening LinkedIn...');
                       }}
                       title="Message this contact directly on LinkedIn"
                     >
@@ -1505,6 +1522,7 @@ export default function GlobalInbox() {
                       Message on LinkedIn
                     </Button>
                   )}
+                  
                   <Button variant="outline" onClick={handleScheduleMeeting}>
                     <Calendar className="h-4 w-4 mr-2" />
                     Schedule Meeting
