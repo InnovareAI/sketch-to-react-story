@@ -816,6 +816,54 @@ Want me to **explain what I can do** first, or should we **just jump in** and st
   const generateFallbackResponse = async (content: string): Promise<string> => {
     const contentLower = content.toLowerCase();
     
+    // Handle continue/resume conversation requests
+    if (contentLower.includes('continue') || contentLower.includes('where we left off') || contentLower.includes('resume') || contentLower.includes('pick up where')) {
+      try {
+        // Try to get recent conversation history
+        if (currentConversationId && userProfile?.workspace_id) {
+          const history = await conversationPersistence.getConversationHistory(userProfile.workspace_id, 5);
+          
+          if (history.length > 0) {
+            // Find the last substantive topic from conversation history
+            const lastTopics = history
+              .filter(msg => msg.content.length > 20 && !msg.content.includes('continue'))
+              .slice(-3);
+            
+            if (lastTopics.length > 0) {
+              const lastTopic = lastTopics[lastTopics.length - 1];
+              const isLeadRelated = lastTopic.content.toLowerCase().includes('lead') || lastTopic.content.toLowerCase().includes('prospect');
+              const isCampaignRelated = lastTopic.content.toLowerCase().includes('campaign') || lastTopic.content.toLowerCase().includes('outreach');
+              
+              return `Got it! 🎯 Let's continue where we left off.
+
+I can see we were talking about ${isLeadRelated ? 'lead generation and prospecting' : isCampaignRelated ? 'campaign creation and outreach' : 'your sales workflow'}.
+
+**Ready to pick up from there:**
+• **Find more leads** in your target market
+• **Write compelling messages** for your prospects  
+• **Create outreach campaigns** that convert
+• **Analyze performance** and optimize
+
+What would you like to focus on next?`;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load conversation history for continue request:', error);
+      }
+      
+      // Fallback if we can't access history
+      return `Absolutely! Let's continue working together 🚀
+
+I'm ready to help you with:
+• **Lead generation** - find qualified prospects
+• **Campaign creation** - write compelling outreach 
+• **Content development** - emails, LinkedIn messages, etc.
+• **Performance optimization** - improve your results
+
+What should we tackle next?`;
+    }
+    
     // Handle feature explanation request
     if (contentLower.includes('explain') || contentLower.includes('features') || contentLower.includes('overview')) {
       return `Cool! Here's what I can do for you:
