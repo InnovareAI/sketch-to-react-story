@@ -1491,11 +1491,12 @@ export default function GlobalInbox() {
                     <Reply className="h-4 w-4 mr-2" />
                     Reply
                   </Button>
-                  {selectedMessage?.metadata?.linkedin_message_url && (
+                  {selectedMessage?.conversationData?.metadata?.linkedin_message_url && (
                     <Button 
                       variant="outline"
                       onClick={() => {
-                        window.open(selectedMessage.metadata.linkedin_message_url, '_blank');
+                        const linkedinUrl = selectedMessage.conversationData.metadata.linkedin_message_url;
+                        window.open(linkedinUrl, '_blank');
                         toast.success('Opening LinkedIn messages...');
                       }}
                       title="Message this contact directly on LinkedIn"
