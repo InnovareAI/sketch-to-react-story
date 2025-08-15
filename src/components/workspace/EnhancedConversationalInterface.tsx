@@ -414,16 +414,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         setSamStatus(`${currentOperationMode} mode (basic)`);
       }
       
-      // Simple mode change notification - conversational style
-      const greetingMessage: Message = {
-        id: "mode-change-" + Date.now(),
-        content: currentOperationMode === 'inbound' 
-          ? "🔄 Switched to **inbound mode** - I'll help with customer service and responding to inquiries"
-          : "🔄 Switched to **outbound mode** - Let's focus on finding leads and creating campaigns",
-        sender: "sam",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, greetingMessage]);
+      // Mode change notification removed per user request
     }
   }, [currentOperationMode, isAgentInitialized, agentFactory]);
 
