@@ -13,7 +13,6 @@ import {
   Phone, 
   Linkedin, 
   Building2,
-  TrendingUp,
   RefreshCw,
   MoreVertical,
   CheckCircle,
@@ -392,14 +391,14 @@ export default function ContactsView() {
 
   const handleExport = () => {
     const csv = [
-      ['First Name', 'Last Name', 'Email', 'Title', 'Company', 'Engagement Score', 'LinkedIn URL'].join(','),
+      ['First Name', 'Last Name', 'Connection Status', 'Job Title', 'Tags', 'Connected Since', 'LinkedIn URL'].join(','),
       ...filteredContacts.map(c => [
         c.first_name,
         c.last_name,
-        c.email,
-        c.title,
-        c.metadata?.company || '',
-        c.engagement_score,
+        (c.metadata?.connection_degree || c.scraped_data?.connection_degree || '1st') + ' degree',
+        c.title || '',
+        (c.tags || []).join('; '),
+        new Date(c.created_at).toLocaleDateString(),
         c.linkedin_url
       ].join(','))
     ].join('\n');
@@ -579,8 +578,6 @@ export default function ContactsView() {
       switch (sortBy) {
         case 'name':
           return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
-        case 'engagement':
-          return b.engagement_score - a.engagement_score;
         case 'recent':
         default:
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -590,11 +587,6 @@ export default function ContactsView() {
   // Get unique tags
   const allTags = [...new Set(contacts.flatMap(c => c.tags || []))];
 
-  const getEngagementColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-50';
-    if (score >= 60) return 'text-yellow-600 bg-yellow-50';
-    return 'text-gray-600 bg-gray-50';
-  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -661,7 +653,6 @@ export default function ContactsView() {
           >
             <option value="recent">Most Recent</option>
             <option value="name">Name (A-Z)</option>
-            <option value="engagement">Engagement Score</option>
           </select>
         </div>
         
@@ -711,10 +702,11 @@ export default function ContactsView() {
                     className="rounded"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Contact</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Title & Company</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Engagement</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Name</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Job Title</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Tags</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Connected Since</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -732,24 +724,18 @@ export default function ContactsView() {
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <ContactAvatar contact={contact} />
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {contact.first_name} {contact.last_name}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {contact.company || contact.metadata?.company || contact.department || 'No company'}
-                        </div>
+                      <div className="font-medium text-gray-900">
+                        {contact.first_name} {contact.last_name}
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="font-medium text-gray-900">{contact.title || 'No title'}</div>
+                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {contact.metadata?.connection_degree || contact.scraped_data?.connection_degree || '1st'} degree
+                    </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium ${getEngagementColor(contact.engagement_score)}`}>
-                      <TrendingUp className="h-3 w-3" />
-                      {contact.engagement_score}%
-                    </div>
+                    <div className="font-medium text-gray-900">{contact.title || 'No title'}</div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap gap-1">
@@ -763,6 +749,15 @@ export default function ContactsView() {
                           +{contact.tags.length - 2}
                         </span>
                       )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-gray-600">
+                      {new Date(contact.created_at).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })}
                     </div>
                   </td>
                   <td className="px-4 py-4">
