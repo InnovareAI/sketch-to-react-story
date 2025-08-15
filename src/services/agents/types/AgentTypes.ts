@@ -146,6 +146,7 @@ export interface AgentCapability {
 
 export interface AgentConfig {
   apiKeys: {
+    openrouter?: string;
     openai?: string;
     claude?: string;
     brightData?: string;

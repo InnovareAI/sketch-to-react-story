@@ -313,6 +313,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
         try {
           const config: AgentConfig = {
             apiKeys: {
+              openrouter: import.meta.env.VITE_OPENROUTER_API_KEY || undefined,
               openai: import.meta.env.VITE_OPENAI_API_KEY || undefined,
               claude: import.meta.env.VITE_CLAUDE_API_KEY || undefined,
             },
