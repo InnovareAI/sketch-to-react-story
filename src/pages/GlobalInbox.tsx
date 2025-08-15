@@ -263,7 +263,9 @@ export default function GlobalInbox() {
           messageType: isInMail ? 'inmail' : 'message', // Add message type
           subject: `Message from ${conv.participant_name}`,
           preview: latestMessage?.content || conv.metadata?.last_message_preview || 'No message content',
-          time: new Date(conv.last_message_at).toLocaleTimeString('en-US', { 
+          time: new Date(conv.last_message_at).toLocaleString('en-US', { 
+            month: 'short',
+            day: 'numeric',
             hour: 'numeric', 
             minute: '2-digit',
             hour12: true 
@@ -1397,7 +1399,16 @@ export default function GlobalInbox() {
                   <h3 className="font-semibold text-lg mb-2">{selectedMessage.subject}</h3>
                   <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                     <Clock className="h-4 w-4" />
-                    {selectedMessage.time}
+                    {selectedMessage.conversationData?.last_message_at ? 
+                      new Date(selectedMessage.conversationData.last_message_at).toLocaleString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      }) : selectedMessage.time}
                     {selectedMessage.priority && (
                       <Badge className={getPriorityColor(selectedMessage.priority)}>
                         {selectedMessage.priority} priority
@@ -1462,7 +1473,14 @@ export default function GlobalInbox() {
                                       {senderName}
                                     </span>
                                     <span className="text-xs text-gray-500">
-                                      {new Date(msg.created_at || msg.metadata?.timestamp || Date.now()).toLocaleString()}
+                                      {new Date(msg.created_at || msg.metadata?.timestamp || Date.now()).toLocaleString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true
+                                      })}
                                     </span>
                                     {msg.metadata?.message_type === 'placeholder' && (
                                       <Badge variant="outline" className="text-xs">
