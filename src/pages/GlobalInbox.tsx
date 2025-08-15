@@ -88,6 +88,7 @@ export default function GlobalInbox() {
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedMessageForFollowUp, setSelectedMessageForFollowUp] = useState<Message | null>(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [filterAccount, setFilterAccount] = useState<string>('all');
   
   // Predefined tags
   const predefinedTags = [
@@ -977,6 +978,56 @@ export default function GlobalInbox() {
                       {tag.label}
                     </Button>
                   ))}
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="p-2">
+                <div className="text-sm font-medium mb-2">Filter by LinkedIn Account</div>
+                <div className="space-y-1">
+                  <Button
+                    variant={filterAccount === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterAccount('all');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    All Accounts
+                  </Button>
+                  <Button
+                    variant={filterAccount === 'primary' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterAccount('primary');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Primary Account
+                  </Button>
+                  <Button
+                    variant={filterAccount === 'team1' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterAccount('team1');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Team Account 1
+                  </Button>
+                  <Button
+                    variant={filterAccount === 'team2' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setFilterAccount('team2');
+                      setShowFilterDropdown(false);
+                    }}
+                  >
+                    Team Account 2
+                  </Button>
                 </div>
               </div>
             </DropdownMenuContent>
