@@ -459,9 +459,17 @@ export class OrchestratorAgent extends BaseAgent {
       }
     ];
 
-    // Add conversation history
+    // Add conversation history (both current session and persistent)
     const recentMessages = context.messageHistory.slice(-5);
-    recentMessages.forEach(msg => {
+    const persistentHistory = (context as any).conversationHistory || [];
+    
+    // Include recent persistent conversation history for context
+    const allHistory = [...persistentHistory.slice(-10), ...recentMessages];
+    const uniqueHistory = allHistory.filter((msg, index, self) => 
+      self.findIndex(m => m.id === msg.id) === index
+    ).slice(-8); // Last 8 unique messages for context
+    
+    uniqueHistory.forEach(msg => {
       messages.push({
         role: msg.sender === 'user' ? 'user' : 'assistant',
         content: msg.content

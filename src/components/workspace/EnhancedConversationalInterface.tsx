@@ -24,6 +24,7 @@ import { ChatSkeleton } from "@/components/ui/skeleton";
 import { AgentFactory } from "@/services/agents/AgentFactory";
 import { AgentConfig, Message, AgentTrace } from "@/services/agents/types/AgentTypes";
 import { MemoryService } from "@/services/memory/MemoryService";
+import { ConversationPersistenceService } from "@/services/ConversationPersistenceService";
 
 interface QuickAction {
   title: string;
@@ -108,6 +109,11 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [agentFactory] = useState(() => AgentFactory.getInstance());
   const [isAgentInitialized, setIsAgentInitialized] = useState(false);
   
+  // Conversation persistence
+  const [conversationPersistence] = useState(() => ConversationPersistenceService.getInstance());
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  
   // UI state
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -146,9 +152,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     return campaignsData ? JSON.parse(campaignsData).length > 0 : false;
   };
 
-  // Load user profile and customize greeting
+  // Load user profile and conversation history
   useEffect(() => {
-    const loadUserProfile = () => {
+    const loadUserProfile = async () => {
       try {
         const profileData = localStorage.getItem('user_auth_profile');
         if (profileData) {
@@ -160,6 +166,9 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
           if (!firstName || firstName === 'Demo' || profile.full_name === 'Demo User' || profile.full_name.trim() === '') {
             setNeedsNameCollection(true);
           }
+          
+          // Load conversation history if available
+          await loadConversationHistory(profile.workspace_id);
         } else {
           setNeedsNameCollection(true);
         }
@@ -171,6 +180,79 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
 
     loadUserProfile();
   }, []);
+
+  // Load previous conversation history
+  const loadConversationHistory = async (workspaceId: string) => {
+    if (!workspaceId) return;
+    
+    setIsLoadingConversation(true);
+    try {
+      const history = await conversationPersistence.getConversationHistory(workspaceId, 10);
+      if (history.length > 0) {
+        // Convert to our Message format and prepend to messages
+        const historicalMessages = history.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          sender: msg.sender,
+          timestamp: msg.timestamp,
+          metadata: msg.metadata
+        }));
+        
+        // Only load history if we don't have current messages (avoid overwriting name collection)
+        if (messages.length === 0 && !needsNameCollection && !needsConfirmation) {
+          setMessages(historicalMessages);
+          console.log(`📚 Loaded ${history.length} messages from conversation history`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load conversation history:', error);
+    } finally {
+      setIsLoadingConversation(false);
+    }
+  };
+
+  // Create new conversation when starting fresh
+  const createNewConversation = async () => {
+    if (!userProfile?.workspace_id) return null;
+    
+    try {
+      const conversationId = await conversationPersistence.createConversation(
+        userProfile.workspace_id,
+        {
+          agent_type: 'sam_ai',
+          operation_mode: currentOperationMode,
+          user_profile: userProfile
+        }
+      );
+      
+      if (conversationId) {
+        setCurrentConversationId(conversationId);
+        console.log(`✨ Created new conversation: ${conversationId}`);
+        return conversationId;
+      }
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+    }
+    return null;
+  };
+
+  // Save message to persistent storage
+  const saveMessageToPersistence = async (message: Message) => {
+    if (!currentConversationId && userProfile?.workspace_id) {
+      // Create new conversation if none exists
+      const newConversationId = await createNewConversation();
+      if (!newConversationId) return;
+    }
+    
+    if (currentConversationId) {
+      try {
+        await conversationPersistence.saveMessage(currentConversationId, message);
+        console.log(`💾 Saved message to conversation: ${currentConversationId}`);
+      } catch (error) {
+        console.error('Failed to save message:', error);
+      }
+    }
+  };
 
   // Set personalized initial message - only once
   useEffect(() => {
@@ -375,6 +457,10 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     if (sessionId) {
       addMessageToSession(sessionId, userMessage as any);
     }
+    
+    // Save to persistent conversation memory
+    await saveMessageToPersistence(userMessage);
+    
     setInput("");
     
     // Show SAM activity in status bar
@@ -421,6 +507,10 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMessage]);
+    
+    // Save user message to persistent memory
+    await saveMessageToPersistence(userMessage);
+    
     setInput("");
 
     try {
@@ -453,6 +543,9 @@ Want me to **explain what I can do** first, or should we **just jump in** and st
       };
 
       setMessages(prev => [...prev, confirmationMessage]);
+      
+      // Save confirmation message to persistent memory
+      await saveMessageToPersistence(confirmationMessage);
 
       console.log(`✅ User profile updated with name: ${firstName}`);
     } catch (error) {
@@ -466,6 +559,10 @@ Want me to **explain what I can do** first, or should we **just jump in** and st
       };
       
       setMessages(prev => [...prev, errorMessage]);
+      
+      // Save error message to persistent memory
+      await saveMessageToPersistence(errorMessage);
+      
       setNeedsNameCollection(false);
     }
   };
@@ -496,6 +593,10 @@ Want me to **explain what I can do** first, or should we **just jump in** and st
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMessage]);
+    
+    // Save user confirmation to persistent memory
+    await saveMessageToPersistence(userMessage);
+    
     setInput("");
 
     // User confirmed, now offer the choice
@@ -514,6 +615,9 @@ Want me to **explain what I can do** first, or should we **just jump in** and st
     };
 
     setMessages(prev => [...prev, choiceMessage]);
+    
+    // Save choice message to persistent memory
+    await saveMessageToPersistence(choiceMessage);
   };
 
   const handleMultiAgentProcessing = async (content: string, sessionId: string) => {
@@ -533,16 +637,20 @@ Want me to **explain what I can do** first, or should we **just jump in** and st
     }
 
     try {
-      // Get current session context
+      // Get current session context including conversation history
       const currentSession = getCurrentSession();
+      const conversationHistory = currentConversationId ? 
+        await conversationPersistence.getConversationHistory(userProfile?.workspace_id || 'default', 20) : [];
+      
       const existingContext = {
         messages: currentSession?.messages || [],
+        conversationHistory: conversationHistory, // Include persistent memory context
         userProfile: {
-          // This would come from user settings/profile
-          name: 'User',
-          company: 'Your Company',
+          name: userProfile?.full_name || 'User',
+          company: userProfile?.company || 'Your Company',
           targetAudience: 'B2B Decision Makers',
-          productOffering: 'Sales Automation Platform'
+          productOffering: 'Sales Automation Platform',
+          workspace_id: userProfile?.workspace_id
         }
       };
 
@@ -619,6 +727,9 @@ Want me to **explain what I can do** first, or should we **just jump in** and st
         if (sessionId) {
           addMessageToSession(sessionId, samResponse as any);
         }
+        
+        // Save SAM response to persistent memory
+        await saveMessageToPersistence(samResponse);
       } catch (processError) {
         console.error('Agent processing failed:', processError);
         throw processError; // Re-throw to trigger fallback
