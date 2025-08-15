@@ -570,7 +570,25 @@ export class UnipileRealTimeSync {
                 const firstName = attendee.first_name || '';
                 const lastName = attendee.last_name || '';
                 participantName = `${firstName} ${lastName}`.trim() || attendee.name || participantName;
-                participantCompany = attendee.headline || attendee.company || '';
+                
+                // Get company but validate it's not our own workspace name
+                let rawCompany = attendee.headline || attendee.company || '';
+                
+                // Prevent using our own workspace name as external contact's company
+                // This happens when LinkedIn returns incorrect/cached data
+                const invalidCompanyNames = ['InnovareAI', 'Innovare AI', 'innovareai'];
+                const isOurWorkspace = invalidCompanyNames.some(name => 
+                  rawCompany.toLowerCase().includes(name.toLowerCase())
+                );
+                
+                if (isOurWorkspace) {
+                  // Log this issue and leave company blank for manual correction
+                  console.warn(`⚠️ Rejecting invalid company "${rawCompany}" for external contact ${participantName}`);
+                  participantCompany = 'External Contact'; // Generic placeholder
+                } else {
+                  participantCompany = rawCompany;
+                }
+                
                 participantAvatar = attendee.profile_picture_url || attendee.profile_picture_url_large || '';
                 console.log(`📝 Set participant name: ${participantName}`);
               } else if (attendeeResponse.status === 422) {
