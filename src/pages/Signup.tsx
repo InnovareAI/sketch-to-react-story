@@ -101,8 +101,8 @@ export default function Signup() {
         localStorage.setItem('app_workspace_id', workspaceId);
         localStorage.setItem('workspace_id', workspaceId);
         
-        // Navigate to dashboard
-        navigate('/');
+        // Navigate to agent space for new users
+        navigate('/agent');
       }
     } catch (err: any) {
       console.error('Signup error:', err);

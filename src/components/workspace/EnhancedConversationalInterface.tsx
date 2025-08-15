@@ -121,7 +121,31 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const [processingProgress, setProcessingProgress] = useState(0);
   const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
   const [showThinking, setShowThinking] = useState(true);
+  const [isNewUser, setIsNewUser] = useState<boolean>(false);
+  const [hasStartedOnboarding, setHasStartedOnboarding] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Check if user is new and needs onboarding
+  useEffect(() => {
+    const checkUserOnboardingStatus = () => {
+      const hasCompletedOnboarding = localStorage.getItem('sam_onboarding_completed');
+      const accountCreatedAt = localStorage.getItem('account_created_at');
+      const now = Date.now();
+      const accountAge = accountCreatedAt ? now - parseInt(accountCreatedAt) : 0;
+      
+      // Consider user "new" if account is less than 7 days old or no onboarding flag
+      const isUserNew = !hasCompletedOnboarding || accountAge < (7 * 24 * 60 * 60 * 1000);
+      
+      setIsNewUser(isUserNew);
+      
+      // If new user and agent is initialized, start onboarding
+      if (isUserNew && isAgentInitialized && !hasStartedOnboarding) {
+        startOnboardingFlow();
+      }
+    };
+
+    checkUserOnboardingStatus();
+  }, [isAgentInitialized, hasStartedOnboarding]);
 
   // Initialize agent system
   useEffect(() => {
@@ -449,6 +473,63 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     setMessages(sessionMessages);
   };
 
+  const startOnboardingFlow = () => {
+    setHasStartedOnboarding(true);
+    
+    // Clear existing messages and start fresh onboarding
+    const onboardingMessage: Message = {
+      id: `onboarding_${Date.now()}`,
+      content: `🎉 **Welcome to SAM AI!** I'm your AI Sales Assistant, and I'm excited to help you transform your sales process.
+
+I'm powered by a **multi-agent system** with 6 specialist agents that work together to:
+
+🎯 **Lead Research Agent** - Find and qualify your ideal prospects
+📊 **Campaign Management Agent** - Create and optimize outreach campaigns  
+✍️ **Content Creation Agent** - Write personalized messages that convert
+📈 **Analytics Agent** - Track performance and suggest improvements
+🔄 **Workflow Automation Agent** - Set up smart follow-ups and sequences
+🧠 **Knowledge Base Agent** - Learn about your business for better recommendations
+
+**Here's how I can help you get started:**
+
+1. **Upload Company Info** - Tell me about your business, products, and ideal customers
+2. **Find Qualified Leads** - I'll help you identify perfect prospects using LinkedIn and other sources
+3. **Create Campaigns** - Set up personalized outreach across LinkedIn and email
+4. **Automate Follow-ups** - Never miss a follow-up with intelligent sequencing
+
+**Let's start with the basics!** What would you like me to know about your business first?`,
+      sender: "sam",
+      timestamp: new Date(),
+    };
+
+    setMessages([onboardingMessage]);
+    localStorage.setItem('sam_onboarding_started', 'true');
+  };
+
+  const completeOnboarding = () => {
+    localStorage.setItem('sam_onboarding_completed', 'true');
+    setIsNewUser(false);
+    setHasStartedOnboarding(false);
+    
+    const completionMessage: Message = {
+      id: `onboarding_complete_${Date.now()}`,
+      content: `🚀 **Onboarding Complete!** 
+
+You're all set up with SAM AI. I now understand your business and I'm ready to help you:
+
+✅ Find qualified leads in your target market
+✅ Create personalized outreach campaigns  
+✅ Automate follow-ups and sequences
+✅ Track performance and optimize results
+
+**What would you like to work on first?** I'm here whenever you need help scaling your sales efforts!`,
+      sender: "sam",
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, completionMessage]);
+  };
+
   const startNewChat = () => {
     const sessionId = createNewSession();
     setMessages([
@@ -493,7 +574,7 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
                 isAgentInitialized ? 'bg-green-500' : 'bg-yellow-500'
               }`} />
               <span className="text-sm text-gray-400">
-                {isAgentInitialized ? 'Multi-agent system online' : 'Initializing agent system...'}
+                {isAgentInitialized ? 'SAM AI ready' : 'SAM AI starting...'}
               </span>
             </div>
           </div>

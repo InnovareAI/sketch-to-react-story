@@ -4,9 +4,10 @@
  */
 
 export interface LLMConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'openrouter';
   apiKey: string;
   anthropicApiKey?: string;
+  openrouterApiKey?: string;
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -33,29 +34,38 @@ export class LLMService {
   private static instance: LLMService;
   private config: LLMConfig;
   private defaultModels = {
-    // OpenAI models
-    fast: 'gpt-3.5-turbo',                   // Fast responses
-    balanced: 'gpt-4-turbo-preview',         // Balanced performance
-    gpt4: 'gpt-4-turbo-preview',            // GPT-4 Turbo
-    gpt5: 'gpt-5-turbo',                    // GPT-5 (when available)
-    
-    // Anthropic models
-    claude: 'claude-3-opus-20240229',       // Claude 3 Opus
-    quality: 'claude-3-opus-20240229',      // PRIMARY: Claude 3 Opus
+    // Direct API models (preferred)
+    fast: 'gpt-3.5-turbo',                  // Fast responses via OpenAI
+    balanced: 'gpt-4-turbo',                // Balanced performance via OpenAI
+    quality: 'claude-3-5-sonnet-20241022',  // PRIMARY: Claude 3.5 Sonnet via Anthropic
+    gpt4: 'gpt-4-turbo',                    // GPT-4 Turbo via OpenAI
+    claude: 'claude-3-5-sonnet-20241022',   // Claude 3.5 Sonnet via Anthropic
     
     // Specialized models
-    code: 'claude-3-opus-20240229',         // Claude for code tasks
-    creative: 'gpt-4-turbo-preview',        // GPT-4 for creative content
-    analysis: 'claude-3-opus-20240229'      // Claude for analysis
+    code: 'claude-3-5-sonnet-20241022',     // Claude for code tasks
+    creative: 'gpt-4-turbo',                // GPT-4 for creative content
+    analysis: 'claude-3-5-sonnet-20241022', // Claude for analysis
+    
+    // OpenRouter fallback models
+    or_claude: 'anthropic/claude-3.5-sonnet',
+    or_gpt4: 'openai/gpt-4-turbo',
+    llama: 'meta-llama/llama-3.1-70b-instruct',
+    mixtral: 'mistralai/mixtral-8x7b-instruct'
   };
 
   private constructor(config: LLMConfig) {
+    let baseUrl = 'https://api.openai.com/v1';
+    
+    if (config.provider === 'anthropic') {
+      baseUrl = 'https://api.anthropic.com/v1';
+    } else if (config.provider === 'openrouter') {
+      baseUrl = 'https://openrouter.ai/api/v1';
+    }
+    
     this.config = {
       ...config,
-      baseUrl: config.provider === 'openai' 
-        ? 'https://api.openai.com/v1'
-        : 'https://api.anthropic.com/v1',
-      model: config.model || (config.provider === 'openai' ? this.defaultModels.gpt4 : this.defaultModels.claude),
+      baseUrl: config.baseUrl || baseUrl,
+      model: config.model || this.defaultModels.quality,
       temperature: config.temperature || 0.7,
       maxTokens: config.maxTokens || 2000
     };
@@ -72,14 +82,29 @@ export class LLMService {
       // Initialize with environment variables if available
       const openaiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
       const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+      const openrouterKey = import.meta.env.VITE_OPENROUTER_API_KEY || '';
       
-      if (!openaiKey && !anthropicKey) {
+      // Prefer direct APIs for better performance and reliability
+      let provider: 'openai' | 'anthropic' | 'openrouter' = 'anthropic';
+      let apiKey = anthropicKey;
+      
+      if (!anthropicKey && openaiKey) {
+        provider = 'openai';
+        apiKey = openaiKey;
+      } else if (!anthropicKey && !openaiKey && openrouterKey) {
+        provider = 'openrouter';
+        apiKey = openrouterKey;
+      } else if (!anthropicKey && !openaiKey && !openrouterKey) {
         console.warn('No API keys found. Using mock responses.');
+        apiKey = '';
       }
 
+      console.log(`Initializing LLMService with provider: ${provider}`);
+
       LLMService.instance = new LLMService({
-        provider: openaiKey ? 'openai' : 'anthropic',
-        apiKey: openaiKey || anthropicKey,
+        provider,
+        apiKey,
+        openrouterApiKey: openrouterKey,
         anthropicApiKey: anthropicKey
       });
     }
@@ -104,21 +129,51 @@ export class LLMService {
     }
 
     try {
-      const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`,
-          'HTTP-Referer': 'https://sameaisalesassistant.netlify.app',
-          'X-Title': 'SAM AI Sales Assistant'
-        },
-        body: JSON.stringify({
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`,
+        'HTTP-Referer': 'https://sameaisalesassistant.netlify.app',
+        'X-Title': 'SAM AI Sales Assistant'
+      };
+      
+      // Add OpenRouter specific headers
+      if (this.config.provider === 'openrouter') {
+        headers['HTTP-Referer'] = 'https://sameaisalesassistant.netlify.app';
+        headers['X-Title'] = 'SAM AI Sales Assistant';
+      }
+      
+      // Add Anthropic specific headers
+      if (this.config.provider === 'anthropic') {
+        headers['anthropic-version'] = '2023-06-01';
+        delete headers['Authorization'];
+        headers['x-api-key'] = this.config.apiKey;
+      }
+
+      let endpoint = '/chat/completions';
+      let body: any;
+      
+      if (this.config.provider === 'anthropic') {
+        endpoint = '/messages';
+        body = {
+          model: options?.model || this.config.model,
+          max_tokens: options?.maxTokens || this.config.maxTokens,
+          temperature: options?.temperature || this.config.temperature,
+          messages: messages
+        };
+      } else {
+        body = {
           model: options?.model || this.config.model,
           messages: messages,
           temperature: options?.temperature || this.config.temperature,
           max_tokens: options?.maxTokens || this.config.maxTokens,
           stream: options?.stream || false
-        })
+        };
+      }
+
+      const response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
@@ -128,15 +183,33 @@ export class LLMService {
 
       const data = await response.json();
       
+      // Handle different response formats
+      let content: string;
+      let model: string;
+      let usage: any;
+      let finishReason: string;
+      
+      if (this.config.provider === 'anthropic') {
+        content = data.content?.[0]?.text || data.content || '';
+        model = data.model || 'claude-3.5-sonnet';
+        usage = data.usage;
+        finishReason = data.stop_reason || 'stop';
+      } else {
+        content = data.choices?.[0]?.message?.content || '';
+        model = data.model || this.config.model || 'unknown';
+        usage = data.usage;
+        finishReason = data.choices?.[0]?.finish_reason || 'stop';
+      }
+      
       return {
-        content: data.choices[0].message.content,
-        model: data.model,
-        usage: data.usage ? {
-          promptTokens: data.usage.prompt_tokens,
-          completionTokens: data.usage.completion_tokens,
-          totalTokens: data.usage.total_tokens
+        content,
+        model,
+        usage: usage ? {
+          promptTokens: usage.prompt_tokens || usage.input_tokens || 0,
+          completionTokens: usage.completion_tokens || usage.output_tokens || 0,
+          totalTokens: usage.total_tokens || (usage.input_tokens + usage.output_tokens) || 0
         } : undefined,
-        finishReason: data.choices[0].finish_reason
+        finishReason
       };
     } catch (error) {
       console.error('LLM request failed:', error);
