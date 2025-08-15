@@ -147,101 +147,104 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     checkUserOnboardingStatus();
   }, [isAgentInitialized, hasStartedOnboarding]);
 
-  // Initialize agent system
+  // Initialize agent system with better error handling
   useEffect(() => {
+    let isMounted = true;
+    
     const initializeAgents = async () => {
       try {
-        const config: AgentConfig = {
-          apiKeys: {
-            // These would come from environment variables
-            openai: process.env.VITE_OPENAI_API_KEY || undefined,
-            claude: process.env.VITE_CLAUDE_API_KEY || undefined,
-          },
-          supabase: {
-            url: process.env.VITE_SUPABASE_URL || 'https://ktchrfgkbpaixbiwbieg.supabase.co',
-            anonKey: process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0Y2hyZmdrYnBhaXhiaXdiaWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjI0MzMxNzcsImV4cCI6MjAzODAwOTE3N30.YI1RxpjqToyqY9Dj12fqEP2V3G6d2j8QZA2xj8TcTBg',
-          },
-          features: {
-            voiceEnabled: true,
-            videoGeneration: false,
-            linkedinAutomation: true,
-            emailAutomation: true,
-          },
-          limits: {
-            maxParallelTasks: 5,
-            maxTokensPerRequest: 4000,
-            maxSessionDuration: 120,
-          },
-          prompts: {
-            orchestrator: "You are SAM, an AI sales assistant orchestrator...",
-            'lead-research': "You are a lead research specialist...",
-            'campaign-management': "You are a campaign management expert...",
-            'gtm-strategy': "You are a go-to-market strategy specialist...",
-            'meddic-qualification': "You are a MEDDIC qualification expert...",
-            'workflow-automation': "You are a workflow automation specialist...",
-            'inbox-triage': "You are an inbox triage specialist...",
-            'spam-filter': "You are a spam filter specialist...",
-            'auto-response': "You are an auto-response specialist...",
-            'content-creation': "You are a content creation specialist...",
-            'outreach-automation': "You are an outreach automation expert...",
-            'analytics': "You are a performance analytics specialist...",
-            'knowledge-base': "You are a knowledge management expert..."
-          }
-        };
+        // Simple delay to show loading state
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        if (!isMounted) return;
+        
+        // Try to initialize agent factory
+        try {
+          const config: AgentConfig = {
+            apiKeys: {
+              openai: import.meta.env.VITE_OPENAI_API_KEY || undefined,
+              claude: import.meta.env.VITE_CLAUDE_API_KEY || undefined,
+            },
+            supabase: {
+              url: import.meta.env.VITE_SUPABASE_URL || 'https://ktchrfgkbpaixbiwbieg.supabase.co',
+              anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0Y2hyZmdrYnBhaXhiaXdiaWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjI0MzMxNzcsImV4cCI6MjAzODAwOTE3N30.YI1RxpjqToyqY9Dj12fqEP2V3G6d2j8QZA2xj8TcTBg',
+            },
+            features: {
+              voiceEnabled: true,
+              videoGeneration: false,
+              linkedinAutomation: true,
+              emailAutomation: true,
+            },
+            limits: {
+              maxParallelTasks: 3,
+              maxTokensPerRequest: 3000,
+              maxSessionDuration: 60,
+            },
+            prompts: {
+              orchestrator: "You are SAM, an AI sales assistant.",
+              'lead-research': "You are a lead research specialist.",
+              'campaign-management': "You are a campaign management expert.",
+              'gtm-strategy': "You are a GTM strategy specialist.",
+              'meddic-qualification': "You are a MEDDIC qualification expert.",
+              'workflow-automation': "You are a workflow automation specialist.",
+              'inbox-triage': "You are an inbox triage specialist.",
+              'spam-filter': "You are a spam filter specialist.",
+              'auto-response': "You are an auto-response specialist.",
+              'content-creation': "You are a content creation specialist.",
+              'outreach-automation': "You are an outreach automation expert.",
+              'analytics': "You are a performance analytics specialist.",
+              'knowledge-base': "You are a knowledge management expert."
+            }
+          };
 
-        // Initialize with minimum delay to show loading state
-        const startTime = Date.now();
-        
-        try {
           await agentFactory.initialize(config);
-          console.log('✅ AgentFactory initialized successfully');
-        } catch (initError) {
-          console.warn('⚠️ AgentFactory initialization failed, continuing in fallback mode:', initError);
-          // Don't throw - just log and continue
-        }
-        
-        const elapsedTime = Date.now() - startTime;
-        
-        // Ensure minimum 2 second loading time for better UX
-        const minLoadTime = 2000;
-        if (elapsedTime < minLoadTime) {
-          await new Promise(resolve => setTimeout(resolve, minLoadTime - elapsedTime));
-        }
-        
-        setIsAgentInitialized(true);
-        
-        // Set initial operation mode (with error handling)
-        try {
-          const orchestrator = agentFactory.getOrchestrator();
-          if (orchestrator) {
-            orchestrator.setOperationMode(operationMode);
+          console.log('✅ Agent system initialized');
+          
+          if (isMounted) {
             setSamStatus(`Multi-agent system ready - ${operationMode} mode`);
-          } else {
-            setSamStatus("Agent system in fallback mode");
           }
-        } catch (orchestratorError) {
-          console.warn('⚠️ Orchestrator setup failed:', orchestratorError);
-          setSamStatus("Agent system in fallback mode");
+        } catch (initError) {
+          console.warn('⚠️ Agent initialization failed, using fallback mode:', initError);
+          if (isMounted) {
+            setSamStatus("Using simplified mode");
+          }
         }
         
-        console.log('Agent system initialization completed');
+        if (isMounted) {
+          setIsAgentInitialized(true);
+        }
+        
       } catch (error) {
-        console.error('❌ Critical agent system error:', error);
-        setSamStatus("Agent system offline - using basic mode");
-        // Still set initialized to true to show the interface
-        setIsAgentInitialized(true);
+        console.error('❌ Agent initialization error:', error);
+        if (isMounted) {
+          setSamStatus("Basic mode active");
+          setIsAgentInitialized(true);
+        }
       }
     };
 
     initializeAgents();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [agentFactory, operationMode]);
   
   // Update operation mode when prop changes
   useEffect(() => {
     if (isAgentInitialized) {
-      const orchestrator = agentFactory.getOrchestrator();
-      orchestrator.setOperationMode(operationMode);
-      setSamStatus(`Switched to ${operationMode} mode`);
+      try {
+        const orchestrator = agentFactory.getOrchestrator();
+        if (orchestrator) {
+          orchestrator.setOperationMode(operationMode);
+          setSamStatus(`Switched to ${operationMode} mode`);
+        } else {
+          setSamStatus(`${operationMode} mode (simplified)`);
+        }
+      } catch (error) {
+        console.warn('Mode change failed:', error);
+        setSamStatus(`${operationMode} mode (basic)`);
+      }
       
       // Update the greeting message based on mode
       const greetingMessage: Message = {
@@ -298,21 +301,23 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     try {
       if (!isAgentInitialized) {
         console.log('🔄 Processing in fallback mode...');
-        // Fallback to simple processing
         await handleFallbackProcessing(content);
         return;
       }
 
-      // Additional safety check
-      const orchestrator = agentFactory.getOrchestrator();
-      if (!orchestrator) {
-        console.log('🔄 No orchestrator available, using fallback...');
+      // Try multi-agent processing with fallback
+      try {
+        const orchestrator = agentFactory.getOrchestrator();
+        if (orchestrator) {
+          await handleMultiAgentProcessing(content, sessionId);
+        } else {
+          console.log('🔄 No orchestrator available, using fallback...');
+          await handleFallbackProcessing(content);
+        }
+      } catch (agentError) {
+        console.warn('🔄 Multi-agent processing failed, falling back:', agentError);
         await handleFallbackProcessing(content);
-        return;
       }
-
-      // Real multi-agent processing
-      await handleMultiAgentProcessing(content, sessionId);
 
     } catch (error) {
       console.error('Message processing error:', error);
@@ -399,26 +404,33 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
       }, 1000);
 
       // Process through multi-agent system
-      const result: any = await agentFactory.processMessage(content, existingContext as any, sessionId);
-      
-      // Update agent trace for debugging
-      setAgentTrace(result.agentTrace || []);
-      
-      // Complete all thinking steps
-      setThinkingSteps(prev => prev.map(s => ({ ...s, status: 'completed' as const })));
+      try {
+        const result: any = await agentFactory.processMessage(content, existingContext as any, sessionId);
+        
+        // Update agent trace for debugging
+        if (result?.agentTrace) {
+          setAgentTrace(result.agentTrace);
+        }
+        
+        // Complete all thinking steps
+        setThinkingSteps(prev => prev.map(s => ({ ...s, status: 'completed' as const })));
 
-      // Create SAM response
-      const samResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: result.response.content,
-        sender: "sam",
-        timestamp: new Date(),
-        agentTrace: result.agentTrace
-      };
+        // Create SAM response
+        const samResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          content: result?.response?.content || "I processed your request successfully, but I'm having trouble formulating a response right now. Could you try rephrasing your question?",
+          sender: "sam",
+          timestamp: new Date(),
+          agentTrace: result?.agentTrace || []
+        };
 
-      setMessages(prev => [...prev, samResponse]);
-      if (sessionId) {
-        addMessageToSession(sessionId, samResponse as any);
+        setMessages(prev => [...prev, samResponse]);
+        if (sessionId) {
+          addMessageToSession(sessionId, samResponse as any);
+        }
+      } catch (processError) {
+        console.error('Agent processing failed:', processError);
+        throw processError; // Re-throw to trigger fallback
       }
 
     } finally {
