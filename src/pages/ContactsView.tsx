@@ -34,6 +34,49 @@ interface Contact {
   metadata: any;
   scraped_data: any;
   created_at: string;
+  profile_picture_url?: string;
+  company?: string;
+  full_name?: string;
+}
+
+// Profile image component with fallback
+function ContactAvatar({ contact }: { contact: Contact }) {
+  const [imageError, setImageError] = useState(false);
+  
+  // Try to get image URL from various sources
+  const getImageUrl = () => {
+    if (contact.profile_picture_url) return contact.profile_picture_url;
+    if (contact.metadata?.profile_picture_url) return contact.metadata.profile_picture_url;
+    if (contact.metadata?.avatar_url) return contact.metadata.avatar_url;
+    if (contact.metadata?.profile_image_url) return contact.metadata.profile_image_url;
+    if (contact.scraped_data?.profile_picture_url) return contact.scraped_data.profile_picture_url;
+    if (contact.scraped_data?.profile_image_url) return contact.scraped_data.profile_image_url;
+    if (contact.scraped_data?.avatar_url) return contact.scraped_data.avatar_url;
+    
+    // Generate professional avatar from DiceBear API
+    const seed = `${contact.first_name}-${contact.last_name}`.toLowerCase();
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+  };
+  
+  const imageUrl = getImageUrl();
+  const initials = `${contact.first_name[0]}${contact.last_name[0]}`;
+  
+  if (imageError || !imageUrl) {
+    return (
+      <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+        {initials}
+      </div>
+    );
+  }
+  
+  return (
+    <img 
+      src={imageUrl} 
+      alt={`${contact.first_name} ${contact.last_name}`}
+      className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+      onError={() => setImageError(true)}
+    />
+  );
 }
 
 export default function ContactsView() {
@@ -688,9 +731,7 @@ export default function ContactsView() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {contact.first_name[0]}{contact.last_name[0]}
-                      </div>
+                      <ContactAvatar contact={contact} />
                       <div>
                         <div className="font-medium text-gray-900">
                           {contact.first_name} {contact.last_name}
