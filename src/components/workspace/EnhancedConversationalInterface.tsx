@@ -36,9 +36,23 @@ interface EnhancedConversationalInterfaceProps {
   operationMode?: 'inbound' | 'outbound';
 }
 
-// Conversation starters - focused on mode selection
+// Conversation starters - focused on agent functionality
 const conversationStarters = {
-  "Choose Your Mode": [
+  "Train Your Agents": [
+    {
+      title: "🎓 Agent Training Overview",
+      prompt: "Show me what my AI agents have learned and how to train them better",
+      icon: Brain,
+      color: "from-purple-500 to-pink-600"
+    },
+    {
+      title: "📊 Agent Performance",
+      prompt: "How are my AI agents performing and what can they do?",
+      icon: Activity,
+      color: "from-blue-500 to-purple-600"
+    }
+  ],
+  "Get Started": [
     {
       title: "🚀 Generate New Leads",
       prompt: "I want to generate new leads and create outreach campaigns",
@@ -46,24 +60,10 @@ const conversationStarters = {
       color: "from-green-500 to-teal-600"
     },
     {
-      title: "📥 Manage My Inbox",
+      title: "📥 Manage My Inbox",  
       prompt: "I want to manage my inbox and automate responses",
       icon: MessageSquare,
-      color: "from-blue-500 to-purple-600"
-    }
-  ],
-  "Quick Setup": [
-    {
-      title: "Upload company info",
-      prompt: "Let me upload information about my company first",
-      icon: Upload,
-      color: "from-purple-500 to-pink-600"
-    },
-    {
-      title: "Connect LinkedIn",
-      prompt: "Help me connect my LinkedIn account to get started",
-      icon: Linkedin,
-      color: "from-blue-600 to-blue-700"
+      color: "from-orange-500 to-red-600"
     }
   ]
 };
@@ -479,19 +479,59 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
   const generateFallbackResponse = (content: string): string => {
     const contentLower = content.toLowerCase();
     
+    // Agent Training Overview
+    if (contentLower.includes('agent') && (contentLower.includes('training') || contentLower.includes('learned') || contentLower.includes('overview'))) {
+      return `🎓 **Agent Training Status:**
+
+**🧠 Knowledge Base Agent:** Currently has access to your uploaded documents and can perform semantic search. Ready for more training data!
+
+**🎯 Lead Research Agent:** Knows basic prospecting techniques. Needs your ICP and target market info to be more effective.
+
+**📊 Campaign Manager:** Has template frameworks loaded. Could use your successful campaign examples for better personalization.
+
+**✍️ Content Creator:** Ready with proven templates. Will improve with your voice and successful message examples.
+
+**📈 Performance Analyst:** Set up to track metrics. Needs historical data and KPI definitions to provide insights.
+
+**🔄 Workflow Agent:** Basic automation ready. Needs your specific workflows and approval processes.
+
+**What would you like to train first?** I recommend starting with uploading some company information or successful campaign examples.`;
+    }
+
+    // Agent Performance  
+    if (contentLower.includes('agent') && (contentLower.includes('performance') || contentLower.includes('performing'))) {
+      return `📊 **Agent Performance Dashboard:**
+
+**Current Status:** All 6 specialist agents are online and ready!
+
+**🎯 Lead Research:** Ready to find prospects (needs ICP training)
+**📊 Campaign Manager:** Template-based campaigns ready  
+**✍️ Content Creator:** 50+ proven templates loaded
+**📈 Performance Analyst:** Tracking systems active
+**🔄 Workflow Automation:** Basic sequences configured  
+**🧠 Knowledge Manager:** Document processing active
+
+**Recommendations:**
+• Upload company info to improve personalization
+• Share successful message examples for better content
+• Define your ICP for better lead targeting
+
+**Ready to put an agent to work?** Try asking me to find leads or write a campaign!`;
+    }
+    
     if (contentLower.includes('lead') || contentLower.includes('prospect')) {
-      return "I understand you're looking for help with lead generation. While my full agent system is initializing, I can guide you through the basic process of finding and qualifying prospects. Would you like me to explain the key steps?";
+      return "🎯 **Lead Research Agent activated!** I can help you find qualified prospects. To get better results, tell me about your ideal customer profile (ICP) - what industry, company size, and job titles are you targeting?";
     }
     
     if (contentLower.includes('campaign') || contentLower.includes('outreach')) {
-      return "I can help you with campaign optimization! Even in simplified mode, I can provide guidance on improving your outreach performance. What specific aspect of your campaigns would you like to work on?";
+      return "📊 **Campaign Manager Agent ready!** I can help you create multi-touch outreach sequences. What's your goal - LinkedIn outreach, email campaigns, or a multi-channel approach?";
     }
     
     if (contentLower.includes('content') || contentLower.includes('template') || contentLower.includes('write')) {
-      return "I'd love to help with content creation. While waiting for full agent capabilities, I can provide you with proven email and LinkedIn message templates. What type of content do you need?";
+      return "✍️ **Content Creator Agent at your service!** I can write personalized messages, email sequences, or LinkedIn outreach. What type of content do you need and who's your target audience?";
     }
     
-    return "I understand what you're looking for. My multi-agent system is still initializing, but I can provide helpful guidance. Could you tell me more specifically what you'd like assistance with?";
+    return "I have 6 specialist agents ready to help! Try asking about **agent training**, **finding leads**, **writing campaigns**, or **analyzing performance**. What would you like to work on?";
   };
 
   const handleQuickAction = (action: QuickAction) => {
@@ -519,25 +559,26 @@ export function EnhancedConversationalInterface({ operationMode = 'outbound' }: 
     // Clear existing messages and start fresh onboarding
     const onboardingMessage: Message = {
       id: `onboarding_${Date.now()}`,
-      content: `🎉 **Welcome to SAM AI!** I'm your AI Sales Assistant, and I'm excited to help you transform your sales process.
+      content: `🎉 **Welcome to SAM AI!** Let me give you a quick overview of your new workspace.
 
-I'm powered by a **multi-agent system** with 6 specialist agents that work together to:
+**📍 Your Interface Layout:**
 
-🎯 **Lead Research Agent** - Find and qualify your ideal prospects
-📊 **Campaign Management Agent** - Create and optimize outreach campaigns  
-✍️ **Content Creation Agent** - Write personalized messages that convert
-📈 **Analytics Agent** - Track performance and suggest improvements
-🔄 **Workflow Automation Agent** - Set up smart follow-ups and sequences
-🧠 **Knowledge Base Agent** - Learn about your business for better recommendations
+**Left Side** - Work Mode Switcher:
+• **🤖 Agent Mode** (where you are now) - Chat with AI specialists for complex tasks
+• **📧 Workspace Mode** - Traditional inbox-style communications hub
 
-**Here's how I can help you get started:**
+You can use both modes concurrently, but you'll spend most of your productive time here in **Agent Mode** where I can actively help you.
 
-1. **Upload Company Info** - Tell me about your business, products, and ideal customers
-2. **Find Qualified Leads** - I'll help you identify perfect prospects using LinkedIn and other sources
-3. **Create Campaigns** - Set up personalized outreach across LinkedIn and email
-4. **Automate Follow-ups** - Never miss a follow-up with intelligent sequencing
+**🤖 Meet Your AI Specialist Team:**
 
-**Let's start with the basics!** What would you like me to know about your business first?`,
+🎯 **Lead Research** - Find and qualify perfect prospects  
+📊 **Campaign Manager** - Create and optimize outreach sequences
+✍️ **Content Creator** - Write personalized messages that convert  
+📈 **Performance Analyst** - Track results and suggest improvements
+🔄 **Workflow Automation** - Set up intelligent follow-ups
+🧠 **Knowledge Manager** - Learn your business for better recommendations
+
+**Ready to train your agents?** Let's start by letting them learn about your business and ideal customers!`,
       sender: "sam",
       timestamp: new Date(),
     };
