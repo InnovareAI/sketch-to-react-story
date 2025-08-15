@@ -50,27 +50,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true); // Start with loading true for proper auth check
 
-  // Check for bypass user on mount (still shared for development)
-  const checkBypassUser = (): UserProfile | null => {
-    const bypassAuth = localStorage.getItem('bypass_auth');
-    const bypassUserData = localStorage.getItem('bypass_user');
-    
-    if (bypassAuth === 'true' && bypassUserData) {
-      try {
-        const profile = JSON.parse(bypassUserData) as UserProfile;
-        // Store user-specific workspace ID when bypassing
-        if (profile.workspace_id) {
-          localStorage.setItem(`user_${profile.id}_workspace_id`, profile.workspace_id);
-        }
-        return profile;
-      } catch (error) {
-        console.error('Error parsing bypass user data:', error);
-        localStorage.removeItem('bypass_auth');
-        localStorage.removeItem('bypass_user');
-      }
-    }
-    return null;
-  };
 
   // Timeout to prevent infinite loading
   useEffect(() => {
@@ -253,16 +232,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const refreshUser = async () => {
-    // Check if this is a bypass user
-    const bypassAuth = localStorage.getItem('bypass_auth');
-    if (bypassAuth === 'true') {
-      const bypassUser = checkBypassUser();
-      if (bypassUser) {
-        setUser(bypassUser);
-      }
-      return;
-    }
-    
     if (!authUser) return;
     
     const profile = await loadUserProfile(authUser.id);
@@ -273,127 +242,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('AuthContext signIn called:', { email });
       setLoading(true);
-      
-      // Check for bypass users
-      const bypassEmails = ['tl@innovareai.com', 'cl@innovareai.com', 'cs@innovareai.com'];
-      if (bypassEmails.includes(email.toLowerCase())) {
-        console.log(`Using bypass authentication for ${email}`);
-        
-        // Create mock user profile based on email
-        const userEmail = email.toLowerCase();
-        let mockUser: UserProfile;
-        
-        // Generate a proper UUID v4 format
-        const generateUUID = (): string => {
-          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-          });
-        };
-        
-        // All InnovareAI team members share the same workspace
-        const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
-        
-        // Use consistent UUIDs for each user (stored in localStorage for persistence)
-        const userIdKey = `${userEmail}_uuid`;
-        let userId = localStorage.getItem(userIdKey);
-        if (!userId) {
-          userId = generateUUID();
-          localStorage.setItem(userIdKey, userId);
-        }
-        const workspaceId = INNOVARE_WORKSPACE_ID;
-        
-        if (userEmail === 'cl@innovareai.com') {
-          mockUser = {
-            id: userId,
-            email: userEmail,
-            full_name: 'Chona Lamberte',
-            role: 'admin',
-            workspace_id: workspaceId,
-            workspace_name: 'InnovareAI Workspace',
-            workspace_plan: 'pro',
-            status: 'active',
-            avatar_url: null
-          };
-        } else if (userEmail === 'cs@innovareai.com') {
-          mockUser = {
-            id: userId,
-            email: userEmail,
-            full_name: 'Charissa Saniel',
-            role: 'member',
-            workspace_id: workspaceId,
-            workspace_name: 'InnovareAI Workspace',
-            workspace_plan: 'pro',
-            status: 'active',
-            avatar_url: null
-          };
-        } else {
-          // TL
-          mockUser = {
-            id: userId,
-            email: userEmail,
-            full_name: 'Thorsten Linz',
-            role: 'owner',
-            workspace_id: workspaceId,
-            workspace_name: 'InnovareAI Workspace',
-            workspace_plan: 'pro',
-            status: 'active',
-            avatar_url: null
-          };
-        }
-        
-        // Create mock auth user
-        const mockAuthUser = {
-          id: mockUser.id,
-          email: mockUser.email,
-          user_metadata: { full_name: mockUser.full_name }
-        } as User;
-        
-        // Load user's actual workspace from database
-        try {
-          const userProfile = await loadUserProfile(mockUser.id);
-          if (userProfile && userProfile.workspace_id) {
-            mockUser.workspace_id = userProfile.workspace_id;
-            mockUser.workspace_name = userProfile.workspace_name;
-          }
-        } catch (error) {
-          console.log('Could not load workspace for bypass user, will use default');
-        }
-        
-        // Clear any old data first (especially for CS account fixes)
-        if (userEmail === 'cs@innovareai.com') {
-          console.log('🧹 Clearing old CS account data...');
-          localStorage.removeItem('bypass_user');
-          localStorage.removeItem('user_auth_profile');
-          localStorage.removeItem('workspace_id');
-          localStorage.removeItem('user_email');
-        }
-
-        // Store bypass data in localStorage
-        localStorage.setItem('bypass_user', JSON.stringify(mockUser));
-        localStorage.setItem('bypass_auth', 'true');
-        localStorage.setItem('user_email', userEmail);
-        localStorage.setItem('workspace_id', workspaceId);
-        // Also store in the key that other components expect
-        localStorage.setItem('user_auth_profile', JSON.stringify(mockUser));
-        
-        // Debug logging for CS account
-        if (userEmail === 'cs@innovareai.com') {
-          console.log('🔍 CS DEBUG: mockUser created:', mockUser);
-          console.log('🔍 CS DEBUG: workspace_id set:', workspaceId);
-          console.log('🔍 CS DEBUG: localStorage bypass_user:', localStorage.getItem('bypass_user'));
-          console.log('🔍 CS DEBUG: localStorage workspace_id:', localStorage.getItem('workspace_id'));
-          console.log('🔍 CS DEBUG: localStorage user_email:', localStorage.getItem('user_email'));
-        }
-        
-        setAuthUser(mockAuthUser);
-        setUser(mockUser);
-        
-        console.log('Bypass authentication successful:', mockUser.email);
-        
-        return { error: null };
-      }
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -434,17 +282,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // Check if this is a bypass user
-      const bypassAuth = localStorage.getItem('bypass_auth');
-      if (bypassAuth === 'true') {
-        // Clear bypass data
-        localStorage.removeItem('bypass_auth');
-        localStorage.removeItem('bypass_user');
-        console.log('🚀 Bypass user signed out');
-      } else {
-        await supabase.auth.signOut();
-      }
-      
+      await supabase.auth.signOut();
       setUser(null);
       setAuthUser(null);
     } catch (error) {
@@ -460,58 +298,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Get initial session
     const initializeAuth = async () => {
       try {
-        // First check for bypass user
-        const bypassUser = checkBypassUser();
-        if (bypassUser) {
-          console.log('🚀 Found bypass user on initialization:', bypassUser.email);
-          
-          // Ensure bypass user has proper workspace_id
-          if (!bypassUser.workspace_id) {
-            try {
-              const userProfile = await loadUserProfile(bypassUser.id);
-              if (userProfile && userProfile.workspace_id) {
-                bypassUser.workspace_id = userProfile.workspace_id;
-                bypassUser.workspace_name = userProfile.workspace_name;
-                localStorage.setItem('bypass_user', JSON.stringify(bypassUser));
-              } else {
-                // All InnovareAI team members share the same workspace
-                const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
-                
-                bypassUser.workspace_id = INNOVARE_WORKSPACE_ID;
-                bypassUser.workspace_name = 'InnovareAI Workspace';
-                localStorage.setItem('bypass_user', JSON.stringify(bypassUser));
-                localStorage.setItem('workspace_id', INNOVARE_WORKSPACE_ID);
-                localStorage.setItem('user_email', bypassUser.email);
-                
-                console.log('Set shared InnovareAI workspace ID for bypass user:', INNOVARE_WORKSPACE_ID);
-              }
-            } catch (error) {
-              console.log('Could not load workspace for bypass user, using shared workspace');
-              // Use shared InnovareAI workspace as fallback
-              const INNOVARE_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000000';
-              
-              bypassUser.workspace_id = INNOVARE_WORKSPACE_ID;
-              bypassUser.workspace_name = 'InnovareAI Workspace';
-              localStorage.setItem('bypass_user', JSON.stringify(bypassUser));
-              localStorage.setItem('workspace_id', INNOVARE_WORKSPACE_ID);
-              localStorage.setItem('user_email', bypassUser.email);
-            }
-          }
-          
-          setUser(bypassUser);
-          // Ensure user_auth_profile is also set
-          localStorage.setItem('user_auth_profile', JSON.stringify(bypassUser));
-          // Create mock auth user for bypass
-          const mockAuthUser = {
-            id: bypassUser.id,
-            email: bypassUser.email,
-            user_metadata: { full_name: bypassUser.full_name }
-          } as User;
-          setAuthUser(mockAuthUser);
-          setLoading(false);
-          return;
-        }
-        
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
@@ -536,17 +322,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     initializeAuth();
     
-    // Listen for auth state changes (but not for bypass users)
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
-        
-        // Don't override bypass user state
-        const bypassAuth = localStorage.getItem('bypass_auth');
-        if (bypassAuth === 'true') {
-          console.log('🚀 Ignoring auth state change for bypass user');
-          return;
-        }
         
         if (session?.user) {
           setAuthUser(session.user);

@@ -4,6 +4,7 @@ import SimpleLoginModal from '@/components/auth/SimpleLoginModal';
 import SignupModal from '@/components/auth/SignupModal';
 import { Button } from '@/components/ui/button';
 import { initializeWorkspace } from '@/lib/workspace';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthGateProps {
   children: React.ReactNode;
@@ -40,16 +41,42 @@ export default function AuthGate({ children }: AuthGateProps) {
     checkAuth();
   }, []);
   
-  const checkAuth = () => {
-    // Clear any existing localStorage auth to force proper login
-    localStorage.removeItem('is_authenticated');
-    localStorage.removeItem('user_auth_profile');
-    localStorage.removeItem('demo_workspace_id');
-    localStorage.removeItem('demo_user_id');
-    
-    // Force users to authenticate properly - no localStorage bypass
-    setIsAuthenticated(false);
-    setLoading(false);
+  const checkAuth = async () => {
+    try {
+      // Check for existing Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // User is authenticated with Supabase, check if profile exists
+        const isAuth = localStorage.getItem('is_authenticated') === 'true';
+        const userProfile = localStorage.getItem('user_auth_profile');
+        
+        if (isAuth && userProfile) {
+          try {
+            const profile = JSON.parse(userProfile);
+            if (profile.id && profile.workspace_id) {
+              setIsAuthenticated(true);
+              // Initialize workspace asynchronously
+              initializeWorkspace().catch(console.error);
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            // Clear bad data
+            localStorage.removeItem('is_authenticated');
+            localStorage.removeItem('user_auth_profile');
+          }
+        }
+      }
+      
+      // No valid session or profile, user needs to authenticate
+      setIsAuthenticated(false);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      setIsAuthenticated(false);
+      setLoading(false);
+    }
   };
   
   const handleAuthSuccess = () => {
@@ -64,7 +91,7 @@ export default function AuthGate({ children }: AuthGateProps) {
         return;
       }
       
-      // Still not authenticated, clear everything and show login again
+      // Still not authenticated, recheck auth state
       checkAuth();
     }, 500);
   };

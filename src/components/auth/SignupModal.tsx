@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Lock, User, Building2, CheckCircle } from 'lucide-react';
-import { generateUUID } from '@/utils/uuid';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -46,46 +46,89 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
     setLoading(true);
     
     try {
-      // For now, simulate signup success since we're not requiring database
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Generate IDs
-      const userId = generateUUID();
-      const workspaceId = generateUUID();
-      
-      // Store user data in localStorage (temporary solution)
-      const workspaceName = formData.companyName || `${formData.fullName}'s Workspace`;
-      const userData = {
-        id: userId,
+      // Use proper Supabase authentication
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        full_name: formData.fullName,
-        workspace_id: workspaceId,
-        workspace_name: workspaceName,
-        role: 'owner',
-        created_at: new Date().toISOString()
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            company_name: formData.companyName
+          }
+        }
+      });
+
+      if (authError) {
+        throw authError;
+      }
+
+      if (!authData.user) {
+        throw new Error('No user data returned from signup');
+      }
+
+      // Create workspace first
+      const workspaceName = formData.companyName || `${formData.fullName}'s Workspace`;
+      const { data: workspace, error: workspaceError } = await supabase
+        .from('workspaces')
+        .insert({
+          name: workspaceName,
+          slug: workspaceName.toLowerCase().replace(/[^a-z0-9]/g, ''),
+          owner_id: authData.user.id,
+          subscription_tier: 'pro',
+          settings: {
+            features: {
+              linkedin: true,
+              email: true,
+              ai: true,
+              workflows: true
+            },
+            limits: {
+              users: 10,
+              linkedin_accounts: 5,
+              monthly_messages: 1000
+            }
+          }
+        })
+        .select()
+        .single();
+
+      if (workspaceError) {
+        console.error('Workspace creation error:', workspaceError);
+        throw new Error('Failed to create workspace');
+      }
+
+      // Create user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: formData.email,
+          full_name: formData.fullName,
+          workspace_id: workspace.id,
+          role: 'owner'
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw new Error('Failed to create user profile');
+      }
+
+      // Set up authentication state for immediate login
+      const userProfile = {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        role: profile.role,
+        workspace_id: profile.workspace_id,
+        workspace_name: workspace.name,
+        workspace_plan: workspace.subscription_tier,
+        status: 'active'
       };
-      
-      // Store workspace in workspaces list
-      const workspace = {
-        id: workspaceId,
-        name: workspaceName,
-        role: 'owner',
-        memberCount: 1
-      };
-      localStorage.setItem('user_workspaces', JSON.stringify([workspace]));
-      
-      // Store auth data
-      localStorage.setItem('user_auth_profile', JSON.stringify(userData));
-      localStorage.setItem('user_email', formData.email);
+
       localStorage.setItem('is_authenticated', 'true');
-      
-      // Store user-specific workspace data
-      localStorage.setItem(`user_${userId}_workspace_id`, workspaceId);
-      localStorage.setItem(`user_${userId}_app_workspace_id`, workspaceId);
-      
-      // Keep legacy keys for backward compatibility during transition
-      localStorage.setItem('app_workspace_id', workspaceId);
-      localStorage.setItem('workspace_id', workspaceId);
+      localStorage.setItem('user_auth_profile', JSON.stringify(userProfile));
       
       // Show success
       setStep('success');
@@ -100,7 +143,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess }: SignupModalP
       
     } catch (err: any) {
       console.error('Signup error:', err);
-      toast.error('Failed to create account. Please try again.');
+      toast.error(err.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }

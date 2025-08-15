@@ -338,19 +338,6 @@ export default function UserLogin() {
               {resetLoading ? 'Sending...' : 'Forgot your password?'}
             </button>
             
-            {/* Debug button */}
-            <button
-              type="button"
-              onClick={() => {
-                console.log('🔧 Debug button clicked');
-                console.log('Current form state:', { email, password, loading });
-                setEmail('test-1755018100009@example.com');
-                setPassword('TestPassword123!');
-              }}
-              className="block text-xs text-blue-500 hover:text-blue-700 mx-auto"
-            >
-              [Debug] Fill test credentials
-            </button>
           </div>
 
           <div className="mt-6 text-center space-y-2">

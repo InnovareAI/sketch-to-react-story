@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getDemoWorkspaceId, initSimpleAuth } from '@/utils/simpleAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -115,8 +114,20 @@ export default function FollowUps() {
 
   const loadFollowUps = async () => {
     try {
-      await initSimpleAuth();
-      const workspaceId = getDemoWorkspaceId();
+      // Get workspace ID from authenticated user profile
+      const userProfile = localStorage.getItem('user_auth_profile');
+      if (!userProfile) {
+        console.error('No user profile found');
+        return;
+      }
+      
+      const profile = JSON.parse(userProfile);
+      const workspaceId = profile.workspace_id;
+      
+      if (!workspaceId) {
+        console.error('No workspace ID found in user profile');
+        return;
+      }
 
       console.log('Loading follow-ups for workspace:', workspaceId);
 

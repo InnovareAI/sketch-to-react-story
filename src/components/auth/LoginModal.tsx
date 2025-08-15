@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Lock, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateUUID } from '@/utils/uuid';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -24,7 +24,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSignupClick }
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
     if (!formData.email || !formData.password) {
       toast.error('Please enter your email and password');
       return;
@@ -33,61 +32,65 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSignupClick }
     setLoading(true);
     
     try {
-      // For demo purposes, accept any login
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Use proper Supabase authentication
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
       
-      // Check if user exists in localStorage (from signup)
-      const existingProfile = localStorage.getItem('user_auth_profile');
-      let userData;
-      
-      if (existingProfile) {
-        userData = JSON.parse(existingProfile);
-        // Update email if different
-        if (userData.email !== formData.email) {
-          userData.email = formData.email;
-        }
-      } else {
-        // Create new user data for demo
-        // Always use proper UUID generation
-        const userId = generateUUID();
-        const workspaceId = generateUUID();
-        
-        userData = {
-          id: userId,
-          email: formData.email,
-          full_name: formData.email.split('@')[0],
-          workspace_id: workspaceId,
-          workspace_name: `${formData.email.split('@')[0]}'s Workspace`,
-          role: 'owner',
-          created_at: new Date().toISOString()
-        };
+      if (authError) {
+        throw authError;
       }
       
-      // Store auth data
-      localStorage.setItem('user_auth_profile', JSON.stringify(userData));
-      localStorage.setItem('user_email', formData.email);
+      if (!authData.user) {
+        throw new Error('No user data returned');
+      }
+      
+      // Get user profile from database
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          role,
+          workspace_id,
+          workspaces (
+            name,
+            subscription_tier
+          )
+        `)
+        .eq('id', authData.user.id)
+        .single();
+      
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw new Error('Failed to load user profile');
+      }
+      
+      // Set up proper authentication state
+      const userProfile = {
+        id: profileData.id,
+        email: profileData.email,
+        full_name: profileData.full_name || profileData.email.split('@')[0],
+        role: profileData.role,
+        workspace_id: profileData.workspace_id,
+        workspace_name: profileData.workspaces?.name || 'Workspace',
+        workspace_plan: profileData.workspaces?.subscription_tier || 'free',
+        status: 'active'
+      };
+      
       localStorage.setItem('is_authenticated', 'true');
-      
-      // Store user-specific workspace data
-      localStorage.setItem(`user_${userData.id}_workspace_id`, userData.workspace_id);
-      localStorage.setItem(`user_${userData.id}_app_workspace_id`, userData.workspace_id);
-      
-      // Keep legacy keys for backward compatibility during transition
-      localStorage.setItem('app_workspace_id', userData.workspace_id);
-      localStorage.setItem('workspace_id', userData.workspace_id);
+      localStorage.setItem('user_auth_profile', JSON.stringify(userProfile));
       
       toast.success('Welcome back!');
-      
-      // Close modal and trigger success callback
-      setTimeout(() => {
-        onClose();
-        if (onSuccess) onSuccess();
-        window.location.reload(); // Refresh to apply auth state
-      }, 500);
+      onClose();
+      onSuccess?.();
       
     } catch (err: any) {
-      console.error('Login error details:', err);
-      toast.error(`Login failed: ${err.message || 'Please try again'}`);
+      console.error('Login error:', err);
+      toast.error('Login failed. Please try again.');
+    } finally {
       setLoading(false);
     }
   };

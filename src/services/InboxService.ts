@@ -5,7 +5,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { getUserWorkspaceId } from '@/utils/userDataStorage';
-import { getDemoWorkspaceId, initSimpleAuth } from '@/utils/simpleAuth';
 
 export interface InboxConversation {
   id: string;
@@ -49,13 +48,19 @@ class InboxService {
    */
   async loadConversations(): Promise<InboxConversation[]> {
     try {
-      // Initialize demo auth if needed
-      await initSimpleAuth();
-      
-      // Try to get workspace ID, fallback to demo workspace
+      // Get workspace ID from authenticated user profile
       let workspaceId = await getUserWorkspaceId();
       if (!workspaceId) {
-        workspaceId = getDemoWorkspaceId();
+        const userProfile = localStorage.getItem('user_auth_profile');
+        if (userProfile) {
+          const profile = JSON.parse(userProfile);
+          workspaceId = profile.workspace_id;
+        }
+      }
+      
+      if (!workspaceId) {
+        console.error('No workspace ID found');
+        return [];
       }
 
       const { data, error } = await supabase
@@ -113,13 +118,25 @@ class InboxService {
    */
   async getInboxStats(): Promise<InboxStats> {
     try {
-      // Initialize demo auth if needed
-      await initSimpleAuth();
-      
-      // Try to get workspace ID, fallback to demo workspace
+      // Get workspace ID from authenticated user profile
       let workspaceId = await getUserWorkspaceId();
       if (!workspaceId) {
-        workspaceId = getDemoWorkspaceId();
+        const userProfile = localStorage.getItem('user_auth_profile');
+        if (userProfile) {
+          const profile = JSON.parse(userProfile);
+          workspaceId = profile.workspace_id;
+        }
+      }
+      
+      if (!workspaceId) {
+        console.error('No workspace ID found');
+        return {
+          total_conversations: 0,
+          unread_conversations: 0,
+          starred_conversations: 0,
+          messages_today: 0,
+          last_sync_at: null
+        };
       }
 
       // Get conversation stats
@@ -342,13 +359,19 @@ class InboxService {
    */
   async triggerSync(): Promise<void> {
     try {
-      // Initialize demo auth if needed
-      await initSimpleAuth();
-      
-      // Try to get workspace ID, fallback to demo workspace
+      // Get workspace ID from authenticated user profile
       let workspaceId = await getUserWorkspaceId();
       if (!workspaceId) {
-        workspaceId = getDemoWorkspaceId();
+        const userProfile = localStorage.getItem('user_auth_profile');
+        if (userProfile) {
+          const profile = JSON.parse(userProfile);
+          workspaceId = profile.workspace_id;
+        }
+      }
+      
+      if (!workspaceId) {
+        console.error('No workspace ID found');
+        return [];
       }
 
       // Call the edge function to trigger background sync
