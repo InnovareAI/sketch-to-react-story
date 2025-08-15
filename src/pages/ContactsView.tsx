@@ -103,6 +103,32 @@ export default function ContactsView() {
 
   useEffect(() => {
     loadContacts();
+    
+    // Auto-sync contacts if we have very few (indicates incomplete initial sync)
+    const performAutoSync = async () => {
+      const contactCount = localStorage.getItem('contact_count');
+      const lastSyncTime = localStorage.getItem('last_full_sync');
+      const now = Date.now();
+      const hoursSinceLastSync = lastSyncTime ? (now - parseInt(lastSyncTime)) / (1000 * 60 * 60) : 999;
+      
+      // Trigger full sync if:
+      // 1. Contact count is low (< 1000 when expecting 15k)
+      // 2. No sync in last 24 hours
+      // 3. No sync time recorded at all
+      if ((!contactCount || parseInt(contactCount) < 1000) || hoursSinceLastSync > 24) {
+        console.log('🔄 Auto-triggering full contact sync...');
+        console.log(`📊 Current contacts: ${contactCount || 0}, Hours since sync: ${hoursSinceLastSync}`);
+        
+        toast.info('🔄 Auto-syncing LinkedIn contacts...', { duration: 3000 });
+        
+        // Run sync in background
+        setTimeout(() => {
+          performFullSync();
+        }, 2000); // Wait 2 seconds to let UI load
+      }
+    };
+    
+    performAutoSync();
   }, []);
 
   // Close dropdown when clicking outside
@@ -142,7 +168,11 @@ export default function ContactsView() {
       if (error) throw error;
       
       setContacts(data || []);
-      // No console logs for clean UX
+      
+      // Update localStorage contact count for auto-sync logic
+      if (data) {
+        localStorage.setItem('contact_count', data.length.toString());
+      }
       
     } catch (error) {
       console.error('Error loading contacts:', error);
@@ -533,6 +563,50 @@ export default function ContactsView() {
     } catch (error) {
       console.error('Error deleting contact:', error);
       toast.error('Failed to delete contact');
+    }
+  };
+
+  const performFullSync = async () => {
+    console.log('🚀 Starting comprehensive LinkedIn contact sync...');
+    
+    try {
+      const workspaceId = localStorage.getItem('demo_workspace_id') || 
+                         localStorage.getItem('workspace_id') ||
+                         localStorage.getItem('current_workspace_id') ||
+                         'df5d730f-1915-4269-bd5a-9534478b17af';
+      
+      // Use the enhanced import with higher limits for initial sync
+      const { enhancedLinkedInImport } = await import('@/services/EnhancedLinkedInImport');
+      enhancedLinkedInImport.initialize(workspaceId);
+      
+      console.log('🔄 Starting full contact import (up to 15k contacts)...');
+      
+      const result = await enhancedLinkedInImport.importContacts({
+        limit: 15000, // Import up to 15k contacts
+        preferredMethod: 'both',
+        useUnipile: true,
+        useLinkedInAPI: true
+      });
+      
+      console.log('📊 Full sync results:', result);
+      
+      if (result.success && result.totalContacts > 0) {
+        // Update localStorage tracking
+        localStorage.setItem('contact_count', result.totalContacts.toString());
+        localStorage.setItem('last_full_sync', Date.now().toString());
+        
+        toast.success(`🎉 Synced ${result.totalContacts} LinkedIn contacts!`, { duration: 5000 });
+        
+        // Refresh the contacts view
+        await loadContacts();
+      } else {
+        console.log('⚠️ Full sync completed but no new contacts found');
+        toast.info('Sync completed - no new contacts found');
+      }
+      
+    } catch (error) {
+      console.error('❌ Full sync failed:', error);
+      toast.error('Contact sync failed. Please try again later.');
     }
   };
 
