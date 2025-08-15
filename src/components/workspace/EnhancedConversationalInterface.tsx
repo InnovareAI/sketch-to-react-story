@@ -738,33 +738,20 @@ What sounds interesting?`;
 • Track when people change jobs or get promoted
 • Find verified emails and phone numbers
 
-**Not ready to connect yet?** Just say "show me a preview" and I'll demo with sample data.`;
+**Need help connecting?** Just ask me to walk you through it step by step.`;
     }
 
     // Handle preview results request  
     if (contentLower.includes('preview') || contentLower.includes('show') || contentLower.includes('sample')) {
-      return `📋 **Boston CTO Preview (Sample)**
+      return `📋 **No Preview Data Available**
 
-**Here are 5 sample prospects:**
+I don't show fake or sample data. To find real prospects, you need to:
 
-1. **Sarah Chen** - CTO, TechFlow AI (Series A, $8M)
-   📍 Cambridge, MA • 🏢 45 employees • 🚀 AI/ML
+**1. Connect LinkedIn** (go to Settings → Connect LinkedIn)
+**2. Tell me your search criteria** (like "50 CTOs in Boston startups")
+**3. I'll pull live prospect data** with real names, companies, and contact info
 
-2. **Mike Rodriguez** - CTO, HealthStream (Series B, $15M)  
-   📍 Boston, MA • 🏢 78 employees • 🏥 HealthTech
-
-3. **Alex Kumar** - CTO, FinanceCore (Series A, $12M)
-   📍 Boston, MA • 🏢 65 employees • 💰 FinTech
-
-4. **Emma Thompson** - CTO, LogiChain (Series A, $6M)
-   📍 Somerville, MA • 🏢 32 employees • 📦 Supply Chain
-
-5. **David Park** - CTO, CloudSync (Series B, $20M)
-   📍 Cambridge, MA • 🏢 85 employees • ☁️ Cloud Infrastructure
-
-**Connect LinkedIn and I can get you 50+ more like this with contact details!**
-
-Want me to write some outreach messages for these CTOs? Just say "write outreach" and I'll get started.`;
+Without a connected LinkedIn account, I can't show you prospects. Want to connect your account first?`;
     }
 
     // Handle start working request
@@ -869,30 +856,21 @@ What should we tackle first?`;
     if (contentLower.includes('lead') || contentLower.includes('prospect') || contentLower.includes('cto') || contentLower.includes('ceo') || contentLower.includes('startup') || contentLower.includes('find')) {
       // Handle specific lead requests
       if (contentLower.includes('cto') && contentLower.includes('boston')) {
-        return `🎯 **Starting Lead Research: 50 Boston CTOs**
+        return `🎯 **Ready to find Boston CTOs**
 
-**✅ Search initiated for:**
+I can search for CTOs at early-stage startups in the Boston area, but I need your LinkedIn connected first.
+
+**What I'll search for:**
 • CTOs at early-stage startups
-• Boston metropolitan area
+• Boston metropolitan area  
 • Series A-B companies (10-100 employees)
 
-**🔍 Research sources active:**
-• LinkedIn Sales Navigator filters
-• AngelList startup database  
-• Crunchbase funding data
-• Boston tech community networks
+**To get started:**
+1. **Connect LinkedIn** (go to Settings → Connect LinkedIn)
+2. **Come back and say "find 50 Boston CTOs"**
+3. **I'll pull real prospect data** with names, companies, and contact info
 
-**📋 Sample companies to target:**
-• Toast, Klaviyo, DataSite, LogMeIn alumni startups
-• MIT/Harvard spin-offs in Series A-B
-• FinTech, HealthTech, AI/ML startups
-
-**Next steps:**
-1. **Type "connect linkedin"** to enable live prospect scraping
-2. **Type "preview results"** to see sample prospects 
-3. **Type "start campaign"** to begin outreach
-
-**Want me to show you the first 10 prospects?**`;
+Without LinkedIn connected, I can't show you actual prospects. Want to connect your account first?`;
       }
       
       return "🎯 **Lead Research ready!** What industry/company type are you targeting?";
