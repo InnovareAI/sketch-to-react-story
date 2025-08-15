@@ -562,8 +562,7 @@ export default function GlobalInbox() {
   // Action handlers
   const handleReply = () => {
     if (selectedMessage) {
-      setSelectedMessageForFollowUp(selectedMessage);
-      setShowFollowUpModal(true);
+      setReplyModalOpen(true);
     }
   };
 
@@ -1215,10 +1214,10 @@ export default function GlobalInbox() {
                                 className="h-6 w-6 p-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedMessageForFollowUp(message);
-                                  setShowFollowUpModal(true);
+                                  setSelectedMessage(message);
+                                  setReplyModalOpen(true);
                                 }}
-                                title="Create follow-up"
+                                title="Reply to message"
                               >
                                 <Reply className="h-3 w-3" />
                               </Button>
