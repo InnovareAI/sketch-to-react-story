@@ -395,7 +395,23 @@ export default function ContactsView() {
       toast.error('No contacts selected');
       return;
     }
-    toast.success(`Preparing email for ${selectedContacts.length} contacts`);
+    
+    // Filter selected contacts to only include those with real email addresses
+    const contactsWithRealEmails = selectedContacts.filter(contactId => {
+      const contact = contacts.find(c => c.id === contactId);
+      return contact && isRealEmail(contact.email);
+    });
+    
+    if (contactsWithRealEmails.length === 0) {
+      toast.error('None of the selected contacts have real email addresses');
+      return;
+    }
+    
+    if (contactsWithRealEmails.length < selectedContacts.length) {
+      toast.warning(`${contactsWithRealEmails.length} of ${selectedContacts.length} selected contacts have real email addresses`);
+    }
+    
+    toast.success(`Preparing email for ${contactsWithRealEmails.length} contacts with real email addresses`);
   };
 
   const handleExport = () => {
@@ -681,6 +697,45 @@ export default function ContactsView() {
   // Get unique tags
   const allTags = [...new Set(contacts.flatMap(c => c.tags || []))];
 
+  // Check if email is a real email address (not LinkedIn-generated)
+  const isRealEmail = (email: string) => {
+    if (!email) return false;
+    
+    // Check if it's a LinkedIn-generated email (longer alphanumeric strings)
+    if (email.includes('@linkedin.com')) {
+      // LinkedIn-generated emails have long random strings like: ACoAADePTH4BGwxPfw_Fi5KXg-z8figinkDu8lM@linkedin.com
+      const linkedinGeneratedPattern = /^[A-Za-z0-9_-]{20,}@linkedin\.com$/;
+      if (linkedinGeneratedPattern.test(email)) {
+        return false;
+      }
+    }
+    
+    // Check if it's a generic imported email pattern
+    if (email.includes('@imported.contact')) {
+      return false;
+    }
+    
+    // Check for other placeholder patterns
+    if (email.includes('noreply') || email.includes('no-reply') || email.includes('donotreply')) {
+      return false;
+    }
+    
+    // Basic email validation - must have proper domain structure
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return false;
+    }
+    
+    // Additional check: domain should have valid TLD (at least 2 characters)
+    const domainPart = email.split('@')[1];
+    const tld = domainPart.split('.').pop();
+    if (!tld || tld.length < 2) {
+      return false;
+    }
+    
+    return true;
+  };
+
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -818,8 +873,13 @@ export default function ContactsView() {
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <ContactAvatar contact={contact} />
-                      <div className="font-medium text-gray-900">
-                        {contact.first_name} {contact.last_name}
+                      <div>
+                        <div className="font-medium text-gray-900 flex items-center gap-2">
+                          {contact.first_name} {contact.last_name}
+                          {isRealEmail(contact.email) && (
+                            <Mail className="h-3 w-3 text-green-600" title="Real email available" />
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -889,13 +949,15 @@ export default function ContactsView() {
                       >
                         <Linkedin className="h-4 w-4" />
                       </a>
-                      <button
-                        onClick={() => window.location.href = `mailto:${contact.email}`}
-                        className="p-1 text-gray-600 hover:bg-gray-100 rounded"
-                        title="Send Email"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </button>
+                      {isRealEmail(contact.email) && (
+                        <button
+                          onClick={() => window.location.href = `mailto:${contact.email}`}
+                          className="p-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer"
+                          title={`Send Email to ${contact.email}`}
+                        >
+                          <Mail className="h-4 w-4" />
+                        </button>
+                      )}
                       <div className="relative">
                         <button 
                           className="p-1 text-gray-600 hover:bg-gray-100 rounded"
