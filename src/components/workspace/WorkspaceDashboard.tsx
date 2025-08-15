@@ -345,7 +345,7 @@ export function WorkspaceDashboard() {
                 <div className="p-2.5 rounded-xl bg-gradient-to-br from-premium-orange to-premium-pink">
                   <Zap className="h-5 w-5 text-white" />
                 </div>
-                <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
+                <CardTitle className="text-lg font-bold">SAM AI Actions</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -354,7 +354,7 @@ export function WorkspaceDashboard() {
                 className="w-full justify-start bg-gradient-to-r from-premium-blue/10 to-premium-purple/10 hover:from-premium-blue/20 hover:to-premium-purple/20 border border-premium-blue/20 text-foreground"
               >
                 <Upload className="h-4 w-4 mr-3" />
-                Upload Knowledge Documents
+                Provide Insights
               </Button>
               <Button 
                 onClick={() => navigate('/research')}
