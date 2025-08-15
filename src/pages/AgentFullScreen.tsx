@@ -33,22 +33,37 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('AgentFullScreen Error:', error, errorInfo);
+    console.error('AgentFullScreen Error Details:', {
+      error: error.toString(),
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      timestamp: new Date().toISOString()
+    });
   }
 
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-          <div className="text-center text-white p-8">
-            <h2 className="text-2xl font-bold mb-4">Something went wrong</h2>
-            <p className="text-gray-400 mb-6">The agent interface encountered an error.</p>
-            <Button onClick={() => window.location.reload()} className="mr-4">
-              Reload Page
-            </Button>
-            <Button variant="outline" onClick={() => window.history.back()}>
-              Go Back
-            </Button>
+          <div className="text-center text-white p-8 max-w-md">
+            <h2 className="text-2xl font-bold mb-4">Agent Interface Error</h2>
+            <p className="text-gray-400 mb-4">The agent interface encountered an error.</p>
+            {this.state.error && (
+              <details className="text-left bg-gray-800 p-4 rounded mb-4">
+                <summary className="text-red-400 cursor-pointer mb-2">Error Details</summary>
+                <pre className="text-xs text-gray-300 overflow-auto">
+                  {this.state.error.toString()}
+                </pre>
+              </details>
+            )}
+            <div className="space-y-2">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Reload Page
+              </Button>
+              <Button variant="outline" onClick={() => window.location.href = '/dashboard'} className="w-full">
+                Back to Dashboard
+              </Button>
+            </div>
           </div>
         </div>
       );
@@ -191,7 +206,34 @@ export default function AgentFullScreen() {
 
         {/* Full Screen Chat Interface */}
         <main className="flex-1 overflow-hidden">
-          <EnhancedConversationalInterface operationMode={operationMode} />
+          <React.Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-white">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-400">Loading conversational interface...</p>
+              </div>
+            </div>
+          }>
+            {/* Temporary bypass to test if error is in EnhancedConversationalInterface */}
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-white max-w-md">
+                <h2 className="text-2xl font-bold mb-4">SAM AI Agent</h2>
+                <p className="text-gray-400 mb-6">
+                  The conversational interface is being debugged. This is a temporary placeholder.
+                </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Mode: <span className="text-blue-400">{operationMode}</span>
+                </p>
+                <Button 
+                  onClick={() => navigate('/dashboard')}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Return to Dashboard
+                </Button>
+              </div>
+            </div>
+            {/* <EnhancedConversationalInterface operationMode={operationMode} /> */}
+          </React.Suspense>
         </main>
 
         {/* Command Palette */}
