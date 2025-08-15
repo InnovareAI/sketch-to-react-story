@@ -150,16 +150,6 @@ export default function AgentFullScreen() {
         {/* Minimal Header with Navigation */}
         <header className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800/50 backdrop-blur-sm">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/dashboard')}
-              className="text-gray-400 hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-            <div className="h-4 w-px bg-gray-600" />
             <h1 className="text-lg font-semibold">SAM AI Agent</h1>
           </div>
           

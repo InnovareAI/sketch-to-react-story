@@ -718,7 +718,7 @@ You're all set up with SAM AI. I now understand your business and I'm ready to h
         )}
 
         {/* Conversation Starters */}
-        {messages.length <= 1 && (
+        {messages.filter(m => m.sender === 'user').length === 0 && (
           <div className="mb-8">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-white mb-2">
